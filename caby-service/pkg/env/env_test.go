@@ -1,7 +1,7 @@
 package env
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 	"os"
 	"testing"
@@ -14,7 +14,14 @@ func ErrAttr(err error) slog.Attr {
 }
 
 func TestErrors(t *testing.T) {
-	os.Setenv("TESTING_VAL_A", "HELLO")
-	_, err := GetEnv[bool]("TESTING_VAL_A", BoolValue)
-	assert.EqualError(t, err, fmt.Sprintf(InvalidBoolErr, "TESTING_VAL_A", "HELLO"))
+	_, err := GetEnv[bool]("MISSING_ENV_VAR", BoolValue)
+	assert.True(t, errors.As(err, &MissingErr{}))
+
+	os.Setenv("BAD_BOOL_VAR", "hello")
+	_, err = GetEnv[bool]("BAD_BOOL_VAR", BoolValue)
+	assert.True(t, errors.As(err, &InvalidBoolErr{}))
+
+	os.Setenv("BAD_INT_VAR", "abc")
+	_, err = GetEnv[int]("BAD_INT_VAR", IntValue)
+	assert.True(t, errors.As(err, &InvalidIntErr{}))
 }
