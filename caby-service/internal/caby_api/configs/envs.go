@@ -1,4 +1,4 @@
-package config
+package configs
 
 import (
 	"caby-service/pkg/config"
@@ -6,20 +6,28 @@ import (
 	"log"
 )
 
-// All environment variables should be defined and described here
+const (
+	ENV_SERVER_ADDRESS = "SERVER_ADDRESS"
+	ENV_DATA_PATH      = "DATA_PATH"
+)
 
-const DATA_PATH = "DATA_PATH"
-
-func mutateConfigEnv(oldConfig config.Config) config.Config {
-	b := config.NewBuilder().WithConfig(oldConfig)
-
-	dataPath, ok, err := env.GetOptionalEnv[string](DATA_PATH, env.StringValue)
+// todo: improve
+func setOrFail[T env.Value](val T, ok bool, err error, builder config.ConfigBuilder, setter func(T) config.ConfigBuilder) config.ConfigBuilder {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
 	if ok {
-		b.WithDataPath(dataPath)
+		return setter(val)
 	}
+	return builder
+}
+
+func mutateConfigEnv(oldConfig config.Config) config.Config {
+	b := config.NewBuilder().WithConfig(oldConfig)
+
+	// todo: make a helper function to set or fail
+	dataPath, ok, err := env.GetOptionalEnv[string](ENV_DATA_PATH, env.StringValue)
+	b = setOrFail[string](dataPath, ok, err, b, b.WithDataPath)
 
 	return b.Compile()
 }

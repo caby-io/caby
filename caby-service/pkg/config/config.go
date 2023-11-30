@@ -1,7 +1,8 @@
 package config
 
 type Config struct {
-	DataPath string // The base path of start
+	ServerAddr string // IP/Port that the http server binds to
+	DataPath   string // The base path of start
 }
 
 type ConfigBuilder func(Config) Config

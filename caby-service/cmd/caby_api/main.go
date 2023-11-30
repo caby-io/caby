@@ -1,6 +1,8 @@
 package main
 
 import (
+	"caby-service/internal/caby_api/configs"
+	"caby-service/internal/caby_api/configs/files"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -8,10 +10,16 @@ import (
 )
 
 func main() {
+	cfg := configs.LoadConfig()
+
+	// todo: temp
 	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
 	r.Use(middleware.Logger)
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("welcome"))
-	})
+	r.Use(middleware.Recoverer)
+
+	r.Mount("/files", files.HandleRoutes(cfg))
+
 	http.ListenAndServe(":8080", r)
 }
