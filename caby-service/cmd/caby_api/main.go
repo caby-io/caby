@@ -2,14 +2,24 @@ package main
 
 import (
 	"caby-service/internal/caby_api/configs"
-	"caby-service/internal/caby_api/configs/files"
+	v0_routes "caby-service/internal/caby_api/v0"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+// temp
+var programLevel = new(slog.LevelVar)
+
 func main() {
+	// temp
+	h := slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: programLevel})
+	slog.SetDefault(slog.New(h))
+	programLevel.Set(slog.LevelDebug)
+
 	cfg := configs.LoadConfig()
 
 	// todo: temp
@@ -19,7 +29,7 @@ func main() {
 	r.Use(middleware.Logger)
 	r.Use(middleware.Recoverer)
 
-	r.Mount("/files", files.HandleRoutes(cfg))
+	r.Mount("/v0", v0_routes.GetRoutes(cfg))
 
 	http.ListenAndServe(":8080", r)
 }
