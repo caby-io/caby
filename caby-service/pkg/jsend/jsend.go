@@ -2,6 +2,7 @@ package jsend
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 )
 
@@ -14,8 +15,8 @@ const (
 type JSend struct {
 	HTTPStatus uint   `json:"-"`
 	Status     string `json:"status"`
-	Data       any    `json:"data"`
-	Message    any    `json:"message"`
+	Data       any    `json:"data,omitempty"`
+	Message    any    `json:"message,omitempty"`
 }
 
 type JSendBuilder func(j JSend) JSend
@@ -25,6 +26,7 @@ func (b JSendBuilder) Ok() JSendBuilder {
 		j = b(j)
 		j.HTTPStatus = http.StatusOK
 		j.Status = STATUS_SUCCESS
+		j.Message = nil
 		return j
 	}
 }
@@ -41,7 +43,9 @@ func (b JSendBuilder) Write(w http.ResponseWriter) {
 	j := b(JSend{})
 	bytes, err := json.Marshal(j)
 	if err != nil {
-		//todo
+		slog.Error("couldn't marshal JSend response", "json.Marshal.error", err, "data", j.Data)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("internal server error"))
 		return
 	}
 	w.Write(bytes)
