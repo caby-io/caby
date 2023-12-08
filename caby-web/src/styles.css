@@ -1,0 +1,64 @@
+@font-face {
+    font-family: "Fira Code";
+    src: url("/fonts/FiraCode-VariableFont_wght.ttf") format('truetype')
+}
+
+/* Theme */
+:root {
+    --clr-text: hsl(240, 9%, 4%);
+    --clr-background: hsl(260, 27%, 98%);
+    --clr-primary: hsl(253, 51%, 50%);
+    --clr-secondary: hsl(253, 72%, 72%);
+    --clr-accent: hsl(253, 93%, 65%);
+
+    --ff-base: 'Fira Code', monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --clr-text: hsl(260, 27%, 98%);
+        --clr-background: hsl(240, 9%, 4%);
+        --clr-primary: hsl(253, 51%, 50%);
+        --clr-secondary: hsl(253, 72%, 72%);
+        --clr-accent: hsl(253, 93%, 65%);
+    }
+}
+
+/* Resets */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+* {
+    margin: 0;
+}
+
+html {
+    color-scheme: light dark;
+}
+
+img {
+    max-width: 100%;
+    display: block;
+}
+
+/* Globals */
+body {
+    font-family: var(--ff-base);
+    background-color: var(--clr-background);
+    color: var(--clr-text);
+    line-height: 1.6;
+}
+
+/* todo: typography */
+
+a {
+    color: var(--clr-primary);
+}
+
+a:hover,
+a:focus {
+    color: var(--clr-accent);
+}

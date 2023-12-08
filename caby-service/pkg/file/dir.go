@@ -15,7 +15,7 @@ type Dir struct {
 	ModifiedAt time.Time `json:"modifiedAt"`
 }
 
-func NewDir(fileinfo fs.FileInfo) Dir {
+func NewDir(path string, fileinfo fs.FileInfo) Dir {
 	// TEMP
 	_, mt, ct, err := statTimes(fileinfo.Name())
 	if err != nil {
