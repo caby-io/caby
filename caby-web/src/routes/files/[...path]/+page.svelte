@@ -9,15 +9,18 @@
 		name: string;
 	};
 
-	let dirs: Array<Directory> = $state([]);
-	let files: Array<File> = $state([]);
+	type Entry = {
+		dirs: Array<Directory>,
+		files: Array<File>
+	}
+
+	let entries: Entry = $state({dirs: [], files: []});
 
 	const get_data = async (path: string) => {
 		const response = await fetch('http://localhost:8080/v0/files/' + path);
 		const payload = await response.json();
 
-		files = payload.data.files;
-		dirs = payload.data.dirs;
+		entries = payload.data;
 	};
 
 	$effect(() => {
@@ -25,47 +28,71 @@
 	});
 </script>
 
-<section class="file-list">
-	{#each dirs as dir}
-		<div>
-            <div class="icon">
-                📁
-            </div>
-            <a href="files/{dir.name}">{dir.name}/</a>
-        </div>
-	{/each}
-	{#each files as file}
-		<div>
-            <div class="icon">
-                📃
-            </div>
-            {file.name}
-        </div>
-	{/each}
-</section>
+<main>
+	<section class="sidebar">Test</section>
+
+	<main class="file-list">
+		<div class="top-bar">
+			<div class="location">
+				
+			</div>
+		</div>
+		<div class="entries">
+			{#each entries.dirs as dir}
+			<div>
+				<div class="icon">📁</div>
+				<a href="/files/{$page.params.path}/{dir.name}">{dir.name}/</a>
+			</div>
+		{/each}
+		{#each entries.files as file}
+			<div>
+				<div class="icon">📃</div>
+				{file.name}
+			</div>
+		{/each}
+		</div>
+	</main>
+</main>
 
 <style lang="scss">
-    .file-list {
-        margin: 1rem;
+	main {
+		display: flex;
+		flex-direction: row;
+	}
 
-        > div {
-            display: flex;
-            // border: 1px solid var(--clr-accent);
-            transition: background-color .3s, color .3s;
-            font-size: 1.2em; // TEMP
+	.sidebar {
+        width: 20rem;
+	}
 
-            > .icon {
-                width: 1.5em;
-            }
+	.file-list {
+		flex-grow: 1;
+	}
 
-            &:hover {
-                color: var(--clr-background);
-                background-color: var(--clr-secondary);
+	.entries {
+		margin: 1rem;
+        flex-grow: 1;
+		> div {
+			display: flex;
+			// border: 1px solid var(--clr-accent);
+			transition:
+				background-color 0.3s,
+				color 0.3s;
+			font-size: 1.2em; // TEMP
+			padding: .5rem;
+			border-radius: 3px;
 
-                a {
-                    color: var(--clr-background);
-                }
-            }
-        }
-    }
+			> .icon {
+				width: 1.5em;
+			}
+
+			&:hover {
+				color: var(--clr-background);
+				background-color: var(--clr-secondary);
+
+				a {
+					color: var(--clr-background);
+				}
+			}
+		}
+	}
 </style>

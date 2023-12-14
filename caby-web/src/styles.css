@@ -14,7 +14,7 @@
     --ff-base: 'Fira Code', monospace;
 }
 
-@media (prefers-color-scheme: dark) {
+/* @media (prefers-color-scheme: dark) {
     :root {
         --clr-text: hsl(260, 27%, 98%);
         --clr-background: hsl(240, 9%, 4%);
@@ -22,9 +22,25 @@
         --clr-secondary: hsl(253, 72%, 72%);
         --clr-accent: hsl(253, 93%, 65%);
     }
+} */
+
+/* .light {
+    --clr-text: hsl(240, 9%, 4%);
+    --clr-background: hsl(260, 27%, 98%);
+    --clr-primary: hsl(253, 51%, 50%);
+    --clr-secondary: hsl(253, 72%, 72%);
+    --clr-accent: hsl(253, 93%, 65%);
+} */
+
+.dark {
+    --clr-text: hsl(260, 27%, 98%);
+    --clr-background: hsl(240, 9%, 4%);
+    --clr-primary: hsl(253, 51%, 50%);
+    --clr-secondary: hsl(253, 72%, 72%);
+    --clr-accent: hsl(253, 93%, 65%);
 }
 
-/* Resets */
+/* Reset */
 *,
 *::before,
 *::after {
