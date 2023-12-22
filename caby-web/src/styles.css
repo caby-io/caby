@@ -5,34 +5,19 @@
 
 /* Theme */
 :root {
-    --clr-text: hsl(240, 9%, 4%);
-    --clr-background: hsl(260, 27%, 98%);
-    --clr-primary: hsl(253, 51%, 50%);
-    --clr-secondary: hsl(253, 72%, 72%);
-    --clr-accent: hsl(253, 93%, 65%);
-
     --ff-base: 'Fira Code', monospace;
+    --top-nav-height: 4.5rem;
 }
 
-/* @media (prefers-color-scheme: dark) {
-    :root {
-        --clr-text: hsl(260, 27%, 98%);
-        --clr-background: hsl(240, 9%, 4%);
-        --clr-primary: hsl(253, 51%, 50%);
-        --clr-secondary: hsl(253, 72%, 72%);
-        --clr-accent: hsl(253, 93%, 65%);
-    }
-} */
-
-/* .light {
+:root[data-theme=light] {
     --clr-text: hsl(240, 9%, 4%);
     --clr-background: hsl(260, 27%, 98%);
     --clr-primary: hsl(253, 51%, 50%);
     --clr-secondary: hsl(253, 72%, 72%);
     --clr-accent: hsl(253, 93%, 65%);
-} */
+}
 
-.dark {
+:root[data-theme=dark] {
     --clr-text: hsl(260, 27%, 98%);
     --clr-background: hsl(240, 9%, 4%);
     --clr-primary: hsl(253, 51%, 50%);
@@ -66,6 +51,7 @@ body {
     background-color: var(--clr-background);
     color: var(--clr-text);
     line-height: 1.6;
+    transition: background-color .15s;
 }
 
 /* todo: typography */
@@ -77,4 +63,38 @@ a {
 a:hover,
 a:focus {
     color: var(--clr-accent);
+}
+
+/* Utility */
+
+.fx {
+    display: flex;
+}
+
+.fx--col {
+    display: flex;
+    flex-direction: column;
+}
+
+.fx-grow {
+    flex-grow: 1
+}
+
+.fx-cc {
+    align-items: center;
+    justify-content: center;
+}
+
+.flow>*+* {
+    margin-top: 1em;
+}
+
+.full-height {
+    height: calc(100vh - var(--top-nav-height));
+}
+
+.ellipsis {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }

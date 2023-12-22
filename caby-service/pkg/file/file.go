@@ -23,9 +23,10 @@ type File struct {
 // Credit: https://gist.github.com/maxmcd
 func prettyByteSize(b int) string {
 	bf := float64(b)
-	for _, unit := range []string{"", "Ki", "Mi", "Gi", "Ti", "Pi", "Ei", "Zi"} {
+	// todo: removed 'i', consider whether this is accurate.
+	for _, unit := range []string{"", "K", "M", "G", "T", "P", "E", "Z"} {
 		if math.Abs(bf) < 1024.0 {
-			return fmt.Sprintf("%3.1f%sB", bf, unit)
+			return fmt.Sprintf("%3.1f %sB", bf, unit)
 		}
 		bf /= 1024.0
 	}

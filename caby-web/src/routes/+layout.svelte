@@ -1,21 +1,21 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import { color_scheme } from '$lib/color-scheme';
-	import { onMount } from 'svelte';
+	import { toggleScheme, clearStorage } from '$lib/color-scheme';
 </script>
+
+<svelte:head>
+	<script>
+		let scheme = localStorage.color_scheme;
+		if (!scheme) {
+			scheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+		}
+		document.documentElement.setAttribute('data-theme', scheme);
+	</script>
+</svelte:head>
 
 <header>
 	<h2>CABY</h2>
-	<button
-		on:click={() => {
-			color_scheme.toggleScheme();
-		}}>Toggle Scheme</button
-	>
-	<button
-		on:click={() => {
-			color_scheme.clearStorage();
-		}}>Clear Storage</button
-	>
+	<button on:click={toggleScheme}>Toggle Scheme</button>
+	<button on:click={clearStorage}>Clear Storage</button>
 </header>
 
 <slot />
@@ -24,9 +24,12 @@
 	@import '../styles.css';
 
 	header {
+		height: var(--top-nav-height);
 		border-bottom: 1px solid var(--clr-accent);
-		padding: 1rem;
+		padding: 0 1rem;
 		display: flex;
+		box-sizing: border-box; // Guarantee that the border doesn't contribute to the height
+		align-items: center;
 
 		h2 {
 			color: var(--clr-secondary);
