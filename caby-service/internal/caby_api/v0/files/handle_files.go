@@ -34,6 +34,7 @@ func HandleFiles(cfg config.Config) http.HandlerFunc {
 			i, err := e.Info()
 			if err != nil {
 				slog.Error("couldn't get entry info", "entry", filepath.Join(fullPath, e.Name()))
+				continue
 			}
 
 			if !e.IsDir() {

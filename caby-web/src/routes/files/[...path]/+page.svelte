@@ -10,6 +10,7 @@
 		size: number;
 		prettySize: string;
 		modifiedAt: string;
+		prettyModifiedAt: string;
 	};
 
 	type Entry = {
@@ -76,7 +77,7 @@
 							<td class="icon">📃</td>
 							<td class="name ellipsis">{file.name}</td>
 							<td>{file.prettySize}</td>
-							<td>{file.modifiedAt}</td>
+							<td>{file.prettyModifiedAt}</td>
 							<td><button>..</button></td>
 						</tr>
 					{/each}

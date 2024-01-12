@@ -1,6 +1,7 @@
 package file
 
 import (
+	"caby-service/pkg/pretty"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -11,11 +12,13 @@ import (
 )
 
 type File struct {
-	Name       string    `json:"name"`
-	Size       int64     `json:"size"`
-	PrettySize string    `json:"prettySize"`
-	CreatedAt  time.Time `json:"createdAt"`
-	ModifiedAt time.Time `json:"modifiedAt"`
+	Name             string    `json:"name"`
+	Size             int64     `json:"size"`
+	PrettySize       string    `json:"prettySize"`
+	CreatedAt        time.Time `json:"createdAt"`
+	PrettyCreatedAt  string    `json:"prettyCreatedAt"`
+	ModifiedAt       time.Time `json:"modifiedAt"`
+	PrettyModifiedAt string    `json:"prettyModifiedAt"`
 	// FileInfo   fs.FileInfo `json:"-"`
 	// Hash       []byte      `json:"hash"`
 }
@@ -53,19 +56,23 @@ func NewFile(fileinfo fs.FileInfo) File {
 	if err != nil {
 		slog.Error("couldnt get file time info", "statTimes.err", err)
 		return File{
-			Name:       fileinfo.Name(),
-			Size:       fileinfo.Size(),
-			PrettySize: prettyByteSize(int(fileinfo.Size())),
-			CreatedAt:  fileinfo.ModTime(),
-			ModifiedAt: fileinfo.ModTime(),
+			Name:             fileinfo.Name(),
+			Size:             fileinfo.Size(),
+			PrettySize:       prettyByteSize(int(fileinfo.Size())),
+			CreatedAt:        fileinfo.ModTime(),
+			PrettyCreatedAt:  pretty.Date(fileinfo.ModTime()),
+			ModifiedAt:       fileinfo.ModTime(),
+			PrettyModifiedAt: pretty.Date(fileinfo.ModTime()),
 		}
 	}
 
 	return File{
-		Name:       fileinfo.Name(),
-		Size:       fileinfo.Size(),
-		PrettySize: prettyByteSize(int(fileinfo.Size())),
-		CreatedAt:  ct,
-		ModifiedAt: mt,
+		Name:             fileinfo.Name(),
+		Size:             fileinfo.Size(),
+		PrettySize:       prettyByteSize(int(fileinfo.Size())),
+		CreatedAt:        ct,
+		PrettyCreatedAt:  pretty.Date(ct),
+		ModifiedAt:       mt,
+		PrettyModifiedAt: pretty.Date(mt),
 	}
 }
