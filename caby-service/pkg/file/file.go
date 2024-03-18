@@ -33,12 +33,13 @@ func prettyByteSize(b int) string {
 		}
 		bf /= 1024.0
 	}
-	return fmt.Sprintf("%.1fYiB", bf)
+	return fmt.Sprintf("%.1fYB", bf)
 }
 
-// TEMP
-func statTimes(name string) (atime, mtime, ctime time.Time, err error) {
-	fi, err := os.Stat(name)
+// todo: handle each OS and have a fallback
+// e.g. use fileinfo.ModTime
+func statTimes(path string) (atime, mtime, ctime time.Time, err error) {
+	fi, err := os.Stat(path)
 	if err != nil {
 		return
 	}
@@ -50,20 +51,12 @@ func statTimes(name string) (atime, mtime, ctime time.Time, err error) {
 }
 
 // Temp?
-func NewFile(fileinfo fs.FileInfo) File {
+func NewFile(path string, fileinfo fs.FileInfo) File {
 	// TEMP
-	_, mt, ct, err := statTimes(fileinfo.Name())
+	_, mt, ct, err := statTimes(path)
 	if err != nil {
+		// todo: handle
 		slog.Error("couldnt get file time info", "statTimes.err", err)
-		return File{
-			Name:             fileinfo.Name(),
-			Size:             fileinfo.Size(),
-			PrettySize:       prettyByteSize(int(fileinfo.Size())),
-			CreatedAt:        fileinfo.ModTime(),
-			PrettyCreatedAt:  pretty.Date(fileinfo.ModTime()),
-			ModifiedAt:       fileinfo.ModTime(),
-			PrettyModifiedAt: pretty.Date(fileinfo.ModTime()),
-		}
 	}
 
 	return File{

@@ -3,28 +3,49 @@
 
 	type Directory = {
 		name: string;
+		createdAt: string;
+		prettyCreatedAt: string;
+		modifiedAt: string;
+		prettyModifiedAt: string;
 	};
 
 	type File = {
 		name: string;
 		size: number;
 		prettySize: string;
+		createdAt: string;
+		prettyCreatedAt: string;
 		modifiedAt: string;
 		prettyModifiedAt: string;
 	};
 
-	type Entry = {
+	type FilesResponse = {
+		parentPath: string | null;
+		currentPath: string;
 		dirs: Array<Directory>;
 		files: Array<File>;
 	};
 
-	let entries: Entry = $state({ dirs: [], files: [] });
+	let filesResponse: FilesResponse = $state({
+		parentPath: null,
+		currentPath: '',
+		dirs: [],
+		files: []
+	});
 
 	const get_data = async (path: string) => {
 		const response = await fetch('http://localhost:8080/v0/files/' + path);
 		const payload = await response.json();
 
-		entries = payload.data;
+		filesResponse = payload.data;
+	};
+
+	const join = (...paths: Array<string>): string => {
+		let joined = "";
+		paths.filter(p => p != "" && p != "/" && p != null).forEach((p) => {
+			joined += `/${p}`
+		});
+		return joined;
 	};
 
 	$effect(() => {
@@ -63,16 +84,26 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#each entries.dirs as dir}
+					{#if filesResponse.parentPath != null}
 						<tr>
 							<td class="icon">📁</td>
-							<td><a href="/files/{$page.params.path}/{dir.name}">{dir.name}/</a></td>
+							<td><a href={join("files", filesResponse.parentPath)}>..</a></td>
+							<td>..</td>
+							<td>..</td>
+							<td></td>
+						</tr>
+					{/if}
+					{#each filesResponse.dirs as dir}
+						<tr>
+							<td class="icon">📁</td>
+							<!-- todo: improve -->
+							<td><a href={join("files", filesResponse.currentPath, dir.name)}>{dir.name}/</a></td>
 							<td>..</td>
 							<td>..</td>
 							<td><button>..</button></td>
 						</tr>
 					{/each}
-					{#each entries.files as file}
+					{#each filesResponse.files as file}
 						<tr>
 							<td class="icon">📃</td>
 							<td class="name ellipsis">{file.name}</td>

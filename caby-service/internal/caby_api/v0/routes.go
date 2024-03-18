@@ -10,6 +10,8 @@ import (
 func GetRoutes(cfg config.Config) chi.Router {
 	r := chi.NewRouter()
 
+	// todo: consolidate these?
+	r.Get("/files", files.HandleFiles(cfg))
 	r.Get("/files/*", files.HandleFiles(cfg))
 
 	return r
