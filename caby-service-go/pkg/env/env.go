@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 type MissingErr struct {
@@ -34,7 +35,7 @@ func (e InvalidBoolErr) Error() string {
 }
 
 type Value interface {
-	string | int | bool
+	string | int | bool | []string
 }
 
 type converter[T Value] func(string, string) (T, error)
@@ -57,6 +58,15 @@ func IntValue(key string, val string) (int, error) {
 		err = fmt.Errorf("%w: %s", InvalidIntErr{key, val}, err)
 	}
 	return i, err
+}
+
+func StringSliceValue(key string, val string) ([]string, error) {
+	split := strings.Split(val, ",")
+	res := []string{}
+	for _, s := range split {
+		res = append(res, strings.TrimSpace(s))
+	}
+	return res, nil
 }
 
 func GetEnv[T Value](key string, conv converter[T]) (T, error) {

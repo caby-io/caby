@@ -31,6 +31,16 @@ func (b JSendBuilder) Ok() JSendBuilder {
 	}
 }
 
+func (b JSendBuilder) ServerError() JSendBuilder {
+	return func(j JSend) JSend {
+		j = b(j)
+		j.HTTPStatus = http.StatusInternalServerError
+		j.Status = STATUS_ERROR
+		j.Message = "internal server error"
+		return j
+	}
+}
+
 func (b JSendBuilder) Data(d any) JSendBuilder {
 	return func(j JSend) JSend {
 		j = b(j)
