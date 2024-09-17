@@ -1,0 +1,7 @@
+{
+    "editor.formatOnSave": true,
+    "makefile.configureOnOpen": false,
+    "[svelte]": {
+        "editor.defaultFormatter": "svelte.svelte-vscode"
+    },
+}

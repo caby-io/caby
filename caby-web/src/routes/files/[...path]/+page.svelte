@@ -1,78 +1,115 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { goto } from '$app/navigation'
+	import { onMount } from 'svelte';
 
 	type Directory = {
 		name: string;
-		createdAt: string;
-		prettyCreatedAt: string;
-		modifiedAt: string;
-		prettyModifiedAt: string;
+		path: string;
+		created_at: string;
+		pretty_created_at: string;
+		modified_at: string;
+		pretty_modified_at: string;
 	};
 
 	type File = {
 		name: string;
+		path: string;
 		size: number;
-		prettySize: string;
-		createdAt: string;
-		prettyCreatedAt: string;
-		modifiedAt: string;
-		prettyModifiedAt: string;
+		pretty_size: string;
+		created_at: string;
+		pretty_created_at: string;
+		modified_at: string;
+		pretty_modified_at: string;
 	};
 
 	type FilesResponse = {
-		parentPath: string | null;
-		currentPath: string;
+		path: string | null;
+		parent_dir: string | null;
+		current_dir: string;
 		dirs: Array<Directory>;
 		files: Array<File>;
 	};
 
 	let filesResponse: FilesResponse = $state({
-		parentPath: null,
-		currentPath: '',
+		path: null,
+		parent_dir: null,
+		current_dir: '',
 		dirs: [],
 		files: []
 	});
+	
+	let loading = $state(false);
 
 	const get_data = async (path: string) => {
+		loading = true;
 		const response = await fetch('http://localhost:8080/v0/files/' + path);
 		const payload = await response.json();
 
 		filesResponse = payload.data;
+
+		// Fix URL if it's incorrect
+		// if document.location.href != join("files", response.path) {
+		// 	document.location.href = join("files", response.path)
+		// }
+		goto(join("files", filesResponse.path))
+		loading = false;
+		// document.location.href = join("files", response.path)
 	};
 
 	const join = (...paths: Array<string>): string => {
 		let joined = "";
 		paths.filter(p => p != "" && p != "/" && p != null).forEach((p) => {
+			while(p.charAt(0) === '/') {
+				p = p.substring(1);
+			}
 			joined += `/${p}`
 		});
 		return joined;
 	};
+
+	// onMount(() => {
+	// 	get_data($page.params.path);
+	// })
 
 	$effect(() => {
 		get_data($page.params.path);
 	});
 </script>
 
-<div class="fx full-height">
-	<section class="sidebar fx--col">
-		<nav class="sidebar__nav fx-grow fx fx--col">
-			<a href="/files"><h4>Files</h4></a>
-			<a href="/"><h4>Home?</h4></a>
-		</nav>
-		<div class="usage-metrics">
-			<header class="fx fx-cc">
-				<h1 class="fx-grow">Disk Usage (Fake)</h1>
-				<span>1GB/20GB (5%)</span>
-			</header>
-			<div><span></span></div>
-		</div>
-	</section>
-
+<div class="top-left-negative fx fx--col fx-grow fx-column">
+	<header>
+		breadcrumbs
+	</header>
 	<section class="file-list">
 		<section class="top-bar">
 			<div class="location"></div>
 		</section>
 		<main class="entries">
+		{#if loading}
+			<table class="skeleton">
+				<thead>
+					<tr>
+						<th class="icon"></th>
+						<th class="name"><span /></th>
+						<th><span /></th>
+						<th><span /></th>
+						<th class="actions"><span /></th>
+					</tr>
+				</thead>
+				<tbody>
+					{#each {length: 3} as _, i}
+					<tr>
+						<th class="icon"></th>
+						<th class="name"><span /></th>
+						<th><span /></th>
+						<th><span /></th>
+						<th class="actions"><span /></th>
+					</tr>
+					{/each}
+				</tbody>
+			</table>
+		{:else}
 			<table>
 				<thead>
 					<tr>
@@ -84,10 +121,16 @@
 					</tr>
 				</thead>
 				<tbody>
-					{#if filesResponse.parentPath != null}
+					{#if filesResponse.parent_dir != null}
 						<tr>
-							<td class="icon">📁</td>
-							<td><a href={join("files", filesResponse.parentPath)}>..</a></td>
+							<td class="check">☐</td>
+							<td class="main fx">
+								<div class="icon fx fx-cc">📁</div>
+								<div class="text fx-grow">
+									<div class="name"><a href={join("files", filesResponse.parent_dir)}>..</a></div>
+									<!-- <div class="size">Unknown</div> -->
+								</div>
+							</td>
 							<td>..</td>
 							<td>..</td>
 							<td></td>
@@ -95,75 +138,43 @@
 					{/if}
 					{#each filesResponse.dirs as dir}
 						<tr>
-							<td class="icon">📁</td>
+							<td class="check">☐</td>
 							<!-- todo: improve -->
-							<td><a href={join("files", filesResponse.currentPath, dir.name)}>{dir.name}/</a></td>
+							<td class="main fx">
+								<div class="icon fx fx-cc">📁</div>
+								<div class="text fx-grow">
+									<div class="name"><a href={join("files", dir.path)}>{dir.name}/</a></div>
+									<div class="size">–</div>
+								</div>
+							</td>
 							<td>..</td>
-							<td>..</td>
+							<td>{dir.pretty_modified_at}</td>
 							<td><button>..</button></td>
 						</tr>
 					{/each}
 					{#each filesResponse.files as file}
 						<tr>
-							<td class="icon">📃</td>
-							<td class="name ellipsis">{file.name}</td>
-							<td>{file.prettySize}</td>
-							<td>{file.prettyModifiedAt}</td>
+							<td class="check">☐</td>
+							<td class="main fx">
+								<div class="icon fx fx-cc">📃</div>
+								<div class="text fx-grow">
+									<div class="name">{file.name}</div>
+									<div class="size">{file.pretty_size}</div>
+								</div>
+							</td>
+							<td>{file.pretty_size}</td>
+							<td>{file.pretty_modified_at}</td>
 							<td><button>..</button></td>
 						</tr>
 					{/each}
 				</tbody>
 			</table>
+		{/if}
 		</main>
 	</section>
 </div>
 
 <style lang="scss">
-	.sidebar {
-		width: 20rem;
-		display: flex;
-	}
-
-	.sidebar__nav {
-		> a {
-			margin: 1rem 1rem 0;
-			padding: 0.5rem 1rem;
-			border-radius: 5px;
-			color: var(--clr-background);
-			background: var(--clr-secondary);
-		}
-	}
-
-	.usage-metrics {
-		padding: 2rem 1rem;
-
-		> header {
-			> h1 {
-				font-size: 0.9rem; // todo: replace with var
-				font-weight: normal;
-			}
-
-			> span {
-				font-size: 0.6rem;
-			}
-		}
-
-		> div {
-			width: 100%;
-			height: 0.2rem;
-			border-radius: 0.1rem;
-			display: flex;
-			background: var(--clr-text);
-
-			> span {
-				// temp
-				width: 5%;
-				height: 100%;
-				background-color: var(--clr-secondary);
-			}
-		}
-	}
-
 	.file-list {
 		flex-grow: 1;
 		height: 100%;
@@ -179,6 +190,17 @@
 			border-spacing: 0rem;
 			font-size: 1.1em;
 			width: 100%;
+			
+			&.skeleton {
+				span {
+					display: block;
+					height: .4rem;
+					min-width: 100px;
+					width: 70%;
+					background: lightgrey;
+					border-radius: 3px;
+				}
+			}
 
 			tr {
 				border-radius: 3px;
@@ -193,8 +215,17 @@
 				text-align: left;
 			}
 
-			.icon {
-				width: 1.5em;
+			.check {
+				width: 2rem;
+			}
+
+			.main {
+				display: flex;
+
+				.icon {
+					font-size: 1.75em;
+					width: 2em;
+				}
 			}
 
 			.name {

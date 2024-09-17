@@ -1,28 +1,45 @@
 @font-face {
+    font-family: "Oswald";
+    src: url("/fonts/Oswald-VariableFont_wght.ttf") format('truetype')
+}
+
+/* @font-face {
     font-family: "Fira Code";
     src: url("/fonts/FiraCode-VariableFont_wght.ttf") format('truetype')
+} */
+
+@font-face {
+    font-family: "Mako";
+    src: url("/fonts/Mako-Regular.ttf") format('truetype')
+}
+
+@font-face {
+    font-family: "Signika Negative";
+    src: url("/fonts/SignikaNegative-VariableFont_wght.ttf") format('truetype')
 }
 
 /* Theme */
 :root {
-    --ff-base: 'Fira Code', monospace;
+    --ff-base: 'Signika Negative', sans-serif;
     --top-nav-height: 4.5rem;
+    --standard-negative: 2rem;
 }
 
 :root[data-theme=light] {
-    --clr-text: hsl(240, 9%, 4%);
+    --clr-title: #2d2c37;
+    --clr-text: #1d1d21;
     --clr-background: hsl(260, 27%, 98%);
-    --clr-primary: hsl(253, 51%, 50%);
-    --clr-secondary: hsl(253, 72%, 72%);
-    --clr-accent: hsl(253, 93%, 65%);
+    --clr-primary: #101828;
+    --clr-secondary: #465366;
+    --clr-accent: #d8d8d8;
 }
 
 :root[data-theme=dark] {
     --clr-text: hsl(260, 27%, 98%);
     --clr-background: hsl(240, 9%, 4%);
-    --clr-primary: hsl(253, 51%, 50%);
-    --clr-secondary: hsl(253, 72%, 72%);
-    --clr-accent: hsl(253, 93%, 65%);
+    --clr-primary: #101828;
+    --clr-secondary: #465366;
+    --clr-accent: #d8d8d8;
 }
 
 /* Reset */
@@ -72,7 +89,6 @@ a:focus {
 }
 
 .fx--col {
-    display: flex;
     flex-direction: column;
 }
 
@@ -89,8 +105,9 @@ a:focus {
     margin-top: 1em;
 }
 
-.full-height {
-    height: calc(100vh - var(--top-nav-height));
+.top-left-negative {
+    margin-top: var(--standard-negative);
+    margin-left: var(--standard-negative);
 }
 
 .ellipsis {
