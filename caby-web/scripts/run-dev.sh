@@ -9,4 +9,4 @@ cd ../
 # load env vars
 # set -a; source ./configs/.dev.env; set +a
 
-npm run dev
+pnpm run dev

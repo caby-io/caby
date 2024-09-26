@@ -88,6 +88,10 @@ a:focus {
     display: flex;
 }
 
+.inline-fx {
+    display: inline-flex;
+}
+
 .fx--col {
     flex-direction: column;
 }
@@ -99,6 +103,14 @@ a:focus {
 .fx-cc {
     align-items: center;
     justify-content: center;
+}
+
+.fx-ac {
+    align-items: center;
+}
+
+.fx-jc {
+    align-items: center;
 }
 
 .flow>*+* {
