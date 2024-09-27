@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 serde_json = "1.0.115"
 tokio = { version = "1", features = ["full"] }
+tokio-util = { version = "0.7.12", features = ["io"] }
 axum = { version = "0.7.5" }
 tower = "0.4.13"
 tower-http = { version = "0.5.2", features = ["cors", "trace"] }
@@ -15,4 +16,5 @@ tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 serde = { version = "1.0.197", features = ["derive"] }
 path-clean = "1.0.1"
+mime_guess = "2.0.5"
 # async-convert = "1.0.0"

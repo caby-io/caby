@@ -171,9 +171,14 @@
 								</td>
 								<td class="actions">
 									<div class="fx fx-ac">
-										<div class="action fx fx-cc">
+										<a
+											class="action fx fx-cc"
+											href={'http://localhost:8080/v0' +
+												join('download', filesResponse.path!, file.name)}
+											download={file.name}
+										>
 											<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-										</div>
+										</a>
 										<div class="action fx fx-cc">
 											<iconify-icon icon="lucide:info"></iconify-icon>
 										</div>
