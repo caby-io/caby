@@ -10,6 +10,7 @@
 		pretty_created_at: string;
 		modified_at: string;
 		pretty_modified_at: string;
+		symlink: { is_broken: boolean; target_path: string };
 	};
 
 	type File = {
@@ -21,6 +22,7 @@
 		pretty_created_at: string;
 		modified_at: string;
 		pretty_modified_at: string;
+		symlink: { is_broken: boolean; target_path: string };
 	};
 
 	type FilesResponse = {
@@ -163,7 +165,20 @@
 							<tr>
 								<td class="check"><iconify-icon icon="lucide:square-check-big"></iconify-icon></td>
 								<td class="main fx">
-									<div class="icon fx fx-cc">📃</div>
+									<div class="icon fx fx-cc">
+										📃
+										{#if file.symlink}
+											{#if !file.symlink.is_broken}
+												<span class="indicator indicator--symlink">
+													<iconify-icon icon="lucide:link"></iconify-icon>
+												</span>
+											{:else}
+												<span class="indicator indicator--broken-symlink">
+													<iconify-icon icon="lucide:unlink"></iconify-icon>
+												</span>
+											{/if}
+										{/if}
+									</div>
 									<div class="text fx-grow">
 										<div class="name">{file.name}</div>
 										<div class="size">{file.pretty_size}</div>
@@ -171,14 +186,16 @@
 								</td>
 								<td class="actions">
 									<div class="fx fx-ac">
-										<a
-											class="action fx fx-cc"
-											href={'http://localhost:8080/v0' +
-												join('download', filesResponse.path!, file.name)}
-											download={file.name}
-										>
-											<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-										</a>
+										{#if !file.symlink}
+											<a
+												class="action fx fx-cc"
+												href={'http://localhost:8080/v0' +
+													join('download', filesResponse.path!, file.name)}
+												download={file.name}
+											>
+												<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
+											</a>
+										{/if}
 										<div class="action fx fx-cc">
 											<iconify-icon icon="lucide:info"></iconify-icon>
 										</div>
@@ -231,29 +248,47 @@
 				}
 			}
 
+			// General
 			tr {
 				border-radius: 3px;
 			}
-
 			td,
 			th {
 				padding: 0.5rem;
-			}
-
-			th {
 				text-align: left;
 			}
 
-			.check {
+			td.check {
 				width: 2rem;
 			}
 
-			.main {
+			td.main {
 				display: flex;
 
 				.icon {
 					font-size: 1.75em;
 					width: 2em;
+					position: relative;
+
+					.indicator {
+						position: absolute;
+						display: inline-flex;
+						bottom: 0;
+						right: 0;
+
+						&--symlink {
+							iconify-icon {
+								font-size: 1rem;
+							}
+						}
+
+						&--broken-symlink {
+							iconify-icon {
+								font-size: 1rem;
+								color: red;
+							}
+						}
+					}
 
 					a {
 						text-decoration: none;
@@ -265,29 +300,29 @@
 				}
 			}
 
-			tbody > tr {
-				td.actions {
-					font-size: 1.5rem;
+			td.actions {
+				font-size: 1.5rem;
 
-					.action {
-						cursor: pointer;
-						color: var(--clr-secondary);
-						margin-right: 0.5rem;
-						width: 2.1rem;
-						height: 2.1rem;
-						background: var(--clr-accent);
-						opacity: 0.6;
-						border-radius: 3px;
-						transition: color 0.3s;
-					}
-					// > div {
-					// 	display: inline-block;
-					// 	padding: 2px;
-					// 	margin-right: 0.5rem;
-					// 	background: lightgrey;
-					// }
+				.action {
+					cursor: pointer;
+					color: var(--clr-secondary);
+					margin-right: 0.5rem;
+					width: 2.1rem;
+					height: 2.1rem;
+					background: var(--clr-accent);
+					opacity: 0.6;
+					border-radius: 3px;
+					transition: color 0.3s;
 				}
+				// > div {
+				// 	display: inline-block;
+				// 	padding: 2px;
+				// 	margin-right: 0.5rem;
+				// 	background: lightgrey;
+				// }
+			}
 
+			tbody > tr {
 				&:hover {
 					color: var(--clr-background);
 					background-color: var(--clr-secondary);

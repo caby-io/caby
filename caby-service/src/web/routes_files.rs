@@ -32,16 +32,26 @@ struct FilesResponse {
 
 async fn api_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Response {
     // todo: sanitize path, more
-    let path = files_path.map_or(PathBuf::from("/"), |Path(p)| clean(p));
+    let path = files_path.map_or(PathBuf::from(""), |Path(p)| clean(p));
     let resp = jsend::JSendBuilder::new();
 
     // todo: get base path from a var
     // todo: consider santizing after join
     // todo: check that it is a dir? OR return something else for files
-    let Ok((dirs, files)) = get_entries(PathBuf::from("/").join(&path).clean().as_path()).await
-    else {
-        return resp.error("could not access files").into_response();
-    };
+    let (dirs, files) =
+        match get_entries(PathBuf::from("/").join(&path).clean().as_path(), &path).await {
+            Ok(r) => r,
+            Err(err) => {
+                return resp
+                    // todo: don't send this down in production, just log the actual error
+                    .error(format!("could not access files: {}", err))
+                    .into_response();
+            }
+        };
+    // let Ok((dirs, files)) = get_entries(PathBuf::from("/").join(&path).clean().as_path()).await
+    // else {
+    //     return resp.error("could not access files: {}").into_response();
+    // };
 
     // todo: make safe
     let parent_dir = PathBuf::from(&path).parent().map(|p| {
