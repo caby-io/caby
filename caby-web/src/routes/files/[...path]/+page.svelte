@@ -97,7 +97,6 @@
 							<th class="actions"><span /></th>
 							<th><span /></th>
 							<th><span /></th>
-							<th class="actions"><span /></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -108,7 +107,6 @@
 								<th class="actions"><span /></th>
 								<th><span /></th>
 								<th><span /></th>
-								<th class="actions"><span /></th>
 							</tr>
 						{/each}
 					</tbody>
@@ -120,16 +118,16 @@
 							<th class="icon"></th>
 							<th class="name">Name</th>
 							<th class="actions"></th>
-							<th>Size</th>
 							<th>Last Modified</th>
-							<th class="actions"></th>
+							<th>Size</th>
 						</tr>
 					</thead>
 					<tbody>
+						<!-- Parent Dir -->
 						{#if filesResponse.parent_dir != null}
 							<tr>
-								<td class="check"></td>
-								<td class="main fx">
+								<td data-cell="select" class="check"></td>
+								<td data-cell="main" class="main fx">
 									<div class="icon fx fx-cc">
 										<a href={join('files', filesResponse.parent_dir)}>📁</a>
 									</div>
@@ -138,33 +136,53 @@
 										<!-- <div class="size">Unknown</div> -->
 									</div>
 								</td>
-								<td></td>
+								<td data-cell="actions">..</td>
+								<td data-cell="last-modified"></td>
+								<td data-cell="size">..</td>
 								<td>..</td>
-								<td>..</td>
-								<td></td>
 							</tr>
 						{/if}
+						<!-- Directories -->
 						{#each filesResponse.dirs as dir}
 							<tr>
-								<td class="check"><iconify-icon icon="lucide:square"></iconify-icon></td>
+								<td data-cell="select" class="check"
+									><iconify-icon icon="lucide:square"></iconify-icon></td
+								>
 								<!-- todo: improve -->
-								<td class="main fx">
+								<td data-cell="main" class="main fx">
 									<div class="icon fx fx-cc"><a href={join('files', dir.path)}>📁</a></div>
 									<div class="text fx-grow">
 										<div class="name"><a href={join('files', dir.path)}>{dir.name}/</a></div>
 										<div class="size">–</div>
 									</div>
 								</td>
-								<td class="actions"></td>
-								<td>..</td>
-								<td>{dir.pretty_modified_at}</td>
-								<td><button>..</button></td>
+								<td data-cell="actions" class="actions">
+									<div class="fx fx-ac">
+										<div class="action fx fx-cc">
+											<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
+										</div>
+										<div class="action fx fx-cc">
+											<iconify-icon icon="lucide:info"></iconify-icon>
+										</div>
+										<div class="action fx fx-cc">
+											<iconify-icon icon="lucide:trash-2"></iconify-icon>
+										</div>
+										<div class="action fx fx-cc">
+											<iconify-icon icon="lucide:more-horizontal"></iconify-icon>
+										</div>
+									</div>
+								</td>
+								<td data-cell="last-modified">{dir.pretty_modified_at}</td>
+								<td data-cell="size"></td>
 							</tr>
 						{/each}
+						<!-- Files -->
 						{#each filesResponse.files as file}
 							<tr>
-								<td class="check"><iconify-icon icon="lucide:square-check-big"></iconify-icon></td>
-								<td class="main fx">
+								<td data-cell="select" class="check"
+									><iconify-icon icon="lucide:square-check-big"></iconify-icon></td
+								>
+								<td data-cell="main" class="main fx">
 									<div class="icon fx fx-cc">
 										📃
 										{#if file.symlink}
@@ -184,7 +202,7 @@
 										<div class="size">{file.pretty_size}</div>
 									</div>
 								</td>
-								<td class="actions">
+								<td data-cell="actions" class="actions">
 									<div class="fx fx-ac">
 										{#if !file.symlink}
 											<a
@@ -195,6 +213,10 @@
 											>
 												<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
 											</a>
+										{:else}
+											<a class="action action--invisible fx fx-cc">
+												<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
+											</a>
 										{/if}
 										<div class="action fx fx-cc">
 											<iconify-icon icon="lucide:info"></iconify-icon>
@@ -202,11 +224,13 @@
 										<div class="action fx fx-cc">
 											<iconify-icon icon="lucide:trash-2"></iconify-icon>
 										</div>
+										<div class="action fx fx-cc">
+											<iconify-icon icon="lucide:more-horizontal"></iconify-icon>
+										</div>
 									</div>
 								</td>
-								<td>{file.pretty_size}</td>
-								<td>{file.pretty_modified_at}</td>
-								<td><button>..</button></td>
+								<td data-cell="last-modified">{file.pretty_modified_at}</td>
+								<td data-cell="size">{file.pretty_size}</td>
 							</tr>
 						{/each}
 					</tbody>
@@ -233,7 +257,8 @@
 		overflow-y: scroll;
 
 		> table {
-			border-spacing: 0rem;
+			border-collapse: collapse;
+			// border-spacing: 0rem;
 			font-size: 1.1em;
 			width: 100%;
 
@@ -273,8 +298,11 @@
 					.indicator {
 						position: absolute;
 						display: inline-flex;
-						bottom: 0;
-						right: 0;
+						bottom: 0.25rem;
+						right: 0.25rem;
+						background: rgba(255, 255, 255, 0.8);
+						border-radius: 50%;
+						padding: 0.2rem;
 
 						&--symlink {
 							iconify-icon {
@@ -313,6 +341,11 @@
 					opacity: 0.6;
 					border-radius: 3px;
 					transition: color 0.3s;
+
+					&--invisible {
+						opacity: 0 !important;
+						pointer-events: none;
+					}
 				}
 				// > div {
 				// 	display: inline-block;
