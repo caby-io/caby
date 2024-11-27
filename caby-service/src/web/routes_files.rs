@@ -1,5 +1,5 @@
 use crate::error::Result;
-use crate::files::{get_entries, Directory, File};
+use crate::files::{build_entries, Directory, Entry, File};
 use crate::jsend::JSendBuilder;
 use crate::{ctx::Ctx, jsend};
 use axum::body::{Body, BodyDataStream};
@@ -26,8 +26,7 @@ pub fn routes() -> Router {
 struct FilesResponse {
     pub path: String,
     pub parent_dir: Option<String>,
-    pub dirs: Vec<Directory>,
-    pub files: Vec<File>,
+    pub entries: Vec<Entry>,
 }
 
 async fn api_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Response {
@@ -38,16 +37,16 @@ async fn api_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Respon
     // todo: get base path from a var
     // todo: consider santizing after join
     // todo: check that it is a dir? OR return something else for files
-    let (dirs, files) =
-        match get_entries(PathBuf::from("/").join(&path).clean().as_path(), &path).await {
-            Ok(r) => r,
-            Err(err) => {
-                return resp
-                    // todo: don't send this down in production, just log the actual error
-                    .error(format!("could not access files: {}", err))
-                    .into_response();
-            }
-        };
+    let entries = match build_entries(PathBuf::from("/").join(&path).clean().as_path(), &path).await
+    {
+        Ok(r) => r,
+        Err(err) => {
+            return resp
+                // todo: don't send this down in production, just log the actual error
+                .error(format!("could not access files: {}", err))
+                .into_response();
+        }
+    };
     // let Ok((dirs, files)) = get_entries(PathBuf::from("/").join(&path).clean().as_path()).await
     // else {
     //     return resp.error("could not access files: {}").into_response();
@@ -63,8 +62,7 @@ async fn api_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Respon
         .success(FilesResponse {
             path: path.to_str().unwrap().to_owned(), // todo: make safe
             parent_dir,
-            dirs,
-            files,
+            entries,
         })
         .into_response()
 }

@@ -21,7 +21,7 @@ async fn main() {
         .with_target(false)
         .compact()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        // .with_max_level(tracing::Level::DEBUG)
+        .with_max_level(tracing::Level::DEBUG)
         .init();
 
     // TEMP

@@ -2,43 +2,40 @@
 	import { page } from '$app/stores';
 
 	import 'iconify-icon';
+	import Directory from './Directory.svelte';
+	import File from './File.svelte';
 
-	type Directory = {
+	type Entry = {
+		entry_type: string;
 		name: string;
 		path: string;
 		created_at: string;
 		pretty_created_at: string;
 		modified_at: string;
 		pretty_modified_at: string;
-		symlink: { is_broken: boolean; target_path: string };
-	};
-
-	type File = {
-		name: string;
-		path: string;
-		size: number;
-		pretty_size: string;
-		created_at: string;
-		pretty_created_at: string;
-		modified_at: string;
-		pretty_modified_at: string;
-		symlink: { is_broken: boolean; target_path: string };
+		entry_fields: any; // todo
 	};
 
 	type FilesResponse = {
 		path: string | null;
 		parent_dir: string | null;
 		current_dir: string;
-		dirs: Array<Directory>;
-		files: Array<File>;
+		entries: Array<Entry>;
 	};
 
 	let filesResponse: FilesResponse = $state({
 		path: null,
 		parent_dir: null,
 		current_dir: '',
-		dirs: [],
-		files: []
+		entries: []
+	});
+
+	type FilesRender = {
+		entries: Array<Entry | undefined>;
+	};
+
+	let filesRender: FilesRender = $state({
+		entries: []
 	});
 
 	let loading = $state(false);
@@ -49,6 +46,9 @@
 		const payload = await response.json();
 
 		filesResponse = payload.data;
+
+		// temp?
+		virtualizeList();
 
 		// Fix URL if it's incorrect
 		// if document.location.href != join("files", response.path) {
@@ -72,13 +72,51 @@
 		return joined;
 	};
 
+	const virtualizeList = () => {
+		// const filesList = document.getElementById('files-list');
+		const main = document.getElementById('main');
+		const height = window.innerHeight - (main!.offsetTop || 0);
+		const offset = main!.scrollTop;
+
+		// todo: get dynamically
+		const trHeadHeight = 44.17;
+		const trBodyHeight = 72.33;
+
+		// we won't bother calculating when the bottom-most element appears
+		const maxTR = Math.ceil(height / trBodyHeight);
+		// todo: should be +1 when we have parent dir link
+		let elOffset = Math.floor(offset / trBodyHeight - trHeadHeight / trBodyHeight);
+
+		const entryCount = filesResponse.entries.length;
+
+		filesRender.entries = Array(entryCount).fill(undefined);
+
+		if (elOffset < 1) {
+			elOffset = 0;
+		}
+
+		const filesOffset = elOffset - entryCount;
+		// console.log(filesOffset);
+
+		// Dirs
+		const dirsRendered = Math.min(elOffset + maxTR, entryCount - 1) - elOffset;
+		for (let i = elOffset; i <= Math.min(elOffset + maxTR, entryCount - 1); i++) {
+			filesRender.entries[i] = filesResponse.entries[i];
+		}
+	};
+
+	// temp
 	// onMount(() => {
-	// 	get_data($page.params.path);
-	// })
+	// 	virtualizeList();
+	// });
 
 	$effect(() => {
 		get_data($page.params.path);
 	});
+
+	// $effect(() => {
+	// 	virtualizeList();
+	// });
 </script>
 
 <div class="right fx fx--col fx-grow">
@@ -87,9 +125,9 @@
 		<section class="top-bar">
 			<div class="location"></div>
 		</section>
-		<main class="entries">
+		<main class="entries" id="main" onscroll={virtualizeList}>
 			{#if loading}
-				<table class="skeleton">
+				<table id="files-list" class="skeleton">
 					<thead>
 						<tr>
 							<th class="icon"></th>
@@ -112,7 +150,7 @@
 					</tbody>
 				</table>
 			{:else}
-				<table>
+				<table id="files-list">
 					<thead>
 						<tr>
 							<th class="icon"></th>
@@ -142,96 +180,15 @@
 								<td>..</td>
 							</tr>
 						{/if}
-						<!-- Directories -->
-						{#each filesResponse.dirs as dir}
-							<tr>
-								<td data-cell="select" class="check"
-									><iconify-icon icon="lucide:square"></iconify-icon></td
-								>
-								<!-- todo: improve -->
-								<td data-cell="main" class="main fx">
-									<div class="icon fx fx-cc"><a href={join('files', dir.path)}>📁</a></div>
-									<div class="text fx-grow">
-										<div class="name"><a href={join('files', dir.path)}>{dir.name}/</a></div>
-										<div class="size">–</div>
-									</div>
-								</td>
-								<td data-cell="actions" class="actions">
-									<div class="fx fx-ac">
-										<div class="action fx fx-cc">
-											<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-										</div>
-										<div class="action fx fx-cc">
-											<iconify-icon icon="lucide:info"></iconify-icon>
-										</div>
-										<div class="action fx fx-cc">
-											<iconify-icon icon="lucide:trash-2"></iconify-icon>
-										</div>
-										<div class="action fx fx-cc">
-											<iconify-icon icon="lucide:more-horizontal"></iconify-icon>
-										</div>
-									</div>
-								</td>
-								<td data-cell="last-modified">{dir.pretty_modified_at}</td>
-								<td data-cell="size"></td>
-							</tr>
-						{/each}
-						<!-- Files -->
-						{#each filesResponse.files as file}
-							<tr>
-								<td data-cell="select" class="check"
-									><iconify-icon icon="lucide:square-check-big"></iconify-icon></td
-								>
-								<td data-cell="main" class="main fx">
-									<div class="icon fx fx-cc">
-										📃
-										{#if file.symlink}
-											{#if !file.symlink.is_broken}
-												<span class="indicator indicator--symlink">
-													<iconify-icon icon="lucide:link"></iconify-icon>
-												</span>
-											{:else}
-												<span class="indicator indicator--broken-symlink">
-													<iconify-icon icon="lucide:unlink"></iconify-icon>
-												</span>
-											{/if}
-										{/if}
-									</div>
-									<div class="text fx-grow">
-										<div class="name">{file.name}</div>
-										<div class="size">{file.pretty_size}</div>
-									</div>
-								</td>
-								<td data-cell="actions" class="actions">
-									<div class="fx fx-ac">
-										{#if !file.symlink}
-											<a
-												class="action fx fx-cc"
-												href={'http://localhost:8080/v0' +
-													join('download', filesResponse.path!, file.name)}
-												download={file.name}
-											>
-												<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-											</a>
-										{:else}
-											<a class="action action--invisible fx fx-cc">
-												<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-											</a>
-										{/if}
-										<div class="action fx fx-cc">
-											<iconify-icon icon="lucide:info"></iconify-icon>
-										</div>
-										<div class="action fx fx-cc">
-											<iconify-icon icon="lucide:trash-2"></iconify-icon>
-										</div>
-										<div class="action fx fx-cc">
-											<iconify-icon icon="lucide:more-horizontal"></iconify-icon>
-										</div>
-									</div>
-								</td>
-								<td data-cell="last-modified">{file.pretty_modified_at}</td>
-								<td data-cell="size">{file.pretty_size}</td>
-							</tr>
+						<!-- Entries -->
+						{#each filesRender.entries as entry}
+							{#if entry?.entry_type == 'directory'}
+								<Directory dir_entry={entry} />
+							{:else if entry?.entry_type == 'file'}
+								<File file_entry={entry} />
+							{:else}
+								<tr style="height: 72.33px"></tr>
+							{/if}
 						{/each}
 					</tbody>
 				</table>

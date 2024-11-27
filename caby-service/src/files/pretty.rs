@@ -7,13 +7,13 @@ const DURATION_DAY: u64 = 86400;
 const DURATION_MONTH: u64 = 2628000;
 const DURATION_YEAR: u64 = 31540000;
 
-pub fn date(time: Option<SystemTime>) -> String {
+pub fn date(time: &Option<SystemTime>) -> String {
     let Some(time) = time else {
         return "Unknown".to_owned();
     };
 
     // TODO: Handle this error
-    let duration = SystemTime::now().duration_since(time).unwrap().as_secs();
+    let duration = SystemTime::now().duration_since(*time).unwrap().as_secs();
 
     if duration < DURATION_MINUTE {
         return format!("Just now");
@@ -39,10 +39,10 @@ pub fn date(time: Option<SystemTime>) -> String {
 }
 
 // Credit: https://gist.github.com/maxmcd
-pub fn bytes(bytes: Option<u64>) -> String {
-    let Some(bytes) = bytes else {
-        return "Unknown".to_owned();
-    };
+pub fn bytes(bytes: u64) -> String {
+    // let Some(bytes) = bytes else {
+    //     return "Unknown".to_owned();
+    // };
 
     let mut bf = bytes as f64;
     for suffix in vec!["", "K", "M", "G", "T", "P", "E", "Z"] {
