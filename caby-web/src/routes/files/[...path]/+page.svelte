@@ -4,6 +4,7 @@
 	import 'iconify-icon';
 	import Directory from './Directory.svelte';
 	import File from './File.svelte';
+	import Loading from './Loading.svelte';
 
 	type Entry = {
 		entry_type: string;
@@ -134,7 +135,6 @@
 							<th class="name"><span /></th>
 							<th class="actions"><span /></th>
 							<th><span /></th>
-							<th><span /></th>
 						</tr>
 					</thead>
 					<tbody>
@@ -143,7 +143,6 @@
 								<th class="icon"></th>
 								<th class="name"><span /></th>
 								<th class="actions"><span /></th>
-								<th><span /></th>
 								<th><span /></th>
 							</tr>
 						{/each}
@@ -157,7 +156,6 @@
 							<th class="name">Name</th>
 							<th class="actions"></th>
 							<th>Last Modified</th>
-							<th>Size</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -176,8 +174,6 @@
 								</td>
 								<td data-cell="actions">..</td>
 								<td data-cell="last-modified"></td>
-								<td data-cell="size">..</td>
-								<td>..</td>
 							</tr>
 						{/if}
 						<!-- Entries -->
@@ -187,7 +183,8 @@
 							{:else if entry?.entry_type == 'file'}
 								<File file_entry={entry} />
 							{:else}
-								<tr style="height: 72.33px"></tr>
+								<Loading />
+								<!-- <tr style="height: 72.33px"></tr> -->
 							{/if}
 						{/each}
 					</tbody>
