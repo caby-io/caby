@@ -17,11 +17,13 @@
 <tr>
 	<td data-cell="select" class="check"><iconify-icon icon="lucide:square"></iconify-icon></td>
 	<!-- todo: improve -->
-	<td data-cell="main" class="main fx">
-		<div class="icon fx fx-cc"><a href={join('files', dir_entry.path)}>📁</a></div>
-		<div class="text fx-grow">
-			<div class="name"><a href={join('files', dir_entry.path)}>{dir_entry.name}/</a></div>
-			<div class="size">–</div>
+	<td data-cell="main" class="main">
+		<div class="fx fx-cc">
+			<div class="icon fx fx-cc"><a href={join('files', dir_entry.path)}>📁</a></div>
+			<div class="text fx-grow">
+				<div class="name"><a href={join('files', dir_entry.path)}>{dir_entry.name}/</a></div>
+				<div class="size">–</div>
+			</div>
 		</div>
 	</td>
 	<td data-cell="actions" class="actions">

@@ -244,7 +244,6 @@ pub fn sanitize_path(path: &Path) -> Box<Path> {
     buf.into_boxed_path()
 }
 
-// todo: ordering
 pub async fn build_entries(path: &Path, root_path: &PathBuf) -> io::Result<Vec<Entry>> {
     let full_path = Path::new("/").join(path);
     let mut entries = read_dir(path).await?;
