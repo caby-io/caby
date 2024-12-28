@@ -109,3 +109,5 @@ async fn download_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> R
 
     (headers, body).into_response()
 }
+
+async fn delete_entries(ctx: Result<Ctx>, entries: [Path<String>]) -> Response {}
