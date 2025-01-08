@@ -1,13 +1,15 @@
 use crate::error::Result;
-use crate::files::{build_entries, Directory, Entry, File};
+use crate::files::{build_entries, Entry};
 use crate::jsend::JSendBuilder;
 use crate::{ctx::Ctx, jsend};
 use axum::body::{Body, BodyDataStream};
+use axum::extract;
 use axum::http::{header, StatusCode};
 use axum::response::{IntoResponse, Response};
+use axum::routing::delete;
 use axum::{extract::Path, routing::get, Extension, Json, Router};
 use path_clean::{clean, PathClean};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use tokio::fs;
@@ -20,6 +22,7 @@ pub fn routes() -> Router {
         .route("/files/", get(api_files))
         .route("/files/*file_path", get(api_files))
         .route("/download/*file_path", get(download_files))
+        .route("/files", delete(delete_entries))
 }
 
 #[derive(Serialize)]
@@ -110,4 +113,53 @@ async fn download_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> R
     (headers, body).into_response()
 }
 
-async fn delete_entries(ctx: Result<Ctx>, entries: [Path<String>]) -> Response {}
+#[derive(Deserialize)]
+struct DeleteEntriesRequest {
+    pub entries: Vec<String>,
+    pub force: bool,
+}
+
+#[derive(Serialize)]
+struct DeleteEntriesResponse {
+    pub deleted: Vec<String>,
+    pub errors: Vec<String>,
+}
+
+// todo: this should be archiving instead of deleting
+async fn delete_entries(
+    ctx: Result<Ctx>,
+    extract::Json(req): extract::Json<DeleteEntriesRequest>,
+) -> Response {
+    // todo: validate that they're valid paths
+
+    let mut deleted = vec![];
+    let mut errors = vec![];
+
+    for relative_path in req.entries {
+        let path = PathBuf::from("/").join(relative_path).clean();
+
+        let Ok(metadata) = fs::metadata(path.clone()).await else {
+            // todo: make error structured and parseable
+            errors.push(format!("{:?} not found", path));
+            debug!("couldn't get entry at {:?}", path);
+            continue;
+        };
+
+        if metadata.is_dir() {
+            debug!("got a directory at {:?}", path);
+            // fs::remove_dir_all(path);
+            deleted.push(path.as_os_str().to_str().unwrap().to_owned());
+            continue;
+        }
+        debug!("got a file at {:?}", path);
+        // fs::remove_file(path);
+        deleted.push(path.as_os_str().to_str().unwrap().to_owned());
+    }
+
+    jsend::JSendBuilder::new()
+        .success(DeleteEntriesResponse {
+            deleted, // todo: make safe
+            errors,
+        })
+        .into_response()
+}
