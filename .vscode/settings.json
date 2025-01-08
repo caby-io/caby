@@ -4,4 +4,7 @@
     "[svelte]": {
         "editor.defaultFormatter": "svelte.svelte-vscode"
     },
+    "rust-analyzer.rustfmt.extraArgs": [
+        "+nightly"
+    ],
 }
