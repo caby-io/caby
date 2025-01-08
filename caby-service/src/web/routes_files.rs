@@ -1,20 +1,25 @@
-use crate::error::Result;
-use crate::files::{build_entries, Entry};
-use crate::jsend::JSendBuilder;
-use crate::{ctx::Ctx, jsend};
-use axum::body::{Body, BodyDataStream};
-use axum::extract;
-use axum::http::{header, StatusCode};
-use axum::response::{IntoResponse, Response};
-use axum::routing::delete;
-use axum::{extract::Path, routing::get, Extension, Json, Router};
+use crate::{
+    ctx::Ctx,
+    error::Result,
+    files::{build_entries, Entry},
+    jsend,
+    jsend::JSendBuilder,
+};
+use axum::{
+    body::{Body, BodyDataStream},
+    extract,
+    extract::Path,
+    http::{header, StatusCode},
+    response::{IntoResponse, Response},
+    routing::{delete, get},
+    Extension, Json, Router,
+};
 use path_clean::{clean, PathClean};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::path::PathBuf;
 use tokio::fs;
-use tokio_util::bytes::BytesMut;
-use tokio_util::io::ReaderStream;
+use tokio_util::{bytes::BytesMut, io::ReaderStream};
 use tracing::{debug, error};
 
 pub fn routes() -> Router {
