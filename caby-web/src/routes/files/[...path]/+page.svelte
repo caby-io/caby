@@ -106,10 +106,22 @@
 		}
 	};
 
-	// temp
-	// onMount(() => {
-	// 	virtualizeList();
-	// });
+	const deleteFiles = async (paths: [String]) => {
+		const response = await fetch('http://localhost:8080/v0/files', {
+			method: 'delete',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				entries: paths,
+				force: false
+			})
+		});
+		const payload = await response.json();
+		console.log(payload);
+		await get_data($page.params.path);
+	};
 
 	$effect(() => {
 		get_data($page.params.path);
@@ -181,7 +193,7 @@
 							{#if entry?.entry_type == 'directory'}
 								<Directory dir_entry={entry} />
 							{:else if entry?.entry_type == 'file'}
-								<File file_entry={entry} />
+								<File file_entry={entry} onDelete={(path: String) => deleteFiles([path])} />
 							{:else}
 								<Loading />
 								<!-- <tr style="height: 72.33px"></tr> -->

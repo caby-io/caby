@@ -15,7 +15,11 @@
 		};
 	};
 
-	export let file_entry: FileEntry;
+	let { onDelete, file_entry }: { onDelete: any; file_entry: FileEntry } = $props();
+
+	// export let file_entry: FileEntry;
+
+	const delete_file = () => {};
 </script>
 
 <tr>
@@ -33,23 +37,17 @@
 	</td>
 	<td data-cell="actions" class="actions">
 		<div class="fx fx-ac">
-			<!-- {#if !file.symlink}
-				<a
-					class="action fx fx-cc"
-					href={'http://localhost:8080/v0' + join('download', filesResponse.path!, file.name)}
-					download={file.name}
-				>
-					<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-				</a>
-			{:else}
-				<a class="action action--invisible fx fx-cc">
-					<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-				</a>
-			{/if} -->
+			<a
+				class="action fx fx-cc"
+				href={'http://localhost:8080/v0' + join('download', file_entry.path!)}
+				download={file_entry.name}
+			>
+				<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
+			</a>
 			<div class="action fx fx-cc">
 				<iconify-icon icon="lucide:info"></iconify-icon>
 			</div>
-			<div class="action fx fx-cc">
+			<div class="action fx fx-cc" on:click={() => onDelete(file_entry.path)}>
 				<iconify-icon icon="lucide:trash-2"></iconify-icon>
 			</div>
 			<div class="action fx fx-cc">

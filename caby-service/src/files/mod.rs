@@ -6,6 +6,7 @@ use std::{
     time::SystemTime,
 };
 
+use path_clean::PathClean;
 use serde::Serialize;
 use serde_json::error;
 use tokio::fs::{self, metadata, read_dir, read_link, DirEntry, ReadDir};
@@ -68,8 +69,10 @@ pub struct Entry {
 // }
 
 impl Entry {
-    async fn try_from(value: fs::DirEntry, root_path: &PathBuf) -> Result<Self, io::Error> {
+    async fn try_from(root_path: &Path, value: DirEntry) -> Result<Self, io::Error> {
         let metadata = value.metadata().await?;
+
+        value.path().strip_prefix(root_path);
 
         // Fill common fields
         let created_at = metadata.created().ok();
@@ -83,8 +86,18 @@ impl Entry {
                 .file_name()
                 .into_string()
                 .map_err(|err| io::Error::new(ErrorKind::Other, "couldn't convert to string"))?,
-            path: root_path
-                .join(value.file_name())
+            // path: root_path
+            //     .join(value.file_name())
+            //     .to_str()
+            //     .ok_or(io::Error::new(
+            //         ErrorKind::Other,
+            //         "couldn't convert root path to string",
+            //     ))?
+            //     .to_owned(),
+            path: value
+                .path()
+                .strip_prefix(root_path)
+                .map_err(|err| io::Error::new(ErrorKind::Other, "couldn't strip prefix"))?
                 .to_str()
                 .ok_or(io::Error::new(
                     ErrorKind::Other,
@@ -156,15 +169,16 @@ impl Entry {
     }
 }
 
-pub fn sanitize_path(path: &Path) -> Box<Path> {
-    let mut buf = PathBuf::new();
-    path.components().into_iter().for_each(|c| {
-        buf.push(c);
-    });
-    buf.into_boxed_path()
+// Returns a sanitized full path from the input path
+pub fn joined_path(root_path: &Path, relative_path: &Path) -> Option<PathBuf> {
+    let path = root_path.join(relative_path.clean()).clean();
+    if path.starts_with(root_path) {
+        return Some(path);
+    }
+    None
 }
 
-pub async fn build_entries(path: &Path, root_path: &PathBuf) -> io::Result<Vec<Entry>> {
+pub async fn build_entries(root_path: &Path, path: &Path) -> io::Result<Vec<Entry>> {
     let full_path = Path::new("/").join(path);
     let mut entries = read_dir(path).await?;
 
@@ -172,7 +186,7 @@ pub async fn build_entries(path: &Path, root_path: &PathBuf) -> io::Result<Vec<E
 
     while let Some(dir_entry) = entries.next_entry().await? {
         let filename = dir_entry.file_name();
-        match Entry::try_from(dir_entry, root_path).await {
+        match Entry::try_from(root_path, dir_entry).await {
             Ok(e) => result.push(e),
             Err(err) => {
                 error!("couldn't process file: {:?} {}", filename, err);

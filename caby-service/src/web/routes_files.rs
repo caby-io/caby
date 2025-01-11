@@ -1,9 +1,8 @@
 use crate::{
     ctx::Ctx,
     error::Result,
-    files::{build_entries, Entry},
-    jsend,
-    jsend::JSendBuilder,
+    files::{build_entries, joined_path, Entry},
+    jsend::{self, JSendBuilder},
 };
 use axum::{
     body::{Body, BodyDataStream},
@@ -30,6 +29,8 @@ pub fn routes() -> Router {
         .route("/files", delete(delete_entries))
 }
 
+static ROOT_PATH: &str = "/home/suhaib/caby-home";
+
 #[derive(Serialize)]
 struct FilesResponse {
     pub path: String,
@@ -39,14 +40,21 @@ struct FilesResponse {
 
 async fn api_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Response {
     // todo: sanitize path, more
-    let path = files_path.map_or(PathBuf::from(""), |Path(p)| clean(p));
+    let root_path = PathBuf::from(ROOT_PATH);
+    let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
+
+    let Some(path) = joined_path(&root_path, &rel_path) else {
+        return jsend::JSendBuilder::new()
+            .fail("invalid path")
+            .into_response();
+    };
+
     let resp = jsend::JSendBuilder::new();
 
     // todo: get base path from a var
     // todo: consider santizing after join
     // todo: check that it is a dir? OR return something else for files
-    let entries = match build_entries(PathBuf::from("/").join(&path).clean().as_path(), &path).await
-    {
+    let entries = match build_entries(&root_path, &path).await {
         Ok(r) => r,
         Err(err) => {
             return resp
@@ -61,14 +69,11 @@ async fn api_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Respon
     // };
 
     // todo: make safe
-    let parent_dir = PathBuf::from(&path).parent().map(|p| {
-        debug!("{:?}", p);
-        p.to_str().unwrap().to_owned()
-    });
+    let parent_dir = rel_path.parent().map(|p| p.to_str().unwrap().to_owned());
 
     jsend::JSendBuilder::new()
         .success(FilesResponse {
-            path: path.to_str().unwrap().to_owned(), // todo: make safe
+            path: rel_path.to_str().unwrap().to_owned(), // todo: make safe
             parent_dir,
             entries,
         })
@@ -76,11 +81,17 @@ async fn api_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Respon
 }
 
 async fn download_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Response {
-    let path = match files_path {
-        Some(Path(p)) => PathBuf::from("/").join(p.clone()).clean(),
+    let rel_path = match files_path {
+        Some(Path(p)) => PathBuf::from(p),
         None => return (StatusCode::NOT_FOUND, "file path required").into_response(),
     };
-    // let resp = jsend::JSendBuilder::new();
+
+    let root_path = PathBuf::from(ROOT_PATH);
+    let Some(path) = joined_path(&root_path, &rel_path) else {
+        return jsend::JSendBuilder::new()
+            .fail("invalid path")
+            .into_response();
+    };
 
     if !path.is_file() {
         return (
@@ -135,30 +146,33 @@ async fn delete_entries(
     ctx: Result<Ctx>,
     extract::Json(req): extract::Json<DeleteEntriesRequest>,
 ) -> Response {
-    // todo: validate that they're valid paths
+    let root_path = PathBuf::from(ROOT_PATH);
 
     let mut deleted = vec![];
     let mut errors = vec![];
 
     for relative_path in req.entries {
-        let path = PathBuf::from("/").join(relative_path).clean();
+        let rel_path = PathBuf::from(relative_path.clone()).clean();
+        let Some(path) = joined_path(&root_path, &rel_path) else {
+            // todo
+            errors.push(format!("{:?} invaild path", relative_path));
+            continue;
+        };
 
         let Ok(metadata) = fs::metadata(path.clone()).await else {
             // todo: make error structured and parseable
-            errors.push(format!("{:?} not found", path));
-            debug!("couldn't get entry at {:?}", path);
+            errors.push(format!("{:?} not found", relative_path));
             continue;
         };
 
         if metadata.is_dir() {
-            debug!("got a directory at {:?}", path);
             // fs::remove_dir_all(path);
-            deleted.push(path.as_os_str().to_str().unwrap().to_owned());
+            deleted.push(rel_path.to_str().unwrap().to_owned());
             continue;
         }
         debug!("got a file at {:?}", path);
         // fs::remove_file(path);
-        deleted.push(path.as_os_str().to_str().unwrap().to_owned());
+        deleted.push(rel_path.to_str().unwrap().to_owned());
     }
 
     jsend::JSendBuilder::new()

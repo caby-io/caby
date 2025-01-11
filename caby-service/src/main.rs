@@ -2,7 +2,11 @@
 
 pub use self::error::{Error, Result};
 
-use axum::{extract::Path, http::Method, Router};
+use axum::{
+    extract::Path,
+    http::{header, Method},
+    Router,
+};
 use tokio::net::TcpListener;
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -26,8 +30,8 @@ async fn main() {
 
     // TEMP
     let cors_layer = CorsLayer::new()
-        // allow `GET` and `POST` when accessing the resource
-        .allow_methods([Method::GET, Method::POST])
+        .allow_methods([Method::GET, Method::OPTIONS, Method::POST, Method::DELETE])
+        .allow_headers([header::ACCEPT, header::CONTENT_TYPE])
         // allow requests from any origin
         // TODO make this come from an env var
         .allow_origin(Any);
