@@ -106,7 +106,7 @@
 		}
 	};
 
-	const deleteFiles = async (paths: [String]) => {
+	const deleteEntries = async (paths: [String]) => {
 		const response = await fetch('http://localhost:8080/v0/files', {
 			method: 'delete',
 			headers: {
@@ -191,9 +191,9 @@
 						<!-- Entries -->
 						{#each filesRender.entries as entry}
 							{#if entry?.entry_type == 'directory'}
-								<Directory dir_entry={entry} />
+								<Directory dir_entry={entry} onDelete={(path: String) => deleteEntries([path])} />
 							{:else if entry?.entry_type == 'file'}
-								<File file_entry={entry} onDelete={(path: String) => deleteFiles([path])} />
+								<File file_entry={entry} onDelete={(path: String) => deleteEntries([path])} />
 							{:else}
 								<Loading />
 								<!-- <tr style="height: 72.33px"></tr> -->

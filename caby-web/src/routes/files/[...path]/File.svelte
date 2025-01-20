@@ -16,10 +16,6 @@
 	};
 
 	let { onDelete, file_entry }: { onDelete: any; file_entry: FileEntry } = $props();
-
-	// export let file_entry: FileEntry;
-
-	const delete_file = () => {};
 </script>
 
 <tr>

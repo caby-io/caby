@@ -11,7 +11,7 @@
 		pretty_modified_at: string;
 	};
 
-	export let dir_entry: DirEntry;
+	let { onDelete, dir_entry }: { onDelete: any; dir_entry: DirEntry } = $props();
 </script>
 
 <tr>
@@ -34,7 +34,7 @@
 			<div class="action fx fx-cc">
 				<iconify-icon icon="lucide:info"></iconify-icon>
 			</div>
-			<div class="action fx fx-cc">
+			<div class="action fx fx-cc" on:click={() => onDelete(dir_entry.path)}>
 				<iconify-icon icon="lucide:trash-2"></iconify-icon>
 			</div>
 			<div class="action fx fx-cc">

@@ -6,11 +6,10 @@ use crate::{
 };
 use axum::{
     body::{Body, BodyDataStream},
-    extract,
-    extract::Path,
+    extract::{self, Path},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
-    routing::{delete, get},
+    routing::{delete, get, post},
     Extension, Json, Router,
 };
 use path_clean::{clean, PathClean};
@@ -27,6 +26,7 @@ pub fn routes() -> Router {
         .route("/files/*file_path", get(api_files))
         .route("/download/*file_path", get(download_files))
         .route("/files", delete(delete_entries))
+        .route("/files/rename", post(rename_entries))
 }
 
 static ROOT_PATH: &str = "/home/suhaib/caby-home";
@@ -166,19 +166,99 @@ async fn delete_entries(
         };
 
         if metadata.is_dir() {
-            // fs::remove_dir_all(path);
+            if let Err(err) = fs::remove_dir_all(path).await {
+                errors.push(format!("couldn't delete {:?}: {:?}", relative_path, err));
+                continue;
+            }
             deleted.push(rel_path.to_str().unwrap().to_owned());
             continue;
         }
-        debug!("got a file at {:?}", path);
-        // fs::remove_file(path);
+
+        if let Err(err) = fs::remove_file(path).await {
+            errors.push(format!("couldn't delete {:?}: {:?}", relative_path, err));
+            continue;
+        }
         deleted.push(rel_path.to_str().unwrap().to_owned());
     }
 
     jsend::JSendBuilder::new()
-        .success(DeleteEntriesResponse {
-            deleted, // todo: make safe
-            errors,
-        })
+        .success(DeleteEntriesResponse { deleted, errors })
+        .into_response()
+}
+
+#[derive(Deserialize)]
+struct RenamedEntriesRequest {
+    pub entries: Vec<(String, String)>,
+    pub force: bool,
+}
+
+#[derive(Serialize)]
+struct RenamedEntriesResponse {
+    pub renamed: Vec<(String, String)>,
+    pub errors: Vec<String>,
+}
+
+async fn rename_entries(
+    ctx: Result<Ctx>,
+    extract::Json(req): extract::Json<RenamedEntriesRequest>,
+) -> Response {
+    let root_path = PathBuf::from(ROOT_PATH);
+
+    let mut renamed = vec![];
+    let mut errors = vec![];
+
+    for (input_src, input_dst) in req.entries {
+        // Build & validate source path
+        let src_rpath = PathBuf::from(input_src.clone()).clean();
+        let Some(src_path) = joined_path(&root_path, &src_rpath) else {
+            // todo: make error structured and parseable
+            errors.push(format!("{:?} invaild source path", input_src));
+            continue;
+        };
+
+        let Ok(src_metadata) = fs::metadata(src_path.clone()).await else {
+            // todo: make error structured and parseable
+            errors.push(format!("source {:?} not found", src_rpath));
+            continue;
+        };
+
+        // Build & validate destination path
+        let dst_rpath = PathBuf::from(input_dst.clone()).clean();
+        let Some(dst_path) = joined_path(&root_path, &dst_rpath) else {
+            // todo: make error structured and parseable
+            errors.push(format!("{:?} invaild destination path", input_src));
+            continue;
+        };
+
+        let Ok(exists) = fs::try_exists(dst_path.clone()).await else {
+            // todo: choose whether to display or output the error
+            errors.push(format!(
+                "{:?}: couldn't determine whether destination path exists",
+                dst_path
+            ));
+            continue;
+        };
+
+        if exists {
+            errors.push(format!("{:?}: destination exists", dst_path));
+            continue;
+        }
+
+        if let Err(err) = fs::rename(src_path, dst_path).await {
+            errors.push(format!(
+                "couldn't rename {:?} to {:?}: {:?}",
+                src_rpath, dst_rpath, err
+            ));
+            continue;
+        }
+
+        renamed.push((
+            src_rpath.to_str().unwrap().to_owned(),
+            dst_rpath.to_str().unwrap().to_owned(),
+        ));
+    }
+
+    jsend::JSendBuilder::new()
+        .success(RenamedEntriesResponse { renamed, errors })
         .into_response()
 }
