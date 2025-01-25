@@ -29,6 +29,7 @@
     --clr-title: #2d2c37;
     --clr-text: #1d1d21;
     --clr-background: hsl(260, 27%, 98%);
+    --clr-secondary-background: hsl(260, 4%, 92%);
     --clr-primary: #101828;
     --clr-secondary: #465366;
     --clr-accent: #d8d8d8;
@@ -37,6 +38,7 @@
 :root[data-theme=dark] {
     --clr-text: hsl(260, 27%, 98%);
     --clr-background: hsl(240, 9%, 4%);
+    --clr-secondary-background: hsl(240, 9%, 20%);
     --clr-primary: #101828;
     --clr-secondary: #465366;
     --clr-accent: #d8d8d8;

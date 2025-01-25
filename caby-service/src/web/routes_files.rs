@@ -226,7 +226,7 @@ async fn rename_entries(
         let dst_rpath = PathBuf::from(input_dst.clone()).clean();
         let Some(dst_path) = joined_path(&root_path, &dst_rpath) else {
             // todo: make error structured and parseable
-            errors.push(format!("{:?} invaild destination path", input_src));
+            errors.push(format!("{:?} invaild destination path", input_dst));
             continue;
         };
 

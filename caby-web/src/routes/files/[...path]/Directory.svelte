@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { join } from '$lib/helpers';
+	import { join } from '$lib/fs';
 
-	type DirEntry = {
+	export type DirEntry = {
 		entry_type: string;
 		name: string;
 		path: string;
@@ -11,17 +11,18 @@
 		pretty_modified_at: string;
 	};
 
-	let { onDelete, dir_entry }: { onDelete: any; dir_entry: DirEntry } = $props();
+	let { dir_entry, onDelete, onRename }: { dir_entry: DirEntry; onDelete: any; onRename: any } =
+		$props();
 </script>
 
-<tr>
+<tr draggable="true">
 	<td data-cell="select" class="check"><iconify-icon icon="lucide:square"></iconify-icon></td>
 	<!-- todo: improve -->
 	<td data-cell="main" class="main">
 		<div class="fx fx-cc">
-			<div class="icon fx fx-cc"><a href={join('files', dir_entry.path)}>📁</a></div>
+			<div class="icon fx fx-cc"><a href={`/${join('files', dir_entry.path)}`}>📁</a></div>
 			<div class="text fx-grow">
-				<div class="name"><a href={join('files', dir_entry.path)}>{dir_entry.name}/</a></div>
+				<div class="name"><a href={`/${join('files', dir_entry.path)}`}>{dir_entry.name}/</a></div>
 				<div class="size">–</div>
 			</div>
 		</div>
@@ -31,8 +32,8 @@
 			<div class="action fx fx-cc">
 				<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
 			</div>
-			<div class="action fx fx-cc">
-				<iconify-icon icon="lucide:info"></iconify-icon>
+			<div class="action fx fx-cc" on:click={() => onRename(dir_entry)}>
+				<iconify-icon icon="lucide:pencil"></iconify-icon>
 			</div>
 			<div class="action fx fx-cc" on:click={() => onDelete(dir_entry.path)}>
 				<iconify-icon icon="lucide:trash-2"></iconify-icon>
@@ -46,5 +47,5 @@
 </tr>
 
 <style lang="scss">
-	@import 'entry';
+	@use 'entry';
 </style>

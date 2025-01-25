@@ -1,10 +1,18 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import * as fs from '$lib/fs';
 
 	import 'iconify-icon';
-	import Directory from './Directory.svelte';
-	import File from './File.svelte';
+	import Directory, { type DirEntry } from './Directory.svelte';
+	import File, { type FileEntry } from './File.svelte';
 	import Loading from './Loading.svelte';
+
+	type FilesResponse = {
+		path: string | null;
+		parent_dir: string | null;
+		current_dir: string;
+		entries: Array<Entry>;
+	};
 
 	type Entry = {
 		entry_type: string;
@@ -15,13 +23,6 @@
 		modified_at: string;
 		pretty_modified_at: string;
 		entry_fields: any; // todo
-	};
-
-	type FilesResponse = {
-		path: string | null;
-		parent_dir: string | null;
-		current_dir: string;
-		entries: Array<Entry>;
 	};
 
 	let filesResponse: FilesResponse = $state({
@@ -106,7 +107,7 @@
 		}
 	};
 
-	const deleteEntries = async (paths: [String]) => {
+	const deleteEntries = async (paths: [string]) => {
 		const response = await fetch('http://localhost:8080/v0/files', {
 			method: 'delete',
 			headers: {
@@ -118,9 +119,41 @@
 				force: false
 			})
 		});
+		// todo: handle errors
 		const payload = await response.json();
-		console.log(payload);
 		await get_data($page.params.path);
+	};
+
+	const renameEntries = async (entries: [[string, string]]) => {
+		const response = await fetch('http://localhost:8080/v0/files/rename', {
+			method: 'post',
+			headers: {
+				Accept: 'application/json',
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				entries,
+				force: false
+			})
+		});
+		// todo: handle errors
+		const payload = await response.json();
+		await get_data($page.params.path);
+	};
+
+	let renameEntry = $state({
+		srcName: '',
+		srcPath: '',
+		dstName: ''
+	});
+
+	const renameEntryDialog = (entry: FileEntry | DirEntry) => {
+		renameEntry.srcName = entry.name;
+		renameEntry.srcPath = entry.path;
+		renameEntry.dstName = entry.name;
+
+		let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
+		dialog!.showModal();
 	};
 
 	$effect(() => {
@@ -177,10 +210,12 @@
 								<td data-cell="select" class="check"></td>
 								<td data-cell="main" class="main fx">
 									<div class="icon fx fx-cc">
-										<a href={join('files', filesResponse.parent_dir)}>📁</a>
+										<a href={`${join('files', filesResponse.parent_dir)}`}>📁</a>
 									</div>
 									<div class="text fx-grow">
-										<div class="name"><a href={join('files', filesResponse.parent_dir)}>..</a></div>
+										<div class="name">
+											<a href={`${join('files', filesResponse.parent_dir)}`}>..</a>
+										</div>
 										<!-- <div class="size">Unknown</div> -->
 									</div>
 								</td>
@@ -191,9 +226,17 @@
 						<!-- Entries -->
 						{#each filesRender.entries as entry}
 							{#if entry?.entry_type == 'directory'}
-								<Directory dir_entry={entry} onDelete={(path: String) => deleteEntries([path])} />
+								<Directory
+									dir_entry={entry}
+									onDelete={(path: string) => deleteEntries([path])}
+									onRename={(entry: DirEntry) => renameEntryDialog(entry)}
+								/>
 							{:else if entry?.entry_type == 'file'}
-								<File file_entry={entry} onDelete={(path: String) => deleteEntries([path])} />
+								<File
+									file_entry={entry}
+									onDelete={(path: string) => deleteEntries([path])}
+									onRename={(entry: FileEntry) => renameEntryDialog(entry)}
+								/>
 							{:else}
 								<Loading />
 								<!-- <tr style="height: 72.33px"></tr> -->
@@ -205,6 +248,45 @@
 		</main>
 	</section>
 </div>
+
+<dialog id="rename-modal" class="rename-modal">
+	<header class="fx">
+		<h2>Rename</h2>
+		<button
+			class="close fx fx-cc"
+			onclick={() => {
+				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
+				dialog!.close();
+			}}
+		>
+			<iconify-icon icon="lucide:x"></iconify-icon>
+		</button>
+	</header>
+	<main>
+		<p>Renaming '<span>{renameEntry.srcName}</span>'</p>
+		<input type="text" bind:value={renameEntry.dstName} />
+	</main>
+	<footer class="fx fx-cc">
+		<button
+			class="cancel"
+			onclick={() => {
+				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
+				dialog!.close();
+			}}>Cancel</button
+		>
+		<button
+			onclick={() => {
+				renameEntries([
+					[renameEntry.srcPath, fs.join(fs.parent(renameEntry.srcPath), renameEntry.dstName)]
+				]);
+				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
+				dialog!.close();
+			}}
+		>
+			Rename
+		</button>
+	</footer>
+</dialog>
 
 <style lang="scss">
 	.right {
@@ -365,5 +447,82 @@
 		// 		}
 		// 	}
 		// }
+	}
+
+	.rename-modal {
+		&::backdrop {
+			background: var(--clr-background);
+			opacity: 0.5;
+			backdrop-filter: blur(2px);
+		}
+
+		margin: auto;
+		background: var(--clr-background);
+		color: var(--clr-primary);
+		padding: 0;
+		min-width: 30rem;
+		max-width: 80vw;
+		border: 0;
+		box-shadow: 0 0 1em rgb(0 0 0 / 0.3);
+
+		> header {
+			background: var(--clr-primary);
+			color: var(--clr-background);
+			padding: 0.5rem 1rem;
+
+			> h2 {
+				font-weight: normal;
+			}
+
+			> .close {
+				cursor: pointer;
+				background: none;
+				padding: 0;
+				border: none;
+				font-size: 1.5em;
+				margin-left: auto;
+			}
+		}
+
+		> main {
+			padding: 1.5em;
+
+			> p > span {
+				font-weight: bold;
+				// color: var(--clr-primary);
+			}
+		}
+
+		input {
+			outline: none;
+			border: none;
+			border-bottom: 2px solid var(--clr-primary);
+			border-radius: 3px 3px 1px 1px;
+			background: var(--clr-secondary-background);
+			color: var(--clr-text);
+			font-size: 1.1em;
+			padding: 0.5em;
+		}
+
+		> footer {
+			background: var(--clr-secondary-background);
+			padding: 0.5rem 1rem;
+			justify-content: flex-end;
+			gap: 0.5em;
+
+			button {
+				cursor: pointer;
+				font-size: 1em;
+				background: var(--clr-primary);
+				border: none;
+				border-radius: 2px;
+				padding: 0.5rem 1rem;
+
+				&.cancel {
+					background: none;
+					color: var(--clr-primary);
+				}
+			}
+		}
 	}
 </style>

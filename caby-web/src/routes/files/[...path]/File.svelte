@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { join } from '$lib/helpers';
+	import { join } from '$lib/fs';
 
-	type FileEntry = {
+	export type FileEntry = {
 		entry_type: string;
 		name: string;
 		path: string;
@@ -15,10 +15,11 @@
 		};
 	};
 
-	let { onDelete, file_entry }: { onDelete: any; file_entry: FileEntry } = $props();
+	let { file_entry, onDelete, onRename }: { file_entry: FileEntry; onDelete: any; onRename: any } =
+		$props();
 </script>
 
-<tr>
+<tr draggable="true">
 	<td data-cell="select" class="check"
 		><iconify-icon icon="lucide:square-check-big"></iconify-icon></td
 	>
@@ -35,13 +36,13 @@
 		<div class="fx fx-ac">
 			<a
 				class="action fx fx-cc"
-				href={'http://localhost:8080/v0' + join('download', file_entry.path!)}
+				href={'http://localhost:8080/v0/' + join('download', file_entry.path!)}
 				download={file_entry.name}
 			>
 				<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
 			</a>
-			<div class="action fx fx-cc">
-				<iconify-icon icon="lucide:info"></iconify-icon>
+			<div class="action fx fx-cc" on:click={() => onRename(file_entry)}>
+				<iconify-icon icon="lucide:pencil"></iconify-icon>
 			</div>
 			<div class="action fx fx-cc" on:click={() => onDelete(file_entry.path)}>
 				<iconify-icon icon="lucide:trash-2"></iconify-icon>
@@ -55,5 +56,5 @@
 </tr>
 
 <style lang="scss">
-	@import 'entry';
+	@use 'entry';
 </style>

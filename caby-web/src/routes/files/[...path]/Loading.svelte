@@ -20,7 +20,7 @@
 </tr>
 
 <style lang="scss">
-	@import 'entry';
+	@use 'entry';
 
 	.actions span.ghost {
 		height: 10px;
