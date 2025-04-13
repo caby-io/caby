@@ -1,3 +1,24 @@
+<script module lang="ts">
+	export const enum MoveOp {
+		ADD_SRC,
+		REM_SRC,
+		// SET_DST,
+		// REM_DST,
+		EXEC
+	}
+
+	export type Entry = {
+		entry_type: string;
+		name: string;
+		path: string;
+		created_at: string;
+		pretty_created_at: string;
+		modified_at: string;
+		pretty_modified_at: string;
+		entry_fields: any; // todo
+	};
+</script>
+
 <script lang="ts">
 	import { page } from '$app/stores';
 	import * as fs from '$lib/fs';
@@ -12,17 +33,6 @@
 		parent_dir: string | null;
 		current_dir: string;
 		entries: Array<Entry>;
-	};
-
-	type Entry = {
-		entry_type: string;
-		name: string;
-		path: string;
-		created_at: string;
-		pretty_created_at: string;
-		modified_at: string;
-		pretty_modified_at: string;
-		entry_fields: any; // todo
 	};
 
 	let filesResponse: FilesResponse = $state({
@@ -42,9 +52,9 @@
 
 	let loading = $state(false);
 
-	const get_data = async (path: string) => {
+	const get_files_list = async (path: string) => {
 		loading = true;
-		const response = await fetch('http://localhost:8080/v0/files/' + path);
+		const response = await fetch('http://localhost:8080/v0/files/list/' + path);
 		const payload = await response.json();
 
 		filesResponse = payload.data;
@@ -107,9 +117,9 @@
 		}
 	};
 
-	const deleteEntries = async (paths: [string]) => {
-		const response = await fetch('http://localhost:8080/v0/files', {
-			method: 'delete',
+	const delete_files = async (paths: [string]) => {
+		const response = await fetch('http://localhost:8080/v0/files/delete', {
+			method: 'post',
 			headers: {
 				Accept: 'application/json',
 				'Content-Type': 'application/json'
@@ -121,11 +131,11 @@
 		});
 		// todo: handle errors
 		const payload = await response.json();
-		await get_data($page.params.path);
+		await get_files_list($page.params.path);
 	};
 
-	const renameEntries = async (entries: [[string, string]]) => {
-		const response = await fetch('http://localhost:8080/v0/files/rename', {
+	const move_files = async (entries: [string, string][]) => {
+		const response = await fetch('http://localhost:8080/v0/files/move', {
 			method: 'post',
 			headers: {
 				Accept: 'application/json',
@@ -138,7 +148,7 @@
 		});
 		// todo: handle errors
 		const payload = await response.json();
-		await get_data($page.params.path);
+		await get_files_list($page.params.path);
 	};
 
 	let renameEntry = $state({
@@ -156,8 +166,42 @@
 		dialog!.showModal();
 	};
 
+	let draggedEntries: Set<Entry> = $state(new Set());
+	// let targetEntry: Entry | undefined = $state();
+
+	const handleMoveOp = async (operation: MoveOp, entry: Entry) => {
+		switch (operation) {
+			case MoveOp.ADD_SRC:
+				draggedEntries.add(entry);
+				break;
+			case MoveOp.REM_SRC:
+				draggedEntries.delete(entry);
+				break;
+			// case MoveOp.SET_DST:
+			// 	targetEntry = entry;
+			// 	break;
+			// case MoveOp.REM_DST:
+			// 	targetEntry = undefined;
+			// 	break;
+			case MoveOp.EXEC:
+				if (draggedEntries.size < 1) {
+					console.error('missing destination');
+					return;
+				}
+
+				let renames: [string, string][] = [];
+
+				draggedEntries.forEach((e) => {
+					renames.push([e.path, fs.join(entry.path, e.name)]);
+				});
+
+				await move_files(renames);
+				break;
+		}
+	};
+
 	$effect(() => {
-		get_data($page.params.path);
+		get_files_list($page.params.path);
 	});
 
 	// $effect(() => {
@@ -227,14 +271,15 @@
 						{#each filesRender.entries as entry}
 							{#if entry?.entry_type == 'directory'}
 								<Directory
-									dir_entry={entry}
-									onDelete={(path: string) => deleteEntries([path])}
+									{entry}
+									onDelete={(path: string) => delete_files([path])}
 									onRename={(entry: DirEntry) => renameEntryDialog(entry)}
+									{handleMoveOp}
 								/>
 							{:else if entry?.entry_type == 'file'}
 								<File
 									file_entry={entry}
-									onDelete={(path: string) => deleteEntries([path])}
+									onDelete={(path: string) => delete_files([path])}
 									onRename={(entry: FileEntry) => renameEntryDialog(entry)}
 								/>
 							{:else}
@@ -276,7 +321,7 @@
 		>
 		<button
 			onclick={() => {
-				renameEntries([
+				move_files([
 					[renameEntry.srcPath, fs.join(fs.parent(renameEntry.srcPath), renameEntry.dstName)]
 				]);
 				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');

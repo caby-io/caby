@@ -1,4 +1,4 @@
-#![allow(unused)]
+// #![allow(unused)]
 
 pub use self::error::{Error, Result};
 
@@ -37,7 +37,7 @@ async fn main() {
         .allow_origin(Any);
 
     let app = Router::new()
-        .nest("/v0", web::api_routes())
+        .nest("/v0", web::api_router())
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(

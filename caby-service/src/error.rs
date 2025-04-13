@@ -19,6 +19,7 @@ pub enum Error {
     CtxMissing,
 }
 
+// todo: jsend this?
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         warn!("unhandled error: {:?}", self);
