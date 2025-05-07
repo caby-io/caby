@@ -35,8 +35,8 @@ pub async fn handle_put_files(
         None => return (StatusCode::BAD_REQUEST, "file path required").into_response(),
     };
 
-    let root_path = PathBuf::from(super::ROOT_PATH);
-    let Some(path) = joined_path(&root_path, &rel_path) else {
+    let files_path = PathBuf::from(super::ROOT_PATH).join("files");
+    let Some(path) = joined_path(&files_path, &rel_path) else {
         return jsend::JSendBuilder::new()
             .fail("invalid path")
             .into_response();

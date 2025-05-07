@@ -41,7 +41,7 @@ pub async fn handle_move_files(
     ctx: Result<Ctx>,
     Json(req): Json<RenamedEntriesRequest>,
 ) -> Response {
-    let root_path = PathBuf::from(super::ROOT_PATH);
+    let files_path = PathBuf::from(super::ROOT_PATH).join("files");
 
     let mut renamed = vec![];
     let mut errors = vec![];
@@ -49,7 +49,7 @@ pub async fn handle_move_files(
     for (input_src, input_dst) in req.entries {
         // Build & validate source path
         let src_rpath = PathBuf::from(input_src.clone()).clean();
-        let Some(src_path) = joined_path(&root_path, &src_rpath) else {
+        let Some(src_path) = joined_path(&files_path, &src_rpath) else {
             errors.push(RenameError::new(input_src, input_dst, "invalid source"));
             continue;
         };
@@ -61,7 +61,7 @@ pub async fn handle_move_files(
 
         // Build & validate destination path
         let dst_rpath = PathBuf::from(input_dst.clone()).clean();
-        let Some(dst_path) = joined_path(&root_path, &dst_rpath) else {
+        let Some(dst_path) = joined_path(&files_path, &dst_rpath) else {
             errors.push(RenameError::new(
                 input_src,
                 input_dst,

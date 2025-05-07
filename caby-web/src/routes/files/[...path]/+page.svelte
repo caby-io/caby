@@ -210,7 +210,10 @@
 </script>
 
 <div class="right fx fx--col fx-grow">
-	<header>breadcrumbs</header>
+	<header>
+		<input type="file" id="myFile" name="filename" multiple />
+		breadcrumbs
+	</header>
 	<section class="file-list">
 		<section class="top-bar">
 			<div class="location"></div>

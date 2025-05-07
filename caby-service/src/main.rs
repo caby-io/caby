@@ -1,4 +1,4 @@
-// #![allow(unused)]
+#![allow(unused)]
 
 pub use self::error::{Error, Result};
 
@@ -7,17 +7,22 @@ use axum::{
     http::{header, Method},
     Router,
 };
+use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
 };
 
+mod config;
 mod ctx;
 mod error;
 mod files;
 mod jsend;
 mod web;
+
+// TEMP
+pub static ROOT_PATH: &str = "/home/suhaib/caby-home";
 
 #[tokio::main]
 async fn main() {
@@ -27,6 +32,20 @@ async fn main() {
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_max_level(tracing::Level::DEBUG)
         .init();
+
+    // Initialize root dir
+    let files_path = PathBuf::from(ROOT_PATH).join("files");
+    let hidden_path = PathBuf::from(ROOT_PATH).join(".caby");
+
+    tokio::fs::create_dir_all(files_path).await.unwrap();
+    tokio::fs::create_dir_all(hidden_path.join("uploads"))
+        .await
+        .unwrap();
+    tokio::fs::create_dir_all(hidden_path.join("files"))
+        .await
+        .unwrap();
+
+    // todo: validation
 
     // TEMP
     let cors_layer = CorsLayer::new()

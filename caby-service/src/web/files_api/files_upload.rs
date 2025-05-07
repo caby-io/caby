@@ -1,4 +1,4 @@
-use crate::{ctx::Ctx, error::Result, files::joined_path, jsend};
+use crate::{ctx::Ctx, error::Result, jsend};
 use axum::{
     extract::Path,
     http::StatusCode,
@@ -8,22 +8,24 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use tokio::fs;
+use tracing::debug;
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 enum UploadEntryType {
     Directory,
     File,
 }
 
-#[derive(Deserialize)]
-struct UploadEntry {
+// todo: need to consider how best to handle empty dirs
+#[derive(Deserialize, Debug)]
+pub struct UploadEntry {
     entry_type: UploadEntryType,
     name: String,
-    relative_path: String,
+    dest: String,
     size: u64,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Debug)]
 pub struct RegisterUploadRequest {
     pub entries: Vec<UploadEntry>,
     // todo: additional controls such as overriding?
@@ -37,29 +39,21 @@ struct RegisterUploadResponse {
 
 pub async fn handle_register_upload(
     ctx: Result<Ctx>,
-    path: Option<Path<String>>,
     Json(payload): Json<RegisterUploadRequest>,
 ) -> Response {
-    let rel_path = match path {
-        Some(Path(p)) => PathBuf::from(p),
-        // todo: jsend
-        None => return (StatusCode::BAD_REQUEST, "file path required").into_response(),
-    };
+    debug!("{:?}", payload);
 
-    // todo: for now we won't allow any sort of merging or overriding of files/folders
+    // Validate?
+    // Generate an ID for this request
+    let id = xid::new();
+    // Create a tmp dir for this upload
 
-    // Check that path exists and is valid
+    // Create a tmp file for this upload
 
-    let root_path = PathBuf::from(super::ROOT_PATH);
-    let Some(path) = joined_path(&root_path, &rel_path) else {
-        return jsend::JSendBuilder::new()
-            .fail("invalid path")
-            .into_response();
-    };
-
-    let Ok(metadata) = fs::metadata(path.clone()).await else {
-        return jsend::JSendBuilder::new().fail("bad path").into_response();
-    };
-
-    "test".into_response()
+    jsend::JSendBuilder::new()
+        .success(RegisterUploadResponse {
+            id: id.to_string(),
+            chunk_size: 1_000_000,
+        })
+        .into_response()
 }

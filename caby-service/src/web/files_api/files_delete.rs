@@ -25,14 +25,14 @@ pub async fn handle_delete_files(
     ctx: Result<Ctx>,
     extract::Json(req): extract::Json<DeleteEntriesRequest>,
 ) -> Response {
-    let root_path = PathBuf::from(super::ROOT_PATH);
+    let files_path = PathBuf::from(super::ROOT_PATH).join("files");
 
     let mut deleted = vec![];
     let mut errors = vec![];
 
     for relative_path in req.entries {
         let rel_path = PathBuf::from(relative_path.clone()).clean();
-        let Some(path) = joined_path(&root_path, &rel_path) else {
+        let Some(path) = joined_path(&files_path, &rel_path) else {
             // todo
             errors.push(format!("{:?} invaild path", relative_path));
             continue;
