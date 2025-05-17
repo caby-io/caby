@@ -7,6 +7,7 @@ use axum::{
     http::{header, Method},
     Router,
 };
+use config::Config;
 use std::path::PathBuf;
 use tokio::net::TcpListener;
 use tower_http::{
@@ -26,6 +27,10 @@ pub static ROOT_PATH: &str = "/home/suhaib/caby-home";
 
 #[tokio::main]
 async fn main() {
+    // Build config
+    let cfg = Config::new();
+
+    // Set up tracing
     tracing_subscriber::fmt()
         .with_target(false)
         .compact()
@@ -33,19 +38,11 @@ async fn main() {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    // Initialize root dir
-    let files_path = PathBuf::from(ROOT_PATH).join("files");
-    let hidden_path = PathBuf::from(ROOT_PATH).join(".caby");
-
-    tokio::fs::create_dir_all(files_path).await.unwrap();
-    tokio::fs::create_dir_all(hidden_path.join("uploads"))
-        .await
-        .unwrap();
-    tokio::fs::create_dir_all(hidden_path.join("files"))
-        .await
-        .unwrap();
-
-    // todo: validation
+    // Initialize paths
+    // todo: log something when dir is created
+    tokio::fs::create_dir_all(&cfg.live_path).await.unwrap();
+    tokio::fs::create_dir_all(&cfg.meta_path).await.unwrap();
+    tokio::fs::create_dir_all(&cfg.uploads_path).await.unwrap();
 
     // TEMP
     let cors_layer = CorsLayer::new()
@@ -67,7 +64,8 @@ async fn main() {
                 ),
             // .on_failure(tower_http::trace::DefaultOnFailure::new().level(tracing::Level::WARN)),
         )
-        .layer(cors_layer);
+        .layer(cors_layer)
+        .with_state(cfg);
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
     axum::serve(listener, app).await.unwrap();

@@ -3,9 +3,11 @@ use axum::{
     Router,
 };
 
+use crate::config::Config;
+
 mod files_api;
 
-pub fn api_router() -> Router {
+pub fn api_router() -> Router<Config> {
     Router::new().nest(
         "/files",
         Router::new()

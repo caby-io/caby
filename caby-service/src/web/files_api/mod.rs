@@ -12,7 +12,3 @@ pub use files_list::handle_list_files;
 pub use files_move::handle_move_files;
 pub use files_put::handle_put_files;
 pub use files_upload::handle_register_upload;
-
-// todo: TEMPORARY Move me to config
-pub static ROOT_PATH: &str = "/home/suhaib/caby-home";
-// pub static TMP_PATH: &str = "/home/suhaib/caby-home/.tmp";

@@ -1,6 +1,6 @@
-use crate::{ctx::Ctx, error::Result, files::joined_path, jsend};
+use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend};
 use axum::{
-    extract::Json,
+    extract::{Json, State},
     response::{IntoResponse, Response},
 };
 use path_clean::PathClean;
@@ -38,18 +38,17 @@ impl RenameError {
 }
 
 pub async fn handle_move_files(
+    State(cfg): State<Config>,
     ctx: Result<Ctx>,
     Json(req): Json<RenamedEntriesRequest>,
 ) -> Response {
-    let files_path = PathBuf::from(super::ROOT_PATH).join("files");
-
     let mut renamed = vec![];
     let mut errors = vec![];
 
     for (input_src, input_dst) in req.entries {
         // Build & validate source path
         let src_rpath = PathBuf::from(input_src.clone()).clean();
-        let Some(src_path) = joined_path(&files_path, &src_rpath) else {
+        let Some(src_path) = joined_path(&cfg.live_path, &src_rpath) else {
             errors.push(RenameError::new(input_src, input_dst, "invalid source"));
             continue;
         };
@@ -61,7 +60,7 @@ pub async fn handle_move_files(
 
         // Build & validate destination path
         let dst_rpath = PathBuf::from(input_dst.clone()).clean();
-        let Some(dst_path) = joined_path(&files_path, &dst_rpath) else {
+        let Some(dst_path) = joined_path(&cfg.live_path, &dst_rpath) else {
             errors.push(RenameError::new(
                 input_src,
                 input_dst,

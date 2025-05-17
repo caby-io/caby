@@ -1,6 +1,6 @@
-use crate::{ctx::Ctx, error::Result, files::joined_path, jsend};
+use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend};
 use axum::{
-    extract,
+    extract::{self, State},
     response::{IntoResponse, Response},
 };
 use path_clean::PathClean;
@@ -22,17 +22,16 @@ struct DeleteEntriesResponse {
 
 // todo: this should be archiving instead of deleting
 pub async fn handle_delete_files(
+    State(cfg): State<Config>,
     ctx: Result<Ctx>,
     extract::Json(req): extract::Json<DeleteEntriesRequest>,
 ) -> Response {
-    let files_path = PathBuf::from(super::ROOT_PATH).join("files");
-
     let mut deleted = vec![];
     let mut errors = vec![];
 
     for relative_path in req.entries {
         let rel_path = PathBuf::from(relative_path.clone()).clean();
-        let Some(path) = joined_path(&files_path, &rel_path) else {
+        let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
             // todo
             errors.push(format!("{:?} invaild path", relative_path));
             continue;

@@ -18,4 +18,3 @@ serde = { version = "1.0.197", features = ["derive"] }
 path-clean = "1.0.1"
 mime_guess = "2.0.5"
 xid = "1.1.1"
-config = { version = "0.15.11", features = ["yaml"] }

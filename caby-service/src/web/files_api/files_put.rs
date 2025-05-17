@@ -1,6 +1,6 @@
-use crate::{ctx::Ctx, error::Result, files::joined_path, jsend};
+use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend};
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     Json,
@@ -9,14 +9,14 @@ use serde::Deserialize;
 use std::path::PathBuf;
 
 #[derive(Deserialize)]
-enum PutEntryType {
+pub enum PutEntryType {
     Directory,
     File,
     Upload,
 }
 
 #[derive(Deserialize)]
-struct PutEntryRequest {
+pub struct PutEntryRequest {
     pub entry_type: PutEntryType,
     pub name: String,
     // todo: this probably isnt the best for raw files?
@@ -25,6 +25,7 @@ struct PutEntryRequest {
 
 // used to create directories and small, inline, files
 pub async fn handle_put_files(
+    State(cfg): State<Config>,
     ctx: Result<Ctx>,
     path: Option<Path<String>>,
     Json(payload): Json<PutEntryRequest>,
@@ -35,8 +36,7 @@ pub async fn handle_put_files(
         None => return (StatusCode::BAD_REQUEST, "file path required").into_response(),
     };
 
-    let files_path = PathBuf::from(super::ROOT_PATH).join("files");
-    let Some(path) = joined_path(&files_path, &rel_path) else {
+    let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
         return jsend::JSendBuilder::new()
             .fail("invalid path")
             .into_response();

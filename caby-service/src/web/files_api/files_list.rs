@@ -1,11 +1,12 @@
 use crate::{
+    config::Config,
     ctx::Ctx,
     error::Result,
     files::{build_entries, joined_path, Entry},
     jsend,
 };
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
@@ -18,12 +19,15 @@ struct ListFilesResponse {
     pub entries: Vec<Entry>,
 }
 
-pub async fn handle_list_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Response {
+pub async fn handle_list_files(
+    State(cfg): State<Config>,
+    ctx: Result<Ctx>,
+    files_path: Option<Path<String>>,
+) -> Response {
     // todo: sanitize path, more
-    let files_dir = PathBuf::from(super::ROOT_PATH).join("files");
     let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
 
-    let Some(path) = joined_path(&files_dir, &rel_path) else {
+    let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
         return jsend::JSendBuilder::new()
             .fail("invalid path")
             .into_response();
@@ -34,7 +38,7 @@ pub async fn handle_list_files(ctx: Result<Ctx>, files_path: Option<Path<String>
     // todo: get base path from a var
     // todo: consider santizing after join
     // todo: check that it is a dir? OR return something else for files
-    let entries = match build_entries(&files_dir, &path).await {
+    let entries = match build_entries(&cfg.live_path, &path).await {
         Ok(r) => r,
         Err(err) => {
             return resp

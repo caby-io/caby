@@ -1,21 +1,24 @@
-use crate::{ctx::Ctx, error::Result, files::joined_path, jsend};
+use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend};
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Path, State},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
 };
 use std::path::PathBuf;
 use tokio_util::io::ReaderStream;
 
-pub async fn handle_download_files(ctx: Result<Ctx>, files_path: Option<Path<String>>) -> Response {
+pub async fn handle_download_files(
+    State(cfg): State<Config>,
+    ctx: Result<Ctx>,
+    files_path: Option<Path<String>>,
+) -> Response {
     let rel_path = match files_path {
         Some(Path(p)) => PathBuf::from(p),
         None => return (StatusCode::NOT_FOUND, "file path required").into_response(),
     };
 
-    let files_path = PathBuf::from(super::ROOT_PATH).join("files");
-    let Some(path) = joined_path(&files_path, &rel_path) else {
+    let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
         return jsend::JSendBuilder::new()
             .fail("invalid path")
             .into_response();
