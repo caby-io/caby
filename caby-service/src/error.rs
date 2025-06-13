@@ -17,6 +17,8 @@ impl std::error::Error for Error {}
 #[derive(Clone, Debug)]
 pub enum Error {
     CtxMissing,
+    HeaderMissing(String),
+    Generic(String),
 }
 
 // todo: jsend this?

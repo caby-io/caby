@@ -112,7 +112,7 @@ a:focus {
 }
 
 .fx-jc {
-    align-items: center;
+    justify-content: center;
 }
 
 .flow>*+* {

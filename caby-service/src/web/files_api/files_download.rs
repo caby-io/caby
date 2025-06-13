@@ -41,6 +41,7 @@ pub async fn handle_download_files(
 
     let filename = path.file_name().unwrap();
     // todo: make this mime type force a download
+    // todo: make mime or download be based on argument
     let content_type = mime_guess::from_path(&path)
         .first_raw()
         .unwrap_or("application/octet-stream");

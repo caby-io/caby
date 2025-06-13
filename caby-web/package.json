@@ -33,6 +33,8 @@
 	},
 	"type": "module",
 	"dependencies": {
-		"iconify-icon": "^2.1.0"
+		"hash-wasm": "^4.12.0",
+		"iconify-icon": "^2.1.0",
+		"xxhash-wasm": "^1.1.0"
 	}
 }

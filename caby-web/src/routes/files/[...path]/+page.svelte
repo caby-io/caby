@@ -17,6 +17,26 @@
 		pretty_modified_at: string;
 		entry_fields: any; // todo
 	};
+
+	export type RegisterUploadRequest = {
+		base_path: string;
+		entries: UploadEntry[];
+		conflict_strategy: ConflictStrategy;
+	};
+
+	enum ConflictStrategy {
+		OVERRIDE = 'override',
+		SKIP = 'skip',
+		PROMPT = 'prompt',
+		DECONFLICT = 'deconflict'
+	}
+
+	export type UploadEntry = {
+		entry_type: string;
+		name: string;
+		size: number;
+		xxh_digest: string;
+	};
 </script>
 
 <script lang="ts">
@@ -24,6 +44,7 @@
 	import * as fs from '$lib/fs';
 
 	import 'iconify-icon';
+	import xxhash from 'xxhash-wasm';
 	import Directory, { type DirEntry } from './Directory.svelte';
 	import File, { type FileEntry } from './File.svelte';
 	import Loading from './Loading.svelte';
@@ -200,6 +221,75 @@
 		}
 	};
 
+	// File upload
+	let selectedFiles: FileList | undefined = $state();
+
+	const hashFile = async (file: globalThis.File): Promise<string> => {
+		// console.log('Starting read of: ' + file.name);
+		// const reader = new FileReader();
+		const reader = file.stream().getReader();
+		const { create64 } = await xxhash();
+
+		const hasher = create64();
+		while (true) {
+			const { done, value } = await reader.read();
+			if (done) {
+				break;
+			}
+			hasher.update(value);
+			// console.log('INCREMENTAL DIGEST: ' + hasher.digest());
+		}
+		const digest = hasher.digest();
+		const digest_str = digest.toString(16).padStart(16, '0');
+		// console.log('COMPLETE INT DIGEST: ' + digest);
+		// console.log('COMPLETE STR DIGEST: ' + digest.toString(16).padStart(16, '0'));
+		return digest_str;
+	};
+
+	const handle_upload_files = async (files: FileList) => {
+		let register_request: RegisterUploadRequest = {
+			base_path: $page.params.path,
+			entries: [],
+			conflict_strategy: ConflictStrategy.OVERRIDE
+		};
+
+		// todo: recursive
+		// todo: directories
+		for (const file of files) {
+			let name = file.webkitRelativePath || file.name;
+			// if (file.webkitRelativePath != '') {
+			// 	// console.log(file.webkitRelativePath.split('/').slice(1, -1));
+			// 	// name = file.webkitRelativePath.split('/').slice(1).join('/');
+			// 	name = file.webkitRelativePath;
+			// }
+
+			register_request.entries.push({
+				entry_type: 'file',
+				name,
+				size: file.size,
+				xxh_digest: await hashFile(file)
+			});
+		}
+
+		console.log(register_request);
+	};
+
+	const readFile = (blob: Blob) => {
+		return new Promise((resolve) => {
+			const reader = new FileReader();
+			reader.onloadend = () => resolve(reader.result);
+			reader.readAsArrayBuffer(blob);
+		});
+	};
+
+	$effect(() => {
+		if (!selectedFiles) {
+			return;
+		}
+
+		handle_upload_files(selectedFiles);
+	});
+
 	$effect(() => {
 		get_files_list($page.params.path);
 	});
@@ -211,7 +301,8 @@
 
 <div class="right fx fx--col fx-grow">
 	<header>
-		<input type="file" id="myFile" name="filename" multiple />
+		<input type="file" id="file-input" name="filename" bind:files={selectedFiles} multiple />
+		<input type="file" id="dir-input" name="filename" bind:files={selectedFiles} webkitdirectory />
 		breadcrumbs
 	</header>
 	<section class="file-list">

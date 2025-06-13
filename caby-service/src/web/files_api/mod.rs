@@ -11,4 +11,4 @@ pub use files_download::handle_download_files;
 pub use files_list::handle_list_files;
 pub use files_move::handle_move_files;
 pub use files_put::handle_put_files;
-pub use files_upload::handle_register_upload;
+pub use files_upload::{handle_chunk_upload, handle_register_upload};

@@ -24,6 +24,7 @@
 	<nav class="sidebar__nav fx-grow fx fx--col">
 		<a href="/"><h2>Home</h2></a>
 		<a href="/files"><h2>Files</h2></a>
+		<a class="indent-1"><h2>Uploads</h2></a>
 	</nav>
 	<div class="usage-metrics">
 		<header class="fx fx-cc">
@@ -59,11 +60,15 @@
 				border-radius: 5px;
 				text-decoration: none;
 				color: var(--clr-text);
-				
+
+				&.indent-1 {
+					margin-left: 2rem;
+				}
+
 				// background: var(--clr-secondary);
 				> h2 {
 					font-size: 1.1rem;
-					font-family: "Mako", sans-serif;
+					font-family: 'Mako', sans-serif;
 					font-weight: bold;
 				}
 
@@ -73,8 +78,6 @@
 			}
 		}
 	}
-
-
 
 	header {
 		// height: var(--top-nav-height);
@@ -88,7 +91,7 @@
 		h1 {
 			color: var(--clr-title);
 			// flex-grow: 1;
-			font-family: "Oswald", sans-serif;
+			font-family: 'Oswald', sans-serif;
 			font-optical-sizing: auto;
 			font-weight: 700;
 			font-style: normal;

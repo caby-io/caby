@@ -9,7 +9,7 @@ use axum::{
 };
 use config::Config;
 use std::path::PathBuf;
-use tokio::net::TcpListener;
+use tokio::{fs, net::TcpListener};
 use tower_http::{
     cors::{Any, CorsLayer},
     trace::TraceLayer,
@@ -40,9 +40,9 @@ async fn main() {
 
     // Initialize paths
     // todo: log something when dir is created
-    tokio::fs::create_dir_all(&cfg.live_path).await.unwrap();
-    tokio::fs::create_dir_all(&cfg.meta_path).await.unwrap();
-    tokio::fs::create_dir_all(&cfg.uploads_path).await.unwrap();
+    fs::create_dir_all(&cfg.live_path).await.unwrap();
+    fs::create_dir_all(&cfg.meta_path).await.unwrap();
+    fs::create_dir_all(&cfg.uploads_path).await.unwrap();
 
     // TEMP
     let cors_layer = CorsLayer::new()
