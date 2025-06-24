@@ -5,6 +5,8 @@ use std::{
 
 use serde::Deserialize;
 
+// todo: improve the error messages
+
 #[derive(Clone, Deserialize)]
 pub struct Config {
     // paths

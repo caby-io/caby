@@ -7,6 +7,6 @@ pushd $(dirname ${0})
 cd ../
 
 # load env vars
-set -a; source .dev.env; set +a
+set -a; source .env; set +a
 
 cargo watch -q -c -w src/ -x run
