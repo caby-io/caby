@@ -8,10 +8,15 @@ use axum::{
 };
 use futures_util::{StreamExt, TryStreamExt};
 use serde::{Deserialize, Serialize};
-use std::{io, path::PathBuf, pin::pin, str::FromStr};
+use std::{
+    io::{self},
+    path::PathBuf,
+    pin::pin,
+    str::FromStr,
+};
 use tokio::{
     fs::{self, remove_file, OpenOptions},
-    io::{AsyncWriteExt, BufReader, BufWriter},
+    io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWriteExt, BufReader},
 };
 use tokio_util::io::StreamReader;
 use tracing::debug;
@@ -108,8 +113,6 @@ pub async fn handle_chunk_upload(
 
     let full_path = cfg.uploads_path.join(id_path).join(file_path);
 
-    println!("{:?}", full_path.clone());
-
     // todo: validate
     // todo: get a JWT or other (PASETO?) so we don't have to read the config
 
@@ -126,17 +129,30 @@ pub async fn handle_chunk_upload(
     };
 
     // TODO: move to fn
-    let body_with_io_error = body
-        .into_data_stream()
-        .take(10_001) // todo: make this dynamic
-        .map_err(io::Error::other);
-    let mut body_reader = pin!(StreamReader::new(body_with_io_error));
+    let mut limited_body_stream =
+        StreamReader::new(body.into_data_stream().map_err(io::Error::other)).take(10_000_001);
 
     // todo: handle error
-    let bytes_written = tokio::io::copy(&mut body_reader, &mut file).await.unwrap();
-    if bytes_written > 10_000 {
+    let bytes_written = tokio::io::copy(&mut limited_body_stream, &mut file)
+        .await
+        .expect("couldn't copy bytes");
+
+    limited_body_stream.into_inner();
+
+    // let test = limited_body_stream.into_inner().close();
+    // let test2 = test.into_inner();
+
+    // body_reader.poll_fill_buf(cx, buf)
+
+    println!("{:?}", bytes_written);
+
+    // body_reader.fluss
+
+    if bytes_written > 10_000_000 {
         // todo: handle error
-        remove_file(full_path).await.unwrap();
+        // remove_file(full_path)
+        //     .await
+        //     .expect("could not delete oversized file");
 
         return resp
             .fail("bytes received exceeded negotiated size")
