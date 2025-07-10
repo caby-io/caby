@@ -137,16 +137,9 @@ pub async fn handle_chunk_upload(
         .await
         .expect("couldn't copy bytes");
 
-    limited_body_stream.into_inner();
-
-    // let test = limited_body_stream.into_inner().close();
-    // let test2 = test.into_inner();
-
     // body_reader.poll_fill_buf(cx, buf)
 
     println!("{:?}", bytes_written);
-
-    // body_reader.fluss
 
     if bytes_written > 10_000_000 {
         // todo: handle error

@@ -9,9 +9,9 @@ edition = "2021"
 serde_json = "1.0.115"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7.12", features = ["io"] }
-axum = { version = "0.7.5" }
-tower = "0.4.13"
-tower-http = { version = "0.5.2", features = ["cors", "trace"] }
+axum = { version = "0.8.4" }
+tower = "0.5.2"
+tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 tracing = "0.1.40"
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 serde = { version = "1.0.197", features = ["derive"] }

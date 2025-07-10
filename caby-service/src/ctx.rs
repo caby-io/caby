@@ -1,5 +1,5 @@
 use crate::{Error, Result};
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use axum::{extract::FromRequestParts, http::request::Parts};
 
 #[derive(Clone, Debug)]
 pub struct Ctx {}
@@ -10,7 +10,6 @@ impl Ctx {
     }
 }
 
-#[async_trait]
 impl<S: Send + Sync> FromRequestParts<S> for Ctx {
     type Rejection = Error;
 
