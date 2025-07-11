@@ -19,6 +19,7 @@ pub enum Error {
     CtxMissing,
     HeaderMissing(String),
     Generic(String),
+    UploadTokenParseError,
 }
 
 // todo: jsend this?

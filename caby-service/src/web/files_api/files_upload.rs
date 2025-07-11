@@ -1,4 +1,14 @@
-use crate::{config::Config, ctx::Ctx, error::Result, jsend::JSendBuilder, Error};
+use crate::{
+    config::Config,
+    ctx::Ctx,
+    error::Result,
+    files::{
+        upload::{TokenFile, UploadToken, UploadTokenPayload},
+        EntryType,
+    },
+    jsend::JSendBuilder,
+    Error,
+};
 use axum::{
     body::{to_bytes, Body},
     extract::{Path, State},
@@ -20,6 +30,8 @@ use tokio::{
 };
 use tokio_util::io::StreamReader;
 use tracing::debug;
+
+static MAX_CHUNK_SIZE: u32 = 10_000_000;
 
 #[derive(Deserialize, Debug)]
 enum UploadEntryType {
@@ -55,35 +67,53 @@ pub struct RegisterUploadRequest {
 struct RegisterUploadResponse {
     pub id: String,
     pub chunk_size: u32,
+    pub token: UploadToken,
 }
 
 // todo: return a signed token or JWT
 pub async fn handle_register_upload(
     cfg: State<Config>,
     ctx: Result<Ctx>,
-    Json(payload): Json<RegisterUploadRequest>,
+    Json(body): Json<RegisterUploadRequest>,
 ) -> Response {
-    debug!("{:?}", payload);
+    debug!("{:?}", body);
 
     // Validate?
     // Generate an ID for this request
     let id = xid::new();
-    // Create a tmp dir for this upload
+    // Create an upload dir for this upload
     fs::create_dir(&cfg.uploads_path.join(id.to_string())).await;
 
-    // Create a tmp file for this upload
+    // Create an meta file for this upload
     // TODO
+
+    // todo: make a builder function for this
+    let token_payload = UploadTokenPayload {
+        id: id.to_string(),
+        chunk_size: MAX_CHUNK_SIZE,
+        files: body
+            .entries
+            .into_iter()
+            .filter(|e| matches!(e.entry_type, UploadEntryType::File))
+            .map(|e| TokenFile {
+                name: e.name.clone(),
+                size: e.size.clone(),
+            })
+            .collect(),
+    };
 
     JSendBuilder::new()
         .success(RegisterUploadResponse {
             id: id.to_string(),
-            chunk_size: 1 * 1024 * 1024, // todo: tune
+            chunk_size: MAX_CHUNK_SIZE,
+            token: token_payload.into(),
         })
         .into_response()
 }
 
 // const HEADER_UPLOAD_ID: &str = "Caby-Upload-ID";
 // const HEADER_UPLOAD_FILE: &str = "Caby-Upload-File";
+const HEADER_UPLOAD_TOKEN: &str = "Caby-Upload-Token";
 const HEADER_UPLOAD_CHUNK: &str = "Caby-Upload-Chunk";
 
 fn get_header_value(headers: &HeaderMap, key: &str) -> Result<String> {
@@ -95,6 +125,11 @@ fn get_header_value(headers: &HeaderMap, key: &str) -> Result<String> {
         .to_owned())
 }
 
+fn get_upload_token_header(headers: &HeaderMap) -> Result<UploadTokenPayload> {
+    let header_value = get_header_value(headers, HEADER_UPLOAD_TOKEN)?;
+    Ok(header_value.try_into()?)
+}
+
 pub async fn handle_chunk_upload(
     cfg: State<Config>,
     ctx: Result<Ctx>,
@@ -104,6 +139,13 @@ pub async fn handle_chunk_upload(
 ) -> Response {
     let id_path = PathBuf::from(id);
     let file_path = PathBuf::from(file);
+
+    let token_payload = match get_upload_token_header(&headers) {
+        Ok(p) => p,
+        Err(e) => return e.into_response(),
+    };
+
+    println!("{:?}", token_payload);
     // let upload_chunk: String = match get_header_value(&headers, HEADER_UPLOAD_CHUNK) {
     //     Ok(v) => v,
     //     Err(e) => return e.into_response(),
