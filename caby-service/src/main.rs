@@ -4,7 +4,7 @@ pub use self::error::{Error, Result};
 
 use axum::{
     extract::Path,
-    http::{header, Method},
+    http::{header, HeaderName, Method},
     Router,
 };
 use config::Config;
@@ -46,8 +46,10 @@ async fn main() {
 
     // TEMP
     let cors_layer = CorsLayer::new()
-        .allow_methods([Method::GET, Method::OPTIONS, Method::POST, Method::DELETE])
-        .allow_headers([header::ACCEPT, header::CONTENT_TYPE])
+        .allow_methods(Any)
+        // temp
+        .allow_headers(Any)
+        // .allow_headers([header::ACCEPT, header::CONTENT_TYPE])
         // allow requests from any origin
         // TODO make this come from an env var
         .allow_origin(Any);

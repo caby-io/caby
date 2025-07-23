@@ -10,6 +10,8 @@ const STATUS_SUCCESS: &'static str = "success";
 const STATUS_FAIL: &'static str = "fail";
 const STATUS_ERROR: &'static str = "error";
 
+const GENERIC_INTERNAL_SERVER_ERROR: &'static str = "internal server error";
+
 #[derive(Serialize)]
 pub struct MessageJSend<T: Serialize> {
     pub status: &'static str,
@@ -55,23 +57,42 @@ impl<U> JSendBuilder<U> {
     }
 
     pub fn success<T: Serialize>(mut self, data: T) -> JSendBuilder<Success<T>> {
+        let mut status_code = StatusCode::OK;
+        if self.status_code != StatusCode::NOT_IMPLEMENTED {
+            status_code = self.status_code;
+        }
         JSendBuilder {
-            status_code: StatusCode::OK,
+            status_code,
             jsend_type: Success(data),
         }
     }
 
     pub fn fail<T: Serialize>(mut self, data: T) -> JSendBuilder<Fail<T>> {
+        let mut status_code = StatusCode::BAD_REQUEST;
+        if self.status_code != StatusCode::NOT_IMPLEMENTED {
+            status_code = self.status_code;
+        }
         JSendBuilder {
-            status_code: StatusCode::BAD_REQUEST,
+            status_code,
             jsend_type: Fail(data),
         }
     }
 
     pub fn error(mut self, message: impl Into<String>) -> JSendBuilder<Error> {
+        let mut status_code = StatusCode::INTERNAL_SERVER_ERROR;
+        if self.status_code != StatusCode::NOT_IMPLEMENTED {
+            status_code = self.status_code;
+        }
+        JSendBuilder {
+            status_code,
+            jsend_type: Error(message.into()),
+        }
+    }
+
+    pub fn internal_error(mut self) -> JSendBuilder<Error> {
         JSendBuilder {
             status_code: StatusCode::INTERNAL_SERVER_ERROR,
-            jsend_type: Error(message.into()),
+            jsend_type: Error(GENERIC_INTERNAL_SERVER_ERROR.to_string()),
         }
     }
 }

@@ -1,0 +1,50 @@
+export const CABY_UPLOAD_TOKEN = 'Caby-Upload-Token';
+export const CABY_CHUNK_INDEX = 'Caby-Chunk-Index';
+
+export enum EntryType {
+	FILE = 'file',
+	DIRECTORY = 'directory'
+}
+
+export type UploadEntry = {
+	entry_type: string;
+	name: string;
+	size: number;
+	xxh_digest: string;
+};
+
+export enum ConflictStrategy {
+	OVERRIDE = 'override',
+	SKIP = 'skip',
+	PROMPT = 'prompt',
+	DECONFLICT = 'deconflict'
+}
+
+export type RegisterUploadRequest = {
+	base_path: string;
+	entries: UploadEntry[];
+	conflict_strategy: ConflictStrategy;
+};
+
+export type UploadRegistration = {
+	id: string;
+	chunk_size: number;
+	token: string;
+};
+
+export type Progress = {
+	progress: number;
+	total: number;
+};
+
+export enum HashStatus {
+	PENDING,
+	HASHING,
+	COMPLETE
+}
+
+export enum UploadStatus {
+	PENDING,
+	UPLOADING,
+	COMPLETE
+}

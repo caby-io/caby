@@ -13,7 +13,6 @@ use tokio::fs::{self, metadata, read_dir, read_link, DirEntry, ReadDir};
 use tracing::{debug, error, warn};
 
 pub mod pretty;
-pub mod upload;
 
 #[derive(Serialize, Default)]
 // #[strum(serialize_all = "snake_case")]

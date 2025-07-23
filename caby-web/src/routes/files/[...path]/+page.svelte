@@ -18,24 +18,10 @@
 		entry_fields: any; // todo
 	};
 
-	export type RegisterUploadRequest = {
-		base_path: string;
-		entries: UploadEntry[];
-		conflict_strategy: ConflictStrategy;
-	};
-
-	enum ConflictStrategy {
-		OVERRIDE = 'override',
-		SKIP = 'skip',
-		PROMPT = 'prompt',
-		DECONFLICT = 'deconflict'
-	}
-
-	export type UploadEntry = {
-		entry_type: string;
-		name: string;
-		size: number;
-		xxh_digest: string;
+	export type UploadRegistration = {
+		id: string;
+		chunk_size: number;
+		token: string;
 	};
 </script>
 
@@ -44,10 +30,11 @@
 	import * as fs from '$lib/fs';
 
 	import 'iconify-icon';
-	import xxhash from 'xxhash-wasm';
 	import Directory, { type DirEntry } from './Directory.svelte';
 	import File, { type FileEntry } from './File.svelte';
 	import Loading from './Loading.svelte';
+	import { uploadManager } from '$lib/files/upload_manager.svelte';
+	import { UploadFile } from '$lib/files/upload_file.svelte';
 
 	type FilesResponse = {
 		path: string | null;
@@ -73,7 +60,7 @@
 
 	let loading = $state(false);
 
-	const get_files_list = async (path: string) => {
+	const getFilesList = async (path: string) => {
 		loading = true;
 		const response = await fetch('http://localhost:8080/v0/files/list/' + path);
 		const payload = await response.json();
@@ -138,7 +125,7 @@
 		}
 	};
 
-	const delete_files = async (paths: [string]) => {
+	const deleteFiles = async (paths: [string]) => {
 		const response = await fetch('http://localhost:8080/v0/files/delete', {
 			method: 'post',
 			headers: {
@@ -152,10 +139,10 @@
 		});
 		// todo: handle errors
 		const payload = await response.json();
-		await get_files_list($page.params.path);
+		await getFilesList($page.params.path);
 	};
 
-	const move_files = async (entries: [string, string][]) => {
+	const moveFiles = async (entries: [string, string][]) => {
 		const response = await fetch('http://localhost:8080/v0/files/move', {
 			method: 'post',
 			headers: {
@@ -169,7 +156,7 @@
 		});
 		// todo: handle errors
 		const payload = await response.json();
-		await get_files_list($page.params.path);
+		await getFilesList($page.params.path);
 	};
 
 	let renameEntry = $state({
@@ -187,16 +174,16 @@
 		dialog!.showModal();
 	};
 
-	let draggedEntries: Set<Entry> = $state(new Set());
+	let dragged_entries: Set<Entry> = $state(new Set());
 	// let targetEntry: Entry | undefined = $state();
 
 	const handleMoveOp = async (operation: MoveOp, entry: Entry) => {
 		switch (operation) {
 			case MoveOp.ADD_SRC:
-				draggedEntries.add(entry);
+				dragged_entries.add(entry);
 				break;
 			case MoveOp.REM_SRC:
-				draggedEntries.delete(entry);
+				dragged_entries.delete(entry);
 				break;
 			// case MoveOp.SET_DST:
 			// 	targetEntry = entry;
@@ -205,81 +192,33 @@
 			// 	targetEntry = undefined;
 			// 	break;
 			case MoveOp.EXEC:
-				if (draggedEntries.size < 1) {
+				if (dragged_entries.size < 1) {
 					console.error('missing destination');
 					return;
 				}
 
 				let renames: [string, string][] = [];
 
-				draggedEntries.forEach((e) => {
+				dragged_entries.forEach((e) => {
 					renames.push([e.path, fs.join(entry.path, e.name)]);
 				});
 
-				await move_files(renames);
+				await moveFiles(renames);
 				break;
 		}
 	};
 
-	// File upload
 	let selectedFiles: FileList | undefined = $state();
 
-	const hashFile = async (file: globalThis.File): Promise<string> => {
-		// console.log('Starting read of: ' + file.name);
-		// const reader = new FileReader();
-		const reader = file.stream().getReader();
-		const { create64 } = await xxhash();
-
-		const hasher = create64();
-		while (true) {
-			const { done, value } = await reader.read();
-			if (done) {
-				break;
-			}
-			hasher.update(value);
-			// console.log('INCREMENTAL DIGEST: ' + hasher.digest());
-		}
-		const digest = hasher.digest();
-		const digest_str = digest.toString(16).padStart(16, '0');
-		// console.log('COMPLETE INT DIGEST: ' + digest);
-		// console.log('COMPLETE STR DIGEST: ' + digest.toString(16).padStart(16, '0'));
-		return digest_str;
-	};
-
-	const handle_upload_files = async (files: FileList) => {
-		let register_request: RegisterUploadRequest = {
-			base_path: $page.params.path,
-			entries: [],
-			conflict_strategy: ConflictStrategy.OVERRIDE
-		};
-
-		// todo: recursive
-		// todo: directories
+	const handleUploadFiles = async (files: FileList) => {
+		let upload_files: UploadFile[] = [];
 		for (const file of files) {
-			let name = file.webkitRelativePath || file.name;
-			// if (file.webkitRelativePath != '') {
-			// 	// console.log(file.webkitRelativePath.split('/').slice(1, -1));
-			// 	// name = file.webkitRelativePath.split('/').slice(1).join('/');
-			// 	name = file.webkitRelativePath;
-			// }
-
-			register_request.entries.push({
-				entry_type: 'file',
-				name,
-				size: file.size,
-				xxh_digest: await hashFile(file)
-			});
+			upload_files.push(new UploadFile($page.params.path, file));
 		}
 
-		console.log(register_request);
-	};
+		uploadManager.addUploads(...upload_files);
 
-	const readFile = (blob: Blob) => {
-		return new Promise((resolve) => {
-			const reader = new FileReader();
-			reader.onloadend = () => resolve(reader.result);
-			reader.readAsArrayBuffer(blob);
-		});
+		selectedFiles = undefined;
 	};
 
 	$effect(() => {
@@ -287,11 +226,11 @@
 			return;
 		}
 
-		handle_upload_files(selectedFiles);
+		handleUploadFiles(selectedFiles);
 	});
 
 	$effect(() => {
-		get_files_list($page.params.path);
+		getFilesList($page.params.path);
 	});
 
 	// $effect(() => {
@@ -366,14 +305,14 @@
 							{#if entry?.entry_type == 'directory'}
 								<Directory
 									{entry}
-									onDelete={(path: string) => delete_files([path])}
+									onDelete={(path: string) => deleteFiles([path])}
 									onRename={(entry: DirEntry) => renameEntryDialog(entry)}
 									{handleMoveOp}
 								/>
 							{:else if entry?.entry_type == 'file'}
 								<File
 									file_entry={entry}
-									onDelete={(path: string) => delete_files([path])}
+									onDelete={(path: string) => deleteFiles([path])}
 									onRename={(entry: FileEntry) => renameEntryDialog(entry)}
 								/>
 							{:else}
@@ -415,7 +354,7 @@
 		>
 		<button
 			onclick={() => {
-				move_files([
+				moveFiles([
 					[renameEntry.srcPath, fs.join(fs.parent(renameEntry.srcPath), renameEntry.dstName)]
 				]);
 				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
