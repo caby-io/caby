@@ -9,7 +9,6 @@ import {
 	HashStatus
 } from './upload';
 import { TaskStatus, type UploadFile } from './upload_file.svelte';
-import { json } from '@sveltejs/kit';
 
 const MAX_HASH_THREADS = 3;
 const MAX_UPLOAD_THREADS = 3;
@@ -63,7 +62,11 @@ const start_hash_file_worker = async (on_done: OnWorkerDone, upload_file: Upload
 	on_done(upload_file);
 };
 
-const start_upload_file_worker = async (on_done: OnWorkerDone, upload_file: UploadFile) => {
+const start_upload_file_worker = async (
+	on_done: OnWorkerDone,
+	upload_file: UploadFile,
+	global_progress: Progress
+) => {
 	const id = upload_file.registration!.id;
 	// todo: better name?
 	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
@@ -105,10 +108,14 @@ const start_upload_file_worker = async (on_done: OnWorkerDone, upload_file: Uplo
 		});
 		// todo: handle response and error
 
-		// update progress
+		// update file progress
+		const last_progress = upload_file.upload_progress.progress;
 		const start = index * chunk_size;
 		const total_loaded = start + byte_length;
 		upload_file.upload_progress.progress = total_loaded;
+
+		// update total progress
+		global_progress.progress += total_loaded - last_progress;
 
 		index++;
 		readNext();
@@ -143,7 +150,10 @@ export class UploadManager {
 
 	public addUploads = (...uploads: UploadFile[]) => {
 		this.uploads.push(...uploads);
-		// todo: update total
+		// update totals
+		uploads.forEach((u) => {
+			this.progress.total += u.file.size;
+		});
 		this.startRegistering();
 	};
 
@@ -202,7 +212,7 @@ export class UploadManager {
 
 			const next_upload = pending_upload.shift()!;
 			next_upload.upload_task_status = TaskStatus.STARTED;
-			start_upload_file_worker(on_done_callback, next_upload);
+			start_upload_file_worker(on_done_callback, next_upload, this.progress);
 		}
 	};
 

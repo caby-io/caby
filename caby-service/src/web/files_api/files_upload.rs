@@ -46,7 +46,7 @@ struct RegisterUploadResponse {
 pub async fn handle_register_upload(
     cfg: State<Config>,
     ctx: Result<Ctx>,
-    Json(body): Json<RegisterUploadRequest>,
+    Json(req): Json<RegisterUploadRequest>,
 ) -> Response {
     // Validate?
     // Generate an ID for this request
@@ -60,8 +60,9 @@ pub async fn handle_register_upload(
     // todo: make a builder function for this
     let token_payload = UploadTokenPayload {
         id: id.to_string(),
+        base_path: req.base_path,
         chunk_size: MAX_CHUNK_SIZE,
-        files: body
+        files: req
             .entries
             .into_iter()
             .filter(|e| matches!(e.entry_type, UploadEntryType::File))

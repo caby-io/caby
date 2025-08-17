@@ -62,6 +62,7 @@ pub struct TokenFile {
 #[derive(Encode, Decode, Debug)]
 pub struct UploadTokenPayload {
     pub id: String,
+    pub base_path: String, // todo: should we bother putting this here?
     pub chunk_size: u64,
     pub files: Vec<TokenFile>,
 }

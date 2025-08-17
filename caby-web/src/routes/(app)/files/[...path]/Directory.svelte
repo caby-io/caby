@@ -10,6 +10,8 @@
 		pretty_created_at: string;
 		modified_at: string;
 		pretty_modified_at: string;
+
+		selected: boolean;
 	};
 
 	let {
@@ -72,7 +74,9 @@
 	};
 </script>
 
-<tr
+<div
+	class="entry entry--directory"
+	role="none"
 	draggable="true"
 	class:dragging
 	class:dragover
@@ -83,35 +87,12 @@
 	ondragleave={onDragLeave}
 	ondrop={onDrop}
 >
-	<td data-cell="select" class="check"><iconify-icon icon="lucide:square"></iconify-icon></td>
-	<!-- todo: improve -->
-	<td data-cell="main" class="main">
-		<div class="fx fx-cc">
-			<div class="icon fx fx-cc"><a href={`/${join('files', entry.path)}`}>📁</a></div>
-			<div class="text fx-grow">
-				<div class="name"><a href={`/${join('files', entry.path)}`}>{entry.name}/</a></div>
-				<div class="size">–</div>
-			</div>
-		</div>
-	</td>
-	<td data-cell="actions" class="actions">
-		<div class="fx fx-ac">
-			<div class="action fx fx-cc">
-				<iconify-icon icon="lucide:hard-drive-download"></iconify-icon>
-			</div>
-			<div class="action fx fx-cc" onclick={() => onRename(entry)}>
-				<iconify-icon icon="lucide:pencil"></iconify-icon>
-			</div>
-			<div class="action fx fx-cc" onclick={() => onDelete(entry.path)}>
-				<iconify-icon icon="lucide:trash-2"></iconify-icon>
-			</div>
-			<div class="action fx fx-cc">
-				<iconify-icon icon="lucide:more-horizontal"></iconify-icon>
-			</div>
-		</div>
-	</td>
-	<td data-cell="last-modified">{entry.pretty_modified_at}</td>
-</tr>
+	<section class="display fx fx--cc fx-grow">📁</section>
+	<section class="info">
+		<h1><a href={`/${join('files', entry.path)}`}>{entry.name}</a></h1>
+		{entry.pretty_modified_at}
+	</section>
+</div>
 
 <style lang="scss">
 	@use 'entry';

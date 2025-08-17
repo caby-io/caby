@@ -8,6 +8,52 @@ $td-main-width: 40rem;
 //     --clr-text: hsl(260, 27%, 98%);--clr-text: hsl(260, 27%, 98%);
 // }
 
+.entry {
+    display: flex;
+    flex-direction: column;
+    background: var(--clr-background-1);
+    border-radius: 3px;
+    // box-shadow: 0 4px .5rem 0px rgba(0,0,0,.1);
+    box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
+    border: 1px solid var(--clr-border);
+    transition: box-shadow .3s;
+
+    &:hover {
+        box-shadow: 0 4px 0.5rem -1px var(--clr-shadow);
+    }
+
+    section.display {
+        margin: .5rem;
+        background: var(--clr-background-2);
+        border-radius: 3px;
+        font-size: 3rem;
+        // box-shadow: 0 4px .5rem 0px rgba(0,0,0,.1);
+        box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
+        border: 1px solid var(--clr-border);
+    }
+
+    section.info {
+        margin: 0 .5rem .5rem .5rem;
+        color: var(--clr-text-1);
+
+        > h1 {
+            color: var(--clr-text-0);
+            overflow-x: hidden;
+            text-overflow: ellipsis;
+            white-space: pre;
+        }
+    }
+
+    &--selected {
+        background: var(--clr-secondary);
+        border-color: var(--clr-accent);
+
+        section.display {
+            // background: var(--clr-accent);
+        }
+    }
+}
+
 td {
     padding: 0.5rem;
     text-align: left;
@@ -23,7 +69,7 @@ td.main {
     > div {
         // width: 30%;
         // flex: 0 0 20rem;
-        width: $td-main-width;
+        // width: $td-main-width;
 
         .icon {
             font-size: 1.75em;
@@ -59,7 +105,10 @@ td.main {
         }
 
         .name {
-            width: 60%;
+            // width: 60%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
     }
 }

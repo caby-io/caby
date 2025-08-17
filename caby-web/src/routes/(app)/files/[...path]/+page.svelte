@@ -35,6 +35,8 @@
 	import Loading from './Loading.svelte';
 	import { uploadManager } from '$lib/files/upload_manager.svelte';
 	import { UploadFile } from '$lib/files/upload_file.svelte';
+	import UploadBar from './UploadBar.svelte';
+	import AddAction from './AddAction.svelte';
 
 	type FilesResponse = {
 		path: string | null;
@@ -65,10 +67,15 @@
 		const response = await fetch('http://localhost:8080/v0/files/list/' + path);
 		const payload = await response.json();
 
-		filesResponse = payload.data;
+		let data = payload.data;
+		data.entries.forEach((d: any) => {
+			d.selected = false;
+		});
+
+		filesResponse = data;
 
 		// temp?
-		virtualizeList();
+		// virtualizeList();
 
 		// Fix URL if it's incorrect
 		// if document.location.href != join("files", response.path) {
@@ -238,91 +245,65 @@
 	// });
 </script>
 
-<div class="right fx fx--col fx-grow">
-	<header>
-		<input type="file" id="file-input" name="filename" bind:files={selectedFiles} multiple />
-		<input type="file" id="dir-input" name="filename" bind:files={selectedFiles} webkitdirectory />
-		breadcrumbs
-	</header>
-	<section class="file-list">
-		<section class="top-bar">
-			<div class="location"></div>
-		</section>
-		<main class="entries" id="main" onscroll={virtualizeList}>
-			{#if loading}
-				<table id="files-list" class="skeleton">
-					<thead>
-						<tr>
-							<th class="icon"></th>
-							<th class="name"><span /></th>
-							<th class="actions"><span /></th>
-							<th><span /></th>
-						</tr>
-					</thead>
-					<tbody>
-						{#each { length: 3 } as _, i}
-							<tr>
-								<th class="icon"></th>
-								<th class="name"><span /></th>
-								<th class="actions"><span /></th>
-								<th><span /></th>
-							</tr>
-						{/each}
-					</tbody>
-				</table>
-			{:else}
-				<table id="files-list">
-					<thead>
-						<tr>
-							<th class="icon"></th>
-							<th class="name">Name</th>
-							<th class="actions"></th>
-							<th>Last Modified</th>
-						</tr>
-					</thead>
-					<tbody>
-						<!-- Parent Dir -->
-						{#if filesResponse.parent_dir != null}
-							<tr>
-								<td data-cell="select" class="check"></td>
-								<td data-cell="main" class="main fx">
-									<div class="icon fx fx-cc">
-										<a href={`${join('files', filesResponse.parent_dir)}`}>📁</a>
-									</div>
-									<div class="text fx-grow">
-										<div class="name">
-											<a href={`${join('files', filesResponse.parent_dir)}`}>..</a>
-										</div>
-										<!-- <div class="size">Unknown</div> -->
-									</div>
-								</td>
-								<td data-cell="actions">..</td>
-								<td data-cell="last-modified"></td>
-							</tr>
-						{/if}
-						<!-- Entries -->
-						{#each filesRender.entries as entry}
-							{#if entry?.entry_type == 'directory'}
-								<Directory
-									{entry}
-									onDelete={(path: string) => deleteFiles([path])}
-									onRename={(entry: DirEntry) => renameEntryDialog(entry)}
-									{handleMoveOp}
-								/>
-							{:else if entry?.entry_type == 'file'}
-								<File
-									file_entry={entry}
-									onDelete={(path: string) => deleteFiles([path])}
-									onRename={(entry: FileEntry) => renameEntryDialog(entry)}
-								/>
-							{:else}
-								<Loading />
-								<!-- <tr style="height: 72.33px"></tr> -->
-							{/if}
-						{/each}
-					</tbody>
-				</table>
-			{/if}
+<div class="files-view fx">
+	<section class="left">left</section>
+	<section class="right fx-grow fx fx--col">
+		<header class="fx fx--ac">
+			<div class="breadcrumbs fx fx--ac">
+				<div class="breadcrumb fx fx--ac">
+					<a class="fx fx--ac" href="#">
+						<iconify-icon icon="ci:house-02"></iconify-icon>
+					</a>
+				</div>
+				<div class="breadcrumb fx fx--ac">
+					<a class="fx fx--ac" href="#">Folder A</a>
+				</div>
+				<div class="breadcrumb fx fx--ac">
+					<a class="fx fx--ac" href="#">Folder B</a>
+				</div>
+			</div>
+			<input type="file" id="file-input" name="filename" bind:files={selectedFiles} multiple />
+			<input
+				type="file"
+				id="dir-input"
+				name="filename"
+				bind:files={selectedFiles}
+				webkitdirectory
+			/>
+		</header>
+		<main class="entries fx-grow">
+			<section class="directories">
+				<h3>Directories</h3>
+				<div class="dir-list">
+					{#each filesResponse.entries.filter((e) => e?.entry_type === 'directory') as entry}
+						<Directory
+							{entry}
+							onDelete={(path: string) => deleteFiles([path])}
+							onRename={(entry: DirEntry) => renameEntryDialog(entry)}
+							{handleMoveOp}
+						/>
+					{/each}
+				</div>
+			</section>
+			<section class="files">
+				<h3>Files</h3>
+				<div class="file-list">
+					{#each filesResponse.entries.filter((e) => e?.entry_type === 'file') as entry}
+						<File
+							{entry}
+							onDelete={(path: string) => deleteFiles([path])}
+							onRename={(entry: DirEntry) => renameEntryDialog(entry)}
+							{handleMoveOp}
+						/>
+					{/each}
+				</div>
+			</section>
+			<aside class="fx fx--cc">
+				<UploadBar />
+			</aside>
+			<section class="add-action fx fx--cc">
+				<AddAction />
+			</section>
 		</main>
 	</section>
 </div>
@@ -367,239 +348,125 @@
 </dialog>
 
 <style lang="scss">
+	.files-view {
+		border-top: 1px solid var(--clr-border);
+	}
+
+	.left {
+		background-color: var(--clr-background-1);
+		width: var(--sidebar-width);
+	}
+
 	.right {
-		max-height: 100vh;
-	}
-
-	.file-list {
-		flex-grow: 1;
-		height: 0; /* Need to investigate why this works */
-	}
-
-	.entries {
-		// margin: 1rem;
-		flex-grow: 1;
-		height: 100%;
-		overflow-y: scroll;
-
-		> table {
-			border-collapse: collapse;
-			// border-spacing: 0rem;
-			font-size: 1.1em;
-			width: 100%;
-
-			&.skeleton {
-				span {
-					display: block;
-					height: 0.4rem;
-					min-width: 100px;
-					width: 70%;
-					background: lightgrey;
-					border-radius: 3px;
-				}
-			}
-
-			// General
-			tr {
-				border-radius: 3px;
-			}
-			td,
-			th {
-				padding: 0.5rem;
-				text-align: left;
-			}
-
-			td.check {
-				width: 2rem;
-			}
-
-			td.main {
-				display: flex;
-
-				.icon {
-					font-size: 1.75em;
-					width: 2em;
-					position: relative;
-
-					.indicator {
-						position: absolute;
-						display: inline-flex;
-						bottom: 0.25rem;
-						right: 0.25rem;
-						background: rgba(255, 255, 255, 0.8);
-						border-radius: 50%;
-						padding: 0.2rem;
-
-						&--symlink {
-							iconify-icon {
-								font-size: 1rem;
-							}
-						}
-
-						&--broken-symlink {
-							iconify-icon {
-								font-size: 1rem;
-								color: red;
-							}
-						}
-					}
-
-					a {
-						text-decoration: none;
-					}
-				}
-
-				.name {
-					width: 60%;
-				}
-			}
-
-			td.actions {
-				font-size: 1.5rem;
-
-				.action {
-					cursor: pointer;
-					color: var(--clr-secondary);
-					margin-right: 0.5rem;
-					width: 2.1rem;
-					height: 2.1rem;
-					background: var(--clr-accent);
-					opacity: 0.6;
-					border-radius: 3px;
-					transition: color 0.3s;
-
-					&--invisible {
-						opacity: 0 !important;
-						pointer-events: none;
-					}
-				}
-				// > div {
-				// 	display: inline-block;
-				// 	padding: 2px;
-				// 	margin-right: 0.5rem;
-				// 	background: lightgrey;
-				// }
-			}
-
-			tbody > tr {
-				&:hover {
-					color: var(--clr-background);
-					background-color: var(--clr-secondary);
-
-					a {
-						color: var(--clr-background);
-					}
-
-					td.actions .action {
-						opacity: 0.8;
-					}
-				}
-
-				td.actions .action:hover {
-					opacity: 1;
-					color: var(--clr-primary);
-				}
-			}
-		}
-
-		// > div {
-		// 	display: flex;
-		// 	// border: 1px solid var(--clr-accent);
-		// 	transition:
-		// 		background-color 0.3s,
-		// 		color 0.3s;
-		// 	font-size: 1.2em; // TEMP
-		// 	padding: 0.5rem;
-		// 	border-radius: 3px;
-
-		// 	> .icon {
-		// 		width: 1.5em;
-		// 	}
-
-		// 	&:hover {
-		// 		color: var(--clr-background);
-		// 		background-color: var(--clr-secondary);
-
-		// 		a {
-		// 			color: var(--clr-background);
-		// 		}
-		// 	}
-		// }
-	}
-
-	.rename-modal {
-		&::backdrop {
-			background: var(--clr-background);
-			opacity: 0.5;
-			backdrop-filter: blur(2px);
-		}
-
-		margin: auto;
-		background: var(--clr-background);
-		color: var(--clr-primary);
-		padding: 0;
-		min-width: 30rem;
-		max-width: 80vw;
-		border: 0;
-		box-shadow: 0 0 1em rgb(0 0 0 / 0.3);
+		border-left: 1px solid var(--clr-border);
+		min-height: calc(100vh - var(--top-nav-height) - 1px);
 
 		> header {
-			background: var(--clr-primary);
-			color: var(--clr-background);
-			padding: 0.5rem 1rem;
-
-			> h2 {
-				font-weight: normal;
-			}
-
-			> .close {
-				cursor: pointer;
-				background: none;
-				padding: 0;
-				border: none;
-				font-size: 1.5em;
-				margin-left: auto;
-			}
+			height: 2.6rem;
+			background-color: var(--clr-background-1);
+			border-bottom: 1px solid var(--clr-border);
+			padding: 0 1rem;
 		}
 
-		> main {
-			padding: 1.5em;
+		.breadcrumbs {
+			.breadcrumb > a {
+				// display: block;
+				padding: 0 0.25rem;
+				height: 2rem;
+				text-decoration: none;
+				transition: opacity 0.2s;
+				opacity: 1;
+				border-radius: 3px;
 
-			> p > span {
-				font-weight: bold;
-				// color: var(--clr-primary);
-			}
-		}
-
-		input {
-			outline: none;
-			border: none;
-			border-bottom: 2px solid var(--clr-primary);
-			border-radius: 3px 3px 1px 1px;
-			background: var(--clr-secondary-background);
-			color: var(--clr-text);
-			font-size: 1.1em;
-			padding: 0.5em;
-		}
-
-		> footer {
-			background: var(--clr-secondary-background);
-			padding: 0.5rem 1rem;
-			justify-content: flex-end;
-			gap: 0.5em;
-
-			button {
-				cursor: pointer;
-				font-size: 1em;
-				background: var(--clr-primary);
-				border: none;
-				border-radius: 2px;
-				padding: 0.5rem 1rem;
-
-				&.cancel {
-					background: none;
-					color: var(--clr-primary);
+				&:hover {
+					color: inherit;
+					opacity: 0.7;
 				}
+			}
+
+			div + div:before {
+				font-family: serif;
+				font-weight: bold;
+				display: block;
+				content: '/';
+				margin: 0.25rem;
+				opacity: 0.4;
+			}
+		}
+	}
+
+	// todo: redo this after moving the entities
+
+	main.entries {
+		background: var(--clr-background);
+		padding: 1rem;
+		position: relative;
+
+		> aside {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+		}
+
+		> .add-action {
+			position: absolute;
+			right: 0;
+			bottom: 0;
+			padding: 1rem;
+		}
+	}
+
+	.directories,
+	.files {
+		> h3 {
+			// font-weight: normal;
+			margin: 1rem 0;
+		}
+
+		&:first-of-type {
+			> h3 {
+				margin-top: 0;
+			}
+		}
+	}
+
+	.dir-list,
+	.file-list {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
+		grid-auto-rows: minmax(12rem, 1fr);
+		// grid-auto-columns: max-content;
+		gap: 0.75rem;
+		// grid-template-columns: repeat(auto-fill);
+	}
+
+	// todo: move to module
+	.directory {
+		background-color: white;
+		display: flex;
+		border-radius: 3px;
+
+		> .preview {
+			margin: 0.5rem;
+			font-size: 3rem;
+			background-color: rgb(233, 235, 241);
+			border-radius: 3px;
+
+			> img {
+				height: 3.5rem;
+				width: 5rem;
+			}
+		}
+
+		> .details {
+			margin: 0 0.5rem 0.5rem 0.5rem;
+
+			> h1 {
+				font-size: 1rem;
+				// font-weight: ;
+				padding: 0;
+				margin: 0;
 			}
 		}
 	}
