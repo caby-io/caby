@@ -5,22 +5,28 @@ import {
 	ConflictStrategy,
 	type RegisterUploadRequest,
 	type Progress,
-	UploadStatus,
-	HashStatus
+	type WorkerEvent,
+	type UploadStartPayload,
+	EventType,
+	type UploadProgressPayload,
+	type UploadCompletePayload
 } from './upload';
 import { TaskStatus, type UploadFile } from './upload_file.svelte';
+import type { UploadGroup, UploadRegistration } from './upload_group';
+import UploadWorker from './workers/upload_worker?worker';
 
 const MAX_HASH_THREADS = 3;
 const MAX_UPLOAD_THREADS = 3;
 
-type OnWorkerDone = (upload_file: UploadFile) => void;
+type UploadGroupCb = (upload_group: UploadGroup) => void;
+type UploadFileCb = (upload_file: UploadFile) => void;
 
 // todo: update the total
 // todo: we may want to eventually batch registrations
-const start_register_file_worker = async (on_done: OnWorkerDone, upload_file: UploadFile) => {
+const startRegisterFileWorker = async (on_done: UploadGroupCb, upload_group: UploadGroup) => {
 	let register_request: RegisterUploadRequest = {
-		base_path: upload_file.base_path,
-		entries: [upload_file.into_upload_entry()],
+		base_path: upload_group.base_path,
+		entries: [...upload_group.upload_files.map((f) => f.intoUploadEntry())],
 		conflict_strategy: ConflictStrategy.OVERRIDE // todo: make this a param
 	};
 
@@ -35,14 +41,14 @@ const start_register_file_worker = async (on_done: OnWorkerDone, upload_file: Up
 
 	const response_payload = await response.json();
 	// todo: check for error
-	upload_file.registration = response_payload.data;
+	Object.assign(upload_group.registration, response_payload.data as UploadRegistration);
 
-	console.debug(`upload manager: registered upload ${upload_file.registration?.id}`);
-	upload_file.registration_task_status = TaskStatus.COMPLETE;
-	on_done(upload_file);
+	console.debug(`[caby/upload-manager] registered upload ${upload_group.registration!.id}`);
+	upload_group.registration_task_status = TaskStatus.COMPLETE;
+	on_done(upload_group);
 };
 
-const start_hash_file_worker = async (on_done: OnWorkerDone, upload_file: UploadFile) => {
+const startHashFileWorker = async (on_done: UploadFileCb, upload_file: UploadFile) => {
 	const reader = upload_file.file.stream().getReader();
 	const { create64 } = await xxhash();
 
@@ -57,13 +63,13 @@ const start_hash_file_worker = async (on_done: OnWorkerDone, upload_file: Upload
 
 	const digest = hasher.digest();
 	upload_file.xxh_digest = digest.toString(16).padStart(16, '0');
-	console.debug(`upload manager: xxh_digest: ${upload_file.xxh_digest}`);
+	console.debug(`[caby/upload-manager] xxh_digest: ${upload_file.xxh_digest}`);
 	upload_file.hash_task_status = TaskStatus.COMPLETE;
 	on_done(upload_file);
 };
 
-const start_upload_file_worker = async (
-	on_done: OnWorkerDone,
+const startUploadFileWorker = async (
+	on_done: UploadFileCb,
 	upload_file: UploadFile,
 	global_progress: Progress
 ) => {
@@ -91,9 +97,10 @@ const start_upload_file_worker = async (
 		// we are done
 		if (byte_length < 1) {
 			upload_file.upload_task_status = TaskStatus.COMPLETE;
+			// todo: remove this??
 			upload_file.upload_progress.progress = upload_file.upload_progress.total;
 			on_done(upload_file);
-			console.debug('upload manager: finished uploading chunks');
+			console.debug('[caby/upload-manager] finished uploading chunks');
 			return;
 		}
 
@@ -133,86 +140,128 @@ const start_upload_file_worker = async (
 	readNext();
 };
 
+const startUploadFileWorkerBackground = async (
+	on_done: UploadFileCb,
+	upload_file: UploadFile,
+	global_progress: Progress
+) => {
+	var upload_worker = new UploadWorker();
+	let start_upload_message: WorkerEvent<UploadStartPayload> = {
+		event: EventType.UploadStart,
+		payload: upload_file.intoUploadStartPayload()
+	};
+	upload_worker.postMessage(start_upload_message);
+	upload_worker.onmessage = function (e: MessageEvent<WorkerEvent<any>>) {
+		switch (e.data?.event) {
+			case EventType.UploadProgress:
+				const payload = e.data!.payload as UploadProgressPayload;
+				upload_file.upload_progress.progress += payload.new_progress;
+				global_progress.progress += payload.new_progress;
+				break;
+			case EventType.UploadCompleted:
+				upload_file.upload_task_status = TaskStatus.COMPLETE;
+				on_done(upload_file);
+				console.debug('[caby/upload-manager/worker-upload] finished uploading chunks');
+				// todo: cleanup worker?
+				break;
+			default:
+				// todo: wrap in err type
+				self.postMessage('unhandled err');
+		}
+	};
+};
 // UploadManager runs upload requests thru the upload pipeline:
 // 1. Register the upload request with the API
 // 2. Hash the file and start uploading chunks
 // 3. Notify the API when a file's upload is complete
 // 4. Notify the API when an upload group is complete
 export class UploadManager {
-	uploads: UploadFile[] = $state([]);
+	upload_groups: UploadGroup[] = $state([]);
+	upload_files: UploadFile[] = $derived(this.upload_groups.flatMap((g) => [...g.upload_files]));
+
 	// todo: rename to upload progress?
 	// todo: do we cache or calculate?
-	progress: Progress = $state({ progress: 0, total: 0 });
+	upload_progress: Progress = $state({ progress: 0, total: 0 });
 
 	register_worker_count: number = 0;
 	hash_worker_count: number = 0;
 	upload_worker_count: number = 0;
 
-	public addUploads = (...uploads: UploadFile[]) => {
-		this.uploads.push(...uploads);
+	// TEMP
+	upload_groups_completed: number = $state(0);
+
+	public addUploads = (...upload_groups: UploadGroup[]) => {
+		this.upload_groups.push(...upload_groups);
 		// update totals
-		uploads.forEach((u) => {
-			this.progress.total += u.file.size;
+		upload_groups.forEach((g) => {
+			this.upload_progress.total += g.upload_files.reduce(
+				(accumulator, f) => accumulator + f.file.size,
+				0
+			);
 		});
 		this.startRegistering();
 	};
 
 	private startRegistering = () => {
-		const on_done_callback: OnWorkerDone = (_upload_file: UploadFile) => {
+		const on_done_callback: UploadGroupCb = (_?: UploadGroup) => {
 			this.register_worker_count--;
 			this.startRegistering();
 			this.startHashing();
 			this.startUploading();
 		};
 
-		let pending_registration = this.uploads.filter(
-			(u) => u.registration_task_status === TaskStatus.PENDING
+		// todo: this is expensive to be doing every time this fn is called. consider not having to do this each time
+		let pending_registration = this.upload_groups.filter(
+			(g) => g.registration_task_status === TaskStatus.PENDING
 		);
 		while (this.register_worker_count < MAX_HASH_THREADS && pending_registration.length > 0) {
 			this.register_worker_count++;
-			console.debug(`upload manager: starting registration worker ${this.register_worker_count}`);
+			console.debug(
+				`[caby/upload-manager] starting registration worker ${this.register_worker_count}`
+			);
 
 			const next_upload = pending_registration.shift()!;
 			next_upload.registration_task_status = TaskStatus.STARTED;
-			start_register_file_worker(on_done_callback, next_upload);
+			startRegisterFileWorker(on_done_callback, next_upload);
 		}
 	};
 
 	private startHashing = () => {
-		const on_done_callback: OnWorkerDone = (upload_file: UploadFile) => {
+		const on_done_callback: UploadFileCb = (upload_file: UploadFile) => {
 			this.hash_worker_count--;
 			this.startHashing();
 			this.finalizeUpload(upload_file);
 		};
 
-		let pending_hashing = this.uploads.filter((u) => u.hash_task_status === TaskStatus.PENDING);
+		let pending_hashing = this.upload_files.filter((f) => f.readyToHash());
 		while (this.hash_worker_count < MAX_HASH_THREADS && pending_hashing.length > 0) {
 			this.hash_worker_count++;
-			console.debug(`upload manager: starting hashing worker ${this.hash_worker_count}`);
+			console.debug(`[caby/upload-manager] starting hashing worker ${this.hash_worker_count}`);
 
 			const next_upload = pending_hashing.shift()!;
 			next_upload.hash_task_status = TaskStatus.STARTED;
-			start_hash_file_worker(on_done_callback, next_upload);
+			startHashFileWorker(on_done_callback, next_upload);
 
-			pending_hashing = this.uploads.filter((u) => u.hash_task_status === TaskStatus.PENDING);
+			pending_hashing = this.upload_files.filter((u) => u.hash_task_status === TaskStatus.PENDING);
 		}
 	};
 
 	private startUploading = () => {
-		const on_done_callback: OnWorkerDone = (upload_file: UploadFile) => {
+		const on_done_callback: UploadFileCb = (upload_file: UploadFile) => {
 			this.upload_worker_count--;
 			this.startUploading();
 			this.finalizeUpload(upload_file);
 		};
 
-		let pending_upload = this.uploads.filter((u) => u.upload_task_status === TaskStatus.PENDING);
-		while (this.upload_worker_count < MAX_UPLOAD_THREADS && pending_upload.length > 0) {
+		let pending_uploads = this.upload_files.filter((u) => u.readyToUpload());
+		while (this.upload_worker_count < MAX_UPLOAD_THREADS && pending_uploads.length > 0) {
 			this.upload_worker_count++;
-			console.debug(`upload manager: starting upload worker ${this.upload_worker_count}`);
+			console.debug(`[caby/upload-manager] starting upload worker ${this.upload_worker_count}`);
 
-			const next_upload = pending_upload.shift()!;
+			const next_upload = pending_uploads.shift()!;
 			next_upload.upload_task_status = TaskStatus.STARTED;
-			start_upload_file_worker(on_done_callback, next_upload, this.progress);
+			startUploadFileWorker(on_done_callback, next_upload, this.upload_progress);
+			// startUploadFileWorkerBackground(on_done_callback, next_upload, this.upload_progress);
 		}
 	};
 
@@ -221,11 +270,7 @@ export class UploadManager {
 	};
 
 	private finalizeUpload = async (upload_file: UploadFile) => {
-		if (
-			upload_file.hash_task_status !== TaskStatus.COMPLETE ||
-			upload_file.upload_task_status !== TaskStatus.COMPLETE ||
-			upload_file.finalize_task_status !== TaskStatus.PENDING
-		) {
+		if (!upload_file.readyToFinalize()) {
 			return;
 		}
 		upload_file.finalize_task_status = TaskStatus.STARTED;
@@ -249,24 +294,17 @@ export class UploadManager {
 		// todo: handle response and error
 
 		upload_file.finalize_task_status = TaskStatus.COMPLETE;
-		console.debug('upload manager: finished finalizing file');
-		this.tryFinalizeUploadGroup(upload_file);
+		console.debug('[caby/upload-manager] finished finalizing file');
+		this.tryCommitUploadGroup(upload_file);
 	};
 
-	private tryFinalizeUploadGroup = async (upload_file: UploadFile) => {
+	private tryCommitUploadGroup = async (upload_file: UploadFile) => {
 		// todo: determine final name for 'upload group'
 		let upload_id = upload_file.registration!.id;
-		let upload_group = this.uploads.filter((u) => u.registration?.id === upload_id);
+		let upload_group = this.upload_groups.find((u) => u.registration?.id === upload_id);
 		// todo: consider what to do for non-complete 'done' states
-		// if even one file isn't ready then skip finalizing
-
-		if (
-			upload_group.find(
-				(u) =>
-					u.upload_task_status !== TaskStatus.COMPLETE && u.hash_task_status !== TaskStatus.COMPLETE
-			)
-		) {
-			console.debug('finalizer: group incomplete');
+		// if even one file isn't ready then skip comitting
+		if (upload_group?.upload_files.find((f) => f.finalize_task_status !== TaskStatus.COMPLETE)) {
 			return;
 		}
 
@@ -278,30 +316,19 @@ export class UploadManager {
 			}
 		});
 
-		console.debug(`upload manager: completed ${upload_id}`);
+		console.debug(`[caby/upload-manager] completed ${upload_id}`);
 
-		// all files for this group are uploaded
-
-		// this.uploads.filter((u) => u.registration?.id === upload_id).forEach((u) => {
-		//     // we have already encountered an upload from this group that wasn't uploaded
-		//     if (groups.get(upload_id) === false) {
-		//         return
-		//     }
-
-		//     break
-
-		//     const upload_files = (groups.get(upload_id) || [])
-		//     upload_files.push(u)
-		//     groups.set(upload_id, upload_files)
-		// })
-
-		// this.uploads.filter((u) => u.state === UploadState.UPLOADED).forEach((u) => {
-		//     if (!ready_cache.get(u.registration!.id)) {
-		//         return
-		//     }
-
-		// })
+		// TEMP
+		this.upload_groups_completed++;
 	};
 }
 
 export const uploadManager = new UploadManager();
+
+// todo
+// window.addEventListener('beforeunload', (event) => {
+// 	// Cancel the event as stated by the standard.
+// 	event.preventDefault();
+// 	// Chrome requires returnValue to be set.
+// 	event.returnValue = 'test';
+// });

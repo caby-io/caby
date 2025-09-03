@@ -4,36 +4,36 @@
 	import { prettyBytes } from '$lib/fs';
 
 	let progress_percent = $derived(
-		Math.floor((uploadManager.progress.progress * 100) / uploadManager.progress.total)
+		Math.floor((uploadManager.upload_progress.progress * 100) / uploadManager.upload_progress.total)
 	);
-	let completed_bytes = $derived(prettyBytes(uploadManager.progress.progress));
-	let total_bytes = $derived(prettyBytes(uploadManager.progress.total));
+	let completed_bytes = $derived(prettyBytes(uploadManager.upload_progress.progress));
+	let total_bytes = $derived(prettyBytes(uploadManager.upload_progress.total));
 
 	// todo: move
 
 	$effect(() => {
-		uploadManager.progress;
+		uploadManager.upload_progress;
 	});
 </script>
 
-<div class="upload-bar border-0 box-shadow-0">
+<div class="upload-bar border-0 box-shadow-0-card">
 	<header class="fx fx--ac">
 		<h1>Upload Progress</h1>
 		<h2>{progress_percent}%</h2>
-		<span class="fx fx--cc">
+		<span class="fx fx--cc border-0 box-shadow-0-card">
 			<iconify-icon icon="lucide:chevron-up"></iconify-icon>
 		</span>
 	</header>
 	<main class="fx fx--col">
 		<section class="fx">
-			<span>{uploadManager.uploads.length} files</span>
-			<span>24 Mb/s</span>
+			<span>{uploadManager.upload_files.length} files</span>
+			<span>?? Mb/s</span>
 			<span>{completed_bytes} of {total_bytes}</span>
-			<span>30m remaining</span>
+			<span>??m remaining</span>
 		</section>
-		<progress class="border-0 box-shadow-0" max="100" value={progress_percent || 0}
-			>{progress_percent}%</progress
-		>
+		<progress class="border-0 box-shadow-0-card" max="100" value={progress_percent || 0}>
+			{progress_percent}%
+		</progress>
 	</main>
 </div>
 

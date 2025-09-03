@@ -1,29 +1,26 @@
 <script lang="ts">
 	import { join } from '$lib/fs';
+	import type { EntryProps, FileFields } from './entry';
 
-	export type FileEntry = {
-		entry_type: string;
-		name: string;
-		path: string;
-		created_at: string;
-		pretty_created_at: string;
-		modified_at: string;
-		pretty_modified_at: string;
-		entry_fields: {
-			size: number;
-			pretty_size: string;
-		};
-
-		selected: boolean;
-	};
-
-	let { entry, onDelete, onRename }: { entry: FileEntry; onDelete: any; onRename: any } = $props();
+	let {
+		entry,
+		isSelected: is_selected = false,
+		// temp
+		onSelect = undefined,
+		onDragStart = undefined,
+		onDragEnd = undefined,
+		onDragEnter = undefined,
+		onDragOver = undefined,
+		onDragLeave = undefined,
+		onDrop = undefined
+	}: EntryProps<FileFields> = $props();
 </script>
 
 <div
-	class="entry entry--file {entry.selected ? 'entry--selected' : ''}"
+	class="entry entry--file {is_selected ? 'entry--selected' : ''}"
 	role="none"
 	draggable="true"
+	onclick={onSelect}
 >
 	<section class="display fx fx--cc fx-grow">📃</section>
 	<section class="info">

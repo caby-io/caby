@@ -6,19 +6,27 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-serde_json = "1.0.140"
+serde_json = "1.0.143"
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7.15", features = ["io"] }
 axum = { version = "0.8.4" }
 tower = "0.5.2"
 tower-http = { version = "0.6.6", features = ["cors", "trace"] }
 tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
+tracing-subscriber = { version = "0.3.20", features = ["env-filter"] }
 serde = { version = "1.0.219", features = ["derive"] }
 path-clean = "1.0.1"
 mime_guess = "2.0.5"
 xid = "1.1.1"
 futures-util = "0.3.31"
-bitcode = "0.6.6"
+bitcode = "0.6.7"
 base64 = "0.22.1"
 xxhash-rust = { version = "0.8.15", features = ["xxh64"]}
+
+# Enable a small amount of optimization in the dev profile.
+[profile.dev]
+opt-level = 1
+
+# Enable a large amount of optimization in the dev profile for dependencies.
+[profile.dev.package."*"]
+opt-level = 3

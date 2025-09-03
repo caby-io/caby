@@ -26,7 +26,7 @@
 			<iconify-icon icon="lucide:settings"></iconify-icon>
 		</div>
 		<div
-			class="color-scheme fx fx--cc {scheme === 'light' ? 'light' : ''}"
+			class="color-scheme fx fx--cc {scheme === 'light' ? 'light' : 'dark'}"
 			onclick={toggleSchemeLocal}
 		>
 			{#if scheme === 'dark'}
@@ -82,9 +82,9 @@
 					color: goldenrod;
 				}
 
-				// &.dark {}
-				// temp
-				// background: var(--clr-border);
+				&.dark {
+					color: var(--clr-accent);
+				}
 			}
 
 			> .user {

@@ -7,17 +7,6 @@
 		EXEC
 	}
 
-	export type Entry = {
-		entry_type: string;
-		name: string;
-		path: string;
-		created_at: string;
-		pretty_created_at: string;
-		modified_at: string;
-		pretty_modified_at: string;
-		entry_fields: any; // todo
-	};
-
 	export type UploadRegistration = {
 		id: string;
 		chunk_size: number;
@@ -27,16 +16,17 @@
 
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { on } from 'svelte/events';
 	import * as fs from '$lib/fs';
 
 	import 'iconify-icon';
 	import Directory, { type DirEntry } from './Directory.svelte';
-	import File, { type FileEntry } from './File.svelte';
+	import File from './File.svelte';
 	import Loading from './Loading.svelte';
-	import { uploadManager } from '$lib/files/upload_manager.svelte';
-	import { UploadFile } from '$lib/files/upload_file.svelte';
 	import UploadBar from './UploadBar.svelte';
 	import AddAction from './AddAction.svelte';
+	import { uploadManager } from '$lib/files/upload_manager.svelte';
+	import { TaskStatus } from '$lib/files/upload_file.svelte';
 
 	type FilesResponse = {
 		path: string | null;
@@ -44,6 +34,8 @@
 		current_dir: string;
 		entries: Array<Entry>;
 	};
+
+	let onuploadComplete = $props();
 
 	let filesResponse: FilesResponse = $state({
 		path: null,
@@ -84,19 +76,6 @@
 
 		loading = false;
 		// document.location.href = join("files", response.path)
-	};
-
-	const join = (...paths: Array<string>): string => {
-		let joined = '';
-		paths
-			.filter((p) => p != '' && p != '/' && p != null)
-			.forEach((p) => {
-				while (p.charAt(0) === '/') {
-					p = p.substring(1);
-				}
-				joined += `/${p}`;
-			});
-		return joined;
 	};
 
 	const virtualizeList = () => {
@@ -215,29 +194,11 @@
 		}
 	};
 
-	let selectedFiles: FileList | undefined = $state();
-
-	const handleUploadFiles = async (files: FileList) => {
-		let upload_files: UploadFile[] = [];
-		for (const file of files) {
-			upload_files.push(new UploadFile($page.params.path, file));
-		}
-
-		uploadManager.addUploads(...upload_files);
-
-		selectedFiles = undefined;
-	};
-
 	$effect(() => {
-		if (!selectedFiles) {
-			return;
-		}
-
-		handleUploadFiles(selectedFiles);
-	});
-
-	$effect(() => {
+		// TEMP
+		uploadManager.upload_groups_completed;
 		getFilesList($page.params.path);
+		// getFilesList($page.params.path);
 	});
 
 	// $effect(() => {
@@ -262,14 +223,6 @@
 					<a class="fx fx--ac" href="#">Folder B</a>
 				</div>
 			</div>
-			<input type="file" id="file-input" name="filename" bind:files={selectedFiles} multiple />
-			<input
-				type="file"
-				id="dir-input"
-				name="filename"
-				bind:files={selectedFiles}
-				webkitdirectory
-			/>
 		</header>
 		<main class="entries fx-grow">
 			<section class="directories">
@@ -291,19 +244,18 @@
 					{#each filesResponse.entries.filter((e) => e?.entry_type === 'file') as entry}
 						<File
 							{entry}
-							onDelete={(path: string) => deleteFiles([path])}
-							onRename={(entry: DirEntry) => renameEntryDialog(entry)}
-							{handleMoveOp}
+							isSelected={entry.isSelected}
+							onSelect={() => (entry.isSelected = !entry.isSelected)}
 						/>
 					{/each}
 				</div>
 			</section>
-			<aside class="fx fx--cc">
+			<aside class="upload-bar fx fx--cc">
 				<UploadBar />
 			</aside>
-			<section class="add-action fx fx--cc">
+			<aside class="add-action fx fx--cc">
 				<AddAction />
-			</section>
+			</aside>
 		</main>
 	</section>
 </div>
@@ -402,15 +354,16 @@
 		padding: 1rem;
 		position: relative;
 
-		> aside {
-			position: absolute;
+		> aside.upload-bar {
+			position: fixed;
+			padding-left: calc(var(--sidebar-width) + 1px);
 			bottom: 0;
 			left: 0;
 			width: 100%;
 		}
 
-		> .add-action {
-			position: absolute;
+		> aside.add-action {
+			position: fixed;
 			right: 0;
 			bottom: 0;
 			padding: 1rem;
@@ -439,6 +392,10 @@
 		// grid-auto-columns: max-content;
 		gap: 0.75rem;
 		// grid-template-columns: repeat(auto-fill);
+	}
+
+	.file-list {
+		padding-bottom: 8rem;
 	}
 
 	// todo: move to module

@@ -13,10 +13,9 @@ $td-main-width: 40rem;
     flex-direction: column;
     background: var(--clr-background-1);
     border-radius: 3px;
-    // box-shadow: 0 4px .5rem 0px rgba(0,0,0,.1);
     box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
     border: 1px solid var(--clr-border);
-    transition: box-shadow .3s;
+    transition: box-shadow .3s, background-color .1s, border-color .1s;
 
     &:hover {
         box-shadow: 0 4px 0.5rem -1px var(--clr-shadow);
@@ -27,9 +26,9 @@ $td-main-width: 40rem;
         background: var(--clr-background-2);
         border-radius: 3px;
         font-size: 3rem;
-        // box-shadow: 0 4px .5rem 0px rgba(0,0,0,.1);
         box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
         border: 1px solid var(--clr-border);
+        transition: background-color .1s;
     }
 
     section.info {

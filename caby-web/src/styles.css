@@ -94,6 +94,7 @@
 
 	/* --clr-border: rgba(255, 255, 255, 0.05); */
 	--box-shadow-0: 0 2px 0.3rem -1px var(--clr-shadow);
+	--box-shadow-0--hover: 0 4px 0.5rem -1px var(--clr-shadow);
 	--border-0: 1px solid var(--clr-border);
 }
 
@@ -200,4 +201,14 @@ a:focus {
 
 .box-shadow-0 {
 	box-shadow: var(--box-shadow-0);
+}
+
+/* replace with a color card */
+.box-shadow-0-card {
+	box-shadow: var(--box-shadow-0);
+	border-radius: 3px;
+	transition: box-shadow 0.3s;
+}
+.box-shadow-0-card:hover {
+	box-shadow: var(--box-shadow-0--hover);
 }
