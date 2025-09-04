@@ -7,21 +7,20 @@
 // 	};
 // }
 
+import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '../upload';
 import {
-	CABY_CHUNK_INDEX,
-	CABY_UPLOAD_TOKEN,
-	EventType,
+	MessageType,
+	type Message,
+	type StartUploadPayload,
 	type UploadCompletePayload,
-	type UploadProgressPayload,
-	type UploadStartPayload,
-	type WorkerEvent
-} from '../upload';
+	type UploadProgressPayload
+} from '../workers';
 
 // todo: handle more messages
-self.onmessage = function (e: MessageEvent<WorkerEvent<any>>) {
+self.onmessage = function (e: MessageEvent<Message<any>>) {
 	switch (e.data?.event) {
-		case EventType.UploadStart:
-			const payload = e.data!.payload as UploadStartPayload;
+		case MessageType.StartUpload:
+			const payload = e.data!.payload as StartUploadPayload;
 			start_upload(payload);
 			break;
 		default:
@@ -32,7 +31,7 @@ self.onmessage = function (e: MessageEvent<WorkerEvent<any>>) {
 
 let progress = 0;
 
-const start_upload = (payload: UploadStartPayload) => {
+const start_upload = (payload: StartUploadPayload) => {
 	const id = payload.registration!.id;
 	// todo: better name?
 	const name = payload.file.name;
@@ -56,8 +55,8 @@ const start_upload = (payload: UploadStartPayload) => {
 		const byte_length = (event.target!.result as ArrayBuffer).byteLength;
 		// we are done
 		if (byte_length < 1) {
-			const completedEvent: WorkerEvent<UploadCompletePayload> = {
-				event: EventType.UploadCompleted,
+			const completedEvent: Message<UploadCompletePayload> = {
+				event: MessageType.UploadCompleted,
 				payload: {}
 			};
 			self.postMessage(completedEvent);
@@ -87,8 +86,8 @@ const start_upload = (payload: UploadStartPayload) => {
 		progress = total_loaded;
 
 		// update total progress
-		const progressEvent: WorkerEvent<UploadProgressPayload> = {
-			event: EventType.UploadProgress,
+		const progressEvent: Message<UploadProgressPayload> = {
+			event: MessageType.UploadProgress,
 			payload: { new_progress: total_loaded - last_progress }
 		};
 		self.postMessage(progressEvent);

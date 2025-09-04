@@ -1,10 +1,6 @@
-import {
-	EntryType,
-	type UploadEntry as RegisterUploadEntry,
-	type Progress,
-	type UploadStartPayload
-} from './upload';
+import { EntryType, type UploadEntry as RegisterUploadEntry, type Progress } from './upload';
 import type { UploadRegistration } from './upload_group';
+import type { StartUploadPayload } from './workers';
 
 export enum TaskStatus {
 	PENDING,
@@ -77,7 +73,7 @@ export class UploadFile {
 		};
 	};
 
-	public intoUploadStartPayload = (): UploadStartPayload => {
+	public intoStartUploadPayload = (): StartUploadPayload => {
 		return {
 			base_path: this.base_path,
 			file: this.file,

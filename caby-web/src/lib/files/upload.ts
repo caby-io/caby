@@ -33,28 +33,3 @@ export type Progress = {
 	progress: number;
 	total: number;
 };
-
-// todo: move to own file
-// worker events
-export enum EventType {
-	UploadStart,
-	UploadProgress,
-	UploadCompleted
-}
-
-export type WorkerEvent<T> = {
-	event: EventType;
-	payload: T;
-};
-
-export type UploadStartPayload = {
-	base_path: string;
-	file: File;
-	registration: UploadRegistration;
-};
-
-export type UploadProgressPayload = {
-	new_progress: number;
-};
-
-export type UploadCompletePayload = {};

@@ -4,16 +4,17 @@ import {
 	CABY_UPLOAD_TOKEN,
 	ConflictStrategy,
 	type RegisterUploadRequest,
-	type Progress,
-	type WorkerEvent,
-	type UploadStartPayload,
-	EventType,
-	type UploadProgressPayload,
-	type UploadCompletePayload
+	type Progress
 } from './upload';
 import { TaskStatus, type UploadFile } from './upload_file.svelte';
 import type { UploadGroup, UploadRegistration } from './upload_group';
 import UploadWorker from './workers/upload_worker?worker';
+import {
+	MessageType,
+	type UploadProgressPayload,
+	type StartUploadPayload,
+	type Message
+} from './workers';
 
 const MAX_HASH_THREADS = 3;
 const MAX_UPLOAD_THREADS = 3;
@@ -146,19 +147,19 @@ const startUploadFileWorkerBackground = async (
 	global_progress: Progress
 ) => {
 	var upload_worker = new UploadWorker();
-	let start_upload_message: WorkerEvent<UploadStartPayload> = {
-		event: EventType.UploadStart,
-		payload: upload_file.intoUploadStartPayload()
+	let start_upload_message: Message<StartUploadPayload> = {
+		event: MessageType.StartUpload,
+		payload: upload_file.intoStartUploadPayload()
 	};
 	upload_worker.postMessage(start_upload_message);
-	upload_worker.onmessage = function (e: MessageEvent<WorkerEvent<any>>) {
+	upload_worker.onmessage = function (e: MessageEvent<Message<any>>) {
 		switch (e.data?.event) {
-			case EventType.UploadProgress:
+			case MessageType.UploadProgress:
 				const payload = e.data!.payload as UploadProgressPayload;
 				upload_file.upload_progress.progress += payload.new_progress;
 				global_progress.progress += payload.new_progress;
 				break;
-			case EventType.UploadCompleted:
+			case MessageType.UploadCompleted:
 				upload_file.upload_task_status = TaskStatus.COMPLETE;
 				on_done(upload_file);
 				console.debug('[caby/upload-manager/worker-upload] finished uploading chunks');
@@ -260,8 +261,11 @@ export class UploadManager {
 
 			const next_upload = pending_uploads.shift()!;
 			next_upload.upload_task_status = TaskStatus.STARTED;
+			if (window.Worker) {
+				startUploadFileWorkerBackground(on_done_callback, next_upload, this.upload_progress);
+				continue;
+			}
 			startUploadFileWorker(on_done_callback, next_upload, this.upload_progress);
-			// startUploadFileWorkerBackground(on_done_callback, next_upload, this.upload_progress);
 		}
 	};
 
