@@ -3,8 +3,7 @@ import {
 	CABY_CHUNK_INDEX,
 	CABY_UPLOAD_TOKEN,
 	ConflictStrategy,
-	type RegisterUploadRequest,
-	type Progress
+	type RegisterUploadRequest
 } from './upload';
 import { TaskStatus, type UploadFile } from './upload_file.svelte';
 import type { UploadGroup, UploadRegistration } from './upload_group';
@@ -15,6 +14,7 @@ import {
 	type StartUploadPayload,
 	type Message
 } from './workers';
+import { Progress } from './progress.svelte';
 
 const MAX_HASH_THREADS = 3;
 const MAX_UPLOAD_THREADS = 3;
@@ -99,7 +99,7 @@ const startUploadFileWorker = async (
 		if (byte_length < 1) {
 			upload_file.upload_task_status = TaskStatus.COMPLETE;
 			// todo: remove this??
-			upload_file.upload_progress.progress = upload_file.upload_progress.total;
+			// upload_file.upload_progress.progress = upload_file.upload_progress.total;
 			on_done(upload_file);
 			console.debug('[caby/upload-manager] finished uploading chunks');
 			return;
@@ -117,13 +117,14 @@ const startUploadFileWorker = async (
 		// todo: handle response and error
 
 		// update file progress
-		const last_progress = upload_file.upload_progress.progress;
-		const start = index * chunk_size;
-		const total_loaded = start + byte_length;
-		upload_file.upload_progress.progress = total_loaded;
+		// const last_progress = upload_file.upload_progress.progress;
+		// const start = index * chunk_size;
+		// const total_loaded = start + byte_length;
+		// upload_file.upload_progress.setProgress(total_loaded);
 
-		// update total progress
-		global_progress.progress += total_loaded - last_progress;
+		// update progress
+		upload_file.upload_progress.addProgress(byte_length);
+		global_progress.addProgress(byte_length);
 
 		index++;
 		readNext();
@@ -156,8 +157,8 @@ const startUploadFileWorkerBackground = async (
 		switch (e.data?.event) {
 			case MessageType.UploadProgress:
 				const payload = e.data!.payload as UploadProgressPayload;
-				upload_file.upload_progress.progress += payload.new_progress;
-				global_progress.progress += payload.new_progress;
+				upload_file.upload_progress.addProgress(payload.new_progress);
+				global_progress.addProgress(payload.new_progress);
 				break;
 			case MessageType.UploadCompleted:
 				upload_file.upload_task_status = TaskStatus.COMPLETE;
@@ -182,7 +183,7 @@ export class UploadManager {
 
 	// todo: rename to upload progress?
 	// todo: do we cache or calculate?
-	upload_progress: Progress = $state({ progress: 0, total: 0 });
+	upload_progress: Progress = $state(new Progress(0));
 
 	register_worker_count: number = 0;
 	hash_worker_count: number = 0;
@@ -195,11 +196,16 @@ export class UploadManager {
 		this.upload_groups.push(...upload_groups);
 		// update totals
 		upload_groups.forEach((g) => {
-			this.upload_progress.total += g.upload_files.reduce(
-				(accumulator, f) => accumulator + f.file.size,
-				0
+			this.upload_progress.addTotal(
+				g.upload_files.reduce((accumulator, f) => accumulator + f.file.size, 0)
 			);
 		});
+		// reset progress
+		console.log(this.upload_progress);
+		if (this.upload_progress.progress == this.upload_progress.total) {
+			console.debug('[caby/upload-manager] resetting upload progress');
+			this.upload_progress.reset();
+		}
 		this.startRegistering();
 	};
 

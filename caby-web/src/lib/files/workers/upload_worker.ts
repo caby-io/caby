@@ -80,18 +80,17 @@ const start_upload = (payload: StartUploadPayload) => {
 
 		// todo: store this in worker scope to make it clear that we have no access to the original upload_file obj
 		// update file progress
-		const last_progress = progress;
-		const start = index * chunk_size;
-		const total_loaded = start + byte_length;
-		progress = total_loaded;
+		// const last_progress = progress;
+		// const start = index * chunk_size;
+		// const total_loaded = start + byte_length;
+		// progress = total_loaded;
 
 		// update total progress
 		const progressEvent: Message<UploadProgressPayload> = {
 			event: MessageType.UploadProgress,
-			payload: { new_progress: total_loaded - last_progress }
+			payload: { new_progress: byte_length }
 		};
 		self.postMessage(progressEvent);
-		// global_progress.progress += total_loaded - last_progress;
 
 		index++;
 		readNext();

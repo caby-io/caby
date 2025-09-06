@@ -29,7 +29,11 @@ export type RegisterUploadRequest = {
 	conflict_strategy: ConflictStrategy;
 };
 
-export type Progress = {
+// export type Progress = {
+
+// };
+
+type ProgressEvent = {
+	time: number;
 	progress: number;
-	total: number;
 };

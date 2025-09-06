@@ -1,19 +1,20 @@
 <script lang="ts">
 	import 'iconify-icon';
 	import { uploadManager } from '$lib/files/upload_manager.svelte';
-	import { prettyBytes } from '$lib/fs';
+	import { prettyBytes, secondsToHms } from '$lib/fs';
 
 	let progress_percent = $derived(
 		Math.floor((uploadManager.upload_progress.progress * 100) / uploadManager.upload_progress.total)
 	);
 	let completed_bytes = $derived(prettyBytes(uploadManager.upload_progress.progress));
 	let total_bytes = $derived(prettyBytes(uploadManager.upload_progress.total));
-
-	// todo: move
-
-	$effect(() => {
-		uploadManager.upload_progress;
-	});
+	let speed = $derived(prettyBytes(uploadManager.upload_progress.rate));
+	let eta = $derived(
+		secondsToHms(
+			(uploadManager.upload_progress.total - uploadManager.upload_progress.progress) /
+				uploadManager.upload_progress.rate
+		)
+	);
 </script>
 
 <div class="upload-bar border-0 box-shadow-0-card">
@@ -27,9 +28,9 @@
 	<main class="fx fx--col">
 		<section class="fx">
 			<span>{uploadManager.upload_files.length} files</span>
-			<span>?? Mb/s</span>
+			<span>{speed}/s</span>
 			<span>{completed_bytes} of {total_bytes}</span>
-			<span>??m remaining</span>
+			<span>{eta} remaining</span>
 		</section>
 		<progress class="border-0 box-shadow-0-card" max="100" value={progress_percent || 0}>
 			{progress_percent}%

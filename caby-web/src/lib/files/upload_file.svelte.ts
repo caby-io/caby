@@ -1,4 +1,5 @@
-import { EntryType, type UploadEntry as RegisterUploadEntry, type Progress } from './upload';
+import { Progress } from './progress.svelte';
+import { EntryType, type UploadEntry as RegisterUploadEntry } from './upload';
 import type { UploadRegistration } from './upload_group';
 import type { StartUploadPayload } from './workers';
 
@@ -43,7 +44,7 @@ export class UploadFile {
 		this.base_path = base_path;
 		this.file = file;
 		this.registration = registration;
-		this.upload_progress = { progress: 0, total: file.size };
+		this.upload_progress = new Progress(file.size);
 	}
 
 	public readyToHash = (): boolean => {
@@ -66,8 +67,7 @@ export class UploadFile {
 	public intoUploadEntry = (): RegisterUploadEntry => {
 		return {
 			entry_type: EntryType.FILE,
-			// name: this.file.webkitRelativePath || this.file.name,
-			name: this.file.name,
+			name: this.file.webkitRelativePath || this.file.name,
 			size: this.file.size,
 			xxh_digest: this.xxh_digest!
 		};
