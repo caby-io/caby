@@ -39,6 +39,7 @@ export class UploadFile {
 	// public registration?: UploadRegistration;
 	public xxh_digest?: string;
 	public upload_progress: Progress;
+	public upload_id?: number;
 
 	constructor(base_path: string, registration: UploadRegistration, file: File) {
 		this.base_path = base_path;

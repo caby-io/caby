@@ -14,10 +14,10 @@ import {
 	type StartUploadPayload,
 	type Message
 } from './workers';
-import { Progress } from './progress.svelte';
+import { CombinedProgress, Progress } from './progress.svelte';
 
-const MAX_HASH_THREADS = 3;
-const MAX_UPLOAD_THREADS = 3;
+export const MAX_HASH_THREADS = 3;
+export const MAX_UPLOAD_THREADS = 3;
 
 type UploadGroupCb = (upload_group: UploadGroup) => void;
 type UploadFileCb = (upload_file: UploadFile) => void;
@@ -72,11 +72,12 @@ const startHashFileWorker = async (on_done: UploadFileCb, upload_file: UploadFil
 const startUploadFileWorker = async (
 	on_done: UploadFileCb,
 	upload_file: UploadFile,
-	global_progress: Progress
+	combined_progress: CombinedProgress,
 ) => {
 	const id = upload_file.registration!.id;
 	// todo: better name?
 	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
+	const upload_id = combined_progress.registerUpload();
 
 	let index = 0;
 
@@ -100,6 +101,7 @@ const startUploadFileWorker = async (
 			upload_file.upload_task_status = TaskStatus.COMPLETE;
 			// todo: remove this??
 			// upload_file.upload_progress.progress = upload_file.upload_progress.total;
+			combined_progress.unregisterUpload(upload_id);
 			on_done(upload_file);
 			console.debug('[caby/upload-manager] finished uploading chunks');
 			return;
@@ -124,7 +126,8 @@ const startUploadFileWorker = async (
 
 		// update progress
 		upload_file.upload_progress.addProgress(byte_length);
-		global_progress.addProgress(byte_length);
+		combined_progress.addProgress(byte_length);
+		combined_progress.setRate(upload_id, upload_file.upload_progress.rate)
 
 		index++;
 		readNext();
@@ -145,9 +148,10 @@ const startUploadFileWorker = async (
 const startUploadFileWorkerBackground = async (
 	on_done: UploadFileCb,
 	upload_file: UploadFile,
-	global_progress: Progress
+	combined_progress: CombinedProgress
 ) => {
-	var upload_worker = new UploadWorker();
+	const upload_id = combined_progress.registerUpload();
+	const upload_worker = new UploadWorker();
 	let start_upload_message: Message<StartUploadPayload> = {
 		event: MessageType.StartUpload,
 		payload: upload_file.intoStartUploadPayload()
@@ -158,10 +162,12 @@ const startUploadFileWorkerBackground = async (
 			case MessageType.UploadProgress:
 				const payload = e.data!.payload as UploadProgressPayload;
 				upload_file.upload_progress.addProgress(payload.new_progress);
-				global_progress.addProgress(payload.new_progress);
+				combined_progress.addProgress(payload.new_progress);
+				combined_progress.setRate(upload_id, upload_file.upload_progress.rate);
 				break;
 			case MessageType.UploadCompleted:
-				upload_file.upload_task_status = TaskStatus.COMPLETE;
+				// upload_file.upload_task_status = TaskStatus.COMPLETE;
+				combined_progress.unregisterUpload(upload_id);
 				on_done(upload_file);
 				console.debug('[caby/upload-manager/worker-upload] finished uploading chunks');
 				// todo: cleanup worker?
@@ -183,7 +189,7 @@ export class UploadManager {
 
 	// todo: rename to upload progress?
 	// todo: do we cache or calculate?
-	upload_progress: Progress = $state(new Progress(0));
+	upload_progress: CombinedProgress = $state(new CombinedProgress());
 
 	register_worker_count: number = 0;
 	hash_worker_count: number = 0;
@@ -194,18 +200,20 @@ export class UploadManager {
 
 	public addUploads = (...upload_groups: UploadGroup[]) => {
 		this.upload_groups.push(...upload_groups);
+
+		// reset progress
+		if (this.upload_progress.progress === this.upload_progress.total) {
+			console.debug('[caby/upload-manager] resetting upload progress');
+			this.upload_progress.reset();
+		}
+
 		// update totals
 		upload_groups.forEach((g) => {
 			this.upload_progress.addTotal(
 				g.upload_files.reduce((accumulator, f) => accumulator + f.file.size, 0)
 			);
 		});
-		// reset progress
-		console.log(this.upload_progress);
-		if (this.upload_progress.progress == this.upload_progress.total) {
-			console.debug('[caby/upload-manager] resetting upload progress');
-			this.upload_progress.reset();
-		}
+
 		this.startRegistering();
 	};
 
@@ -255,6 +263,7 @@ export class UploadManager {
 
 	private startUploading = () => {
 		const on_done_callback: UploadFileCb = (upload_file: UploadFile) => {
+			upload_file.upload_task_status = TaskStatus.COMPLETE;
 			this.upload_worker_count--;
 			this.startUploading();
 			this.finalizeUpload(upload_file);
@@ -267,6 +276,7 @@ export class UploadManager {
 
 			const next_upload = pending_uploads.shift()!;
 			next_upload.upload_task_status = TaskStatus.STARTED;
+			const upload_id = this.upload_progress.registerUpload()
 			if (window.Worker) {
 				startUploadFileWorkerBackground(on_done_callback, next_upload, this.upload_progress);
 				continue;

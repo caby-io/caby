@@ -1,6 +1,3 @@
-import type { UploadFile } from './upload_file.svelte';
-import type { UploadRegistration } from './upload_group';
-
 export const CABY_UPLOAD_TOKEN = 'Caby-Upload-Token';
 export const CABY_CHUNK_INDEX = 'Caby-Chunk-Index';
 

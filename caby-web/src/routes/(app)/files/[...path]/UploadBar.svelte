@@ -8,11 +8,11 @@
 	);
 	let completed_bytes = $derived(prettyBytes(uploadManager.upload_progress.progress));
 	let total_bytes = $derived(prettyBytes(uploadManager.upload_progress.total));
-	let speed = $derived(prettyBytes(uploadManager.upload_progress.rate));
+	let speed = $derived(prettyBytes(uploadManager.upload_progress.total_rate));
 	let eta = $derived(
 		secondsToHms(
 			(uploadManager.upload_progress.total - uploadManager.upload_progress.progress) /
-				uploadManager.upload_progress.rate
+				uploadManager.upload_progress.total_rate
 		)
 	);
 </script>
@@ -42,7 +42,7 @@
 	.upload-bar {
 		background: var(--clr-background-1);
 		border-radius: 3px;
-		width: clamp(20rem, 40%, 40rem); // todo: clamp
+		width: clamp(20rem, 60%, 40rem);
 		margin: 1rem 0;
 		padding: 1rem;
 
