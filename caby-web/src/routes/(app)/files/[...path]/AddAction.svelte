@@ -2,7 +2,6 @@
 	import { page } from '$app/stores';
 	import 'iconify-icon';
 	import { uploadManager } from '$lib/files/upload_manager.svelte';
-	import { UploadFile } from '$lib/files/upload_file.svelte';
 	import { UploadGroup } from '$lib/files/upload_group';
 
 	let addEntryDialog: HTMLDialogElement;
@@ -42,8 +41,16 @@
 	<iconify-icon icon="lucide:plus"></iconify-icon>
 </button>
 
-<dialog bind:this={addEntryDialog} id="add-entry-dialog" class="border-0 box-shadow-0-card">
-	<!-- <h2>Add Content</h2> -->
+<dialog
+	bind:this={addEntryDialog}
+	id="add-entry-dialog"
+	class="border-0 box-shadow-0-card"
+	onclick={(e) => {
+		if (e.target === e.currentTarget) {
+			addEntryDialog.close();
+		}
+	}}
+>
 	<div class="add-list">
 		<button class="fx fx--ac border-0 box-shadow-0-card">
 			<div class="fx fx--cc">
@@ -103,7 +110,8 @@
 		transform: translateX(-50%) translateY(-50%);
 		background: var(--clr-background-1);
 		color: var(--clr-text-1);
-		width: clamp(30rem, 40vw, 40rem);
+		width: clamp(30rem, 56%, 40rem);
+		padding: 0;
 
 		&::backdrop {
 			background: rgba(0, 0, 0, 0.5);
@@ -116,6 +124,7 @@
 			grid-template-columns: 1fr 1fr;
 			grid-auto-rows: 5rem;
 			gap: 0.5rem;
+			padding: 1rem;
 
 			> button {
 				cursor: pointer;

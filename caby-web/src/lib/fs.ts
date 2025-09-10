@@ -48,7 +48,7 @@ export const prettyBytes = (bytes: number, si = false, dp = 1) => {
 // todo: move
 export function secondsToHms(d: number) {
 	if (!isFinite(d)) {
-		return "..."
+		return "0s"
 	}
 	var h = Math.floor(d / 3600);
 	var m = Math.floor((d % 3600) / 60);

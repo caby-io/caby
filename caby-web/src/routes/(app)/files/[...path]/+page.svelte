@@ -16,7 +16,6 @@
 
 <script lang="ts">
 	import { page } from '$app/stores';
-	import { on } from 'svelte/events';
 	import * as fs from '$lib/fs';
 
 	import 'iconify-icon';
@@ -306,7 +305,7 @@
 
 	.left {
 		background-color: var(--clr-background-1);
-		width: var(--sidebar-width);
+		min-width: var(--sidebar-width);
 	}
 
 	.right {
