@@ -3,15 +3,17 @@
 pub use self::error::{Error, Result};
 
 use axum::{
-    extract::Path,
+    extract::{Path, Request},
     http::{header, HeaderName, Method},
-    Router,
+    Router, ServiceExt,
 };
 use config::Config;
 use std::path::PathBuf;
 use tokio::{fs, net::TcpListener};
+use tower::Layer;
 use tower_http::{
     cors::{Any, CorsLayer},
+    normalize_path::NormalizePathLayer,
     trace::TraceLayer,
 };
 
@@ -68,9 +70,12 @@ async fn main() {
         )
         .layer(cors_layer)
         .with_state(cfg);
+    let app = NormalizePathLayer::trim_trailing_slash().layer(app);
 
     let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
-    axum::serve(listener, app).await.unwrap();
+    axum::serve(listener, ServiceExt::<Request>::into_make_service(app))
+        .await
+        .unwrap();
 }
 
 async fn handler_files(files_path: Option<Path<String>>) {

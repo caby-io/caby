@@ -1,16 +1,31 @@
 <script lang="ts">
-	let dialog: HTMLDialogElement;
+	// let dialog: HTMLDialogElement;
+
+	// let { openEmitter } = $props();
+	let { dialog = $bindable(), title }: { dialog: HTMLDialogElement; title?: string } = $props();
 
 	const onClick = (e: Event) => {
 		if (e.target === e.currentTarget) {
 			dialog.close();
 		}
 	};
+
+	// $effect(() => {
+	// 	openEmitter.setEvent(() => value.showModal());
+	// });
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 <dialog bind:this={dialog} class="dialog border-0 box-shadow-0-card" onclick={onClick}>
+	{#if title}
+		<header class="title fx fx--ac">
+			<h3 class="fx-grow">{title}</h3>
+			<button class="fx fx--cc" aria-label="close" onclick={() => dialog.close()}>
+				<iconify-icon icon="lucide:x"></iconify-icon>
+			</button>
+		</header>
+	{/if}
 	<slot />
 </dialog>
 
@@ -32,6 +47,17 @@
 			background: rgba(0, 0, 0, 0.5);
 			backdrop-filter: blur(2px);
 			// transition: backdrop-filter 0.3s;
+		}
+
+		> header.title {
+			background: var(--clr-background-2);
+			padding: 1rem;
+			border-bottom: 1px solid var(--clr-border);
+
+			> button {
+				font-size: 1.2rem;
+				cursor: pointer;
+			}
 		}
 	}
 </style>

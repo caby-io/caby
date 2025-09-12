@@ -3,7 +3,11 @@
 	import 'iconify-icon';
 	import { uploadManager } from '$lib/files/upload_manager.svelte';
 	import { UploadGroup } from '$lib/files/upload_group';
+	import NewFolderDialog from './NewFolderDialog.svelte';
 
+	let { onListChange }: { onListChange: any } = $props();
+
+	// Upload files
 	let addEntryDialog: HTMLDialogElement;
 
 	const openAddDialog = () => {
@@ -33,6 +37,14 @@
 		input.click();
 	};
 
+	// New directory
+	let newFolderDialog: HTMLDialogElement;
+
+	const openNewFolderDialog = () => {
+		newFolderDialog.showModal();
+		addEntryDialog.close();
+	};
+
 	// let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
 	// dialog!.showModal();
 </script>
@@ -52,7 +64,7 @@
 	}}
 >
 	<div class="add-list">
-		<button class="fx fx--ac border-0 box-shadow-0-card">
+		<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openNewFolderDialog()}>
 			<div class="fx fx--cc">
 				<iconify-icon icon="flat-color-icons:folder"></iconify-icon>
 				<span class="overlay"><iconify-icon icon="lucide:plus"></iconify-icon></span>
@@ -86,6 +98,8 @@
 		</button>
 	</div>
 </dialog>
+
+<NewFolderDialog bind:dialog={newFolderDialog} {onListChange} />
 
 <style lang="scss">
 	.add-button {

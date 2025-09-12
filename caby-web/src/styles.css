@@ -63,7 +63,7 @@
 	--clr-success: rgb(19, 193, 19);
 	--clr-error: rgb(193, 19, 36);
 	--clr-warn: rgb(19, 193, 19);
-	--clr-info: rgb(19, 193, 19);
+	--clr-info: oklch(0.5 0.28 268.68);
 }
 
 :root[data-theme='dark'] {
@@ -85,7 +85,7 @@
 	--clr-success: rgb(19, 193, 19);
 	--clr-error: rgb(193, 19, 36);
 	--clr-warn: rgb(19, 193, 19);
-	--clr-info: rgb(19, 193, 19);
+	--clr-info: oklch(0.5 0.28 268.68);
 }
 
 :root {
@@ -147,6 +147,25 @@ a {
 a:hover,
 a:focus {
 	color: var(--clr-accent);
+}
+
+/* Forms */
+input {
+	all: unset;
+	background-color: var(--clr-background-2);
+	border-radius: 4px;
+	border: 1px solid var(--clr-border);
+	box-shadow: var(--box-shadow-0);
+	padding: 0.5rem;
+}
+
+.button {
+	padding: 0.5rem 1rem;
+	border-radius: 5px;
+	background-color: var(--clr-info);
+	border: 1px solid var(--clr-border);
+	box-shadow: var(--box-shadow-0);
+	cursor: pointer;
 }
 
 /* Utility */

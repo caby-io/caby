@@ -26,6 +26,7 @@
 	import AddAction from './AddAction.svelte';
 	import { uploadManager } from '$lib/files/upload_manager.svelte';
 	import { TaskStatus } from '$lib/files/upload_file.svelte';
+	import { createEventDispatcher } from 'svelte';
 
 	type FilesResponse = {
 		path: string | null;
@@ -193,6 +194,10 @@
 		}
 	};
 
+	const onListChange = async () => {
+		await getFilesList($page.params.path);
+	};
+
 	$effect(() => {
 		// TEMP
 		uploadManager.upload_groups_completed;
@@ -206,12 +211,14 @@
 </script>
 
 <div class="files-view fx">
-	<section class="left">left</section>
+	<section class="left fx fx--col">
+		<button class="add-button button">Add</button>
+	</section>
 	<section class="right fx-grow fx fx--col">
 		<header class="fx fx--ac">
 			<div class="breadcrumbs fx fx--ac">
 				<div class="breadcrumb fx fx--ac">
-					<a class="fx fx--ac" href="#">
+					<a class="fx fx--ac" href="/files">
 						<iconify-icon icon="ci:house-02"></iconify-icon>
 					</a>
 				</div>
@@ -253,7 +260,7 @@
 				<UploadBar />
 			</aside>
 			<aside class="add-action fx fx--cc">
-				<AddAction />
+				<AddAction {onListChange} />
 			</aside>
 		</main>
 	</section>
@@ -306,6 +313,11 @@
 	.left {
 		background-color: var(--clr-background-1);
 		min-width: var(--sidebar-width);
+
+		.add-button {
+			margin: 1rem;
+			text-align: center;
+		}
 	}
 
 	.right {

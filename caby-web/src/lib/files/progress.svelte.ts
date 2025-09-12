@@ -1,4 +1,4 @@
-import { MAX_UPLOAD_THREADS } from "./upload_manager.svelte";
+import { MAX_UPLOAD_THREADS } from './upload_manager.svelte';
 
 const WEIGHT_FACTOR = 5;
 
@@ -62,13 +62,13 @@ export class CombinedProgress {
 
 	public registerUpload(): number {
 		for (let i = 0; i <= MAX_UPLOAD_THREADS; i++) {
-			if (this.file_rate.get(i)) {
-				continue
+			if (this.file_rate.has(i)) {
+				continue;
 			}
 			this.file_rate.set(i, 0);
-			return i
+			return i;
 		}
-		throw ("could not register upload");
+		throw 'could not register upload';
 	}
 
 	public unregisterUpload(id: number) {
@@ -79,10 +79,12 @@ export class CombinedProgress {
 		this.file_rate.set(id, rate);
 		let rate_sum = 0;
 		this.file_rate.forEach((p) => {
-			rate_sum += p
+			rate_sum += p;
 		});
 
-		this.total_rate = Math.floor(this.total_rate + (rate_sum - this.total_rate) / (WEIGHT_FACTOR))
+		console.log(this.file_rate);
+
+		this.total_rate = Math.floor(this.total_rate + (rate_sum - this.total_rate) / WEIGHT_FACTOR);
 	}
 
 	public addTotal(total: number) {

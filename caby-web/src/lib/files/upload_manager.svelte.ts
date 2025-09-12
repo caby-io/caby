@@ -72,7 +72,7 @@ const startHashFileWorker = async (on_done: UploadFileCb, upload_file: UploadFil
 const startUploadFileWorker = async (
 	on_done: UploadFileCb,
 	upload_file: UploadFile,
-	combined_progress: CombinedProgress,
+	combined_progress: CombinedProgress
 ) => {
 	const id = upload_file.registration!.id;
 	// todo: better name?
@@ -127,7 +127,7 @@ const startUploadFileWorker = async (
 		// update progress
 		upload_file.upload_progress.addProgress(byte_length);
 		combined_progress.addProgress(byte_length);
-		combined_progress.setRate(upload_id, upload_file.upload_progress.rate)
+		combined_progress.setRate(upload_id, upload_file.upload_progress.rate);
 
 		index++;
 		readNext();
@@ -276,7 +276,6 @@ export class UploadManager {
 
 			const next_upload = pending_uploads.shift()!;
 			next_upload.upload_task_status = TaskStatus.STARTED;
-			const upload_id = this.upload_progress.registerUpload()
 			if (window.Worker) {
 				startUploadFileWorkerBackground(on_done_callback, next_upload, this.upload_progress);
 				continue;
