@@ -4,20 +4,20 @@
 
 	let {
 		entry,
-		isSelected: is_selected = false,
+		isSelected = false,
 		// temp
-		onSelect = undefined,
-		onDragStart = undefined,
-		onDragEnd = undefined,
-		onDragEnter = undefined,
-		onDragOver = undefined,
-		onDragLeave = undefined,
-		onDrop = undefined
+		onSelect
+		// onDragStart = undefined,
+		// onDragEnd = undefined,
+		// onDragEnter = undefined,
+		// onDragOver = undefined,
+		// onDragLeave = undefined,
+		// onDrop = undefined
 	}: EntryProps<FileFields> = $props();
 </script>
 
 <div
-	class="entry entry--file {is_selected ? 'entry--selected' : ''}"
+	class="entry entry--file {isSelected ? 'entry--selected' : ''}"
 	role="none"
 	draggable="true"
 	onclick={onSelect}

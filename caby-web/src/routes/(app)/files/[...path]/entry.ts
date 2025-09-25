@@ -9,11 +9,6 @@ export type Entry<T> = {
 	entry_fields: T;
 };
 
-export type FileFields = {
-	size: number;
-	pretty_size: string;
-};
-
 export type EntryProps<T> = {
 	entry: Entry<T>;
 	isSelected: boolean;
@@ -29,4 +24,13 @@ export type EntryProps<T> = {
 	onDragOver?: () => void;
 	onDragLeave?: () => void;
 	onDrop?: () => void;
+};
+
+export type FileFields = {
+	size: number;
+	pretty_size: string;
+};
+
+export type DirFields = {
+	//todo
 };

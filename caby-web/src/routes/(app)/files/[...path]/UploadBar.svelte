@@ -1,6 +1,6 @@
 <script lang="ts">
 	import 'iconify-icon';
-	import { uploadManager } from '$lib/files/upload_manager.svelte';
+	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import { prettyBytes, secondsToHms } from '$lib/fs';
 
 	let progress_percent = $derived(

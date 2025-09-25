@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 	import 'iconify-icon';
-	import { uploadManager } from '$lib/files/upload_manager.svelte';
-	import { UploadGroup } from '$lib/files/upload_group';
+	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
+	import { UploadGroup } from '$lib/files/upload/upload_group';
 	import NewFolderDialog from './NewFolderDialog.svelte';
 
 	let { onListChange }: { onListChange: any } = $props();
@@ -12,7 +12,6 @@
 
 	const openAddDialog = () => {
 		addEntryDialog.showModal();
-		// addEntryDialog.hideM
 	};
 
 	const handleUploadFiles = async (files: FileList) => {
@@ -38,6 +37,7 @@
 	};
 
 	// New directory
+	// svelte-ignore non_reactive_update
 	let newFolderDialog: HTMLDialogElement;
 
 	const openNewFolderDialog = () => {

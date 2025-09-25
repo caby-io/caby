@@ -44,9 +44,9 @@
 		}
 
 		dragoverCt += 1;
-		// if (dragover) {
-		// 	handleMoveOp(MoveOp.SET_DST, entry);
-		// }
+		if (dragover) {
+			handleMoveOp(MoveOp.SET_DST, entry);
+		}
 	};
 
 	const onDragOver = (e: DragEvent) => {
@@ -62,9 +62,9 @@
 		}
 
 		dragoverCt -= 1;
-		// if (!dragover) {
-		// 	handleMoveOp(MoveOp.REM_DST, entry);
-		// }
+		if (!dragover) {
+			handleMoveOp(MoveOp.REM_DST, entry);
+		}
 	};
 
 	const onDrop = (e: DragEvent) => {

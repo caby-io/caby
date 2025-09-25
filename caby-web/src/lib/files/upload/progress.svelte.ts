@@ -82,8 +82,6 @@ export class CombinedProgress {
 			rate_sum += p;
 		});
 
-		console.log(this.file_rate);
-
 		this.total_rate = Math.floor(this.total_rate + (rate_sum - this.total_rate) / WEIGHT_FACTOR);
 	}
 

@@ -2,8 +2,8 @@
 	export const enum MoveOp {
 		ADD_SRC,
 		REM_SRC,
-		// SET_DST,
-		// REM_DST,
+		SET_DST,
+		REM_DST,
 		EXEC
 	}
 
@@ -24,9 +24,10 @@
 	import Loading from './Loading.svelte';
 	import UploadBar from './UploadBar.svelte';
 	import AddAction from './AddAction.svelte';
-	import { uploadManager } from '$lib/files/upload_manager.svelte';
-	import { TaskStatus } from '$lib/files/upload_file.svelte';
+	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
+	import { TaskStatus } from '$lib/files/upload/upload_file.svelte';
 	import { createEventDispatcher } from 'svelte';
+	import type { Entry } from './entry';
 
 	type FilesResponse = {
 		path: string | null;
@@ -160,8 +161,12 @@
 		dialog!.showModal();
 	};
 
+	const handleSelectOp = async (e: MouseEvent, entry_index: number, entry: Entry<any>) => {
+		() => (entry.isSelected = !entry.isSelected);
+	};
+
 	let dragged_entries: Set<Entry> = $state(new Set());
-	// let targetEntry: Entry | undefined = $state();
+	let targetEntry: Entry | undefined = $state();
 
 	const handleMoveOp = async (operation: MoveOp, entry: Entry) => {
 		switch (operation) {
@@ -171,13 +176,18 @@
 			case MoveOp.REM_SRC:
 				dragged_entries.delete(entry);
 				break;
-			// case MoveOp.SET_DST:
-			// 	targetEntry = entry;
-			// 	break;
-			// case MoveOp.REM_DST:
-			// 	targetEntry = undefined;
-			// 	break;
+			case MoveOp.SET_DST:
+				targetEntry = entry;
+				break;
+			case MoveOp.REM_DST:
+				targetEntry = undefined;
+				break;
 			case MoveOp.EXEC:
+				if (dragged_entries.size < 1) {
+					console.error('missing src');
+					return;
+				}
+
 				if (dragged_entries.size < 1) {
 					console.error('missing destination');
 					return;
