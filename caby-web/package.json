@@ -13,14 +13,14 @@
 		"format": "prettier --write ."
 	},
 	"devDependencies": {
-		"@sveltejs/adapter-auto": "^3.3.1",
+		"@sveltejs/adapter-auto": "^6.1.0",
 		"@sveltejs/kit": "^2.43.5",
-		"@sveltejs/vite-plugin-svelte": "^4.0.4",
+		"@sveltejs/vite-plugin-svelte": "^6.2.1",
 		"@types/eslint": "^9.6.1",
 		"eslint": "^9.36.0",
-		"eslint-config-prettier": "^9.1.2",
-		"eslint-plugin-svelte": "^2.46.1",
-		"globals": "^15.15.0",
+		"eslint-config-prettier": "^10.1.8",
+		"eslint-plugin-svelte": "^3.12.4",
+		"globals": "^16.4.0",
 		"prettier": "^3.6.2",
 		"prettier-plugin-svelte": "^3.4.0",
 		"sass": "^1.93.2",
@@ -29,12 +29,12 @@
 		"svelte-preprocess": "^6.0.3",
 		"typescript": "^5.9.2",
 		"typescript-eslint": "^8.44.1",
-		"vite": "^5.4.20"
+		"vite": "^6.3.6"
 	},
 	"type": "module",
 	"dependencies": {
 		"hash-wasm": "^4.12.0",
-		"iconify-icon": "^2.3.0",
+		"iconify-icon": "^3.0.1",
 		"xxhash-wasm": "^1.1.0"
 	}
 }
