@@ -1,8 +1,14 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+
 	// let dialog: HTMLDialogElement;
 
 	// let { openEmitter } = $props();
-	let { dialog = $bindable(), title }: { dialog: HTMLDialogElement; title?: string } = $props();
+	let {
+		dialog = $bindable(),
+		title,
+		content
+	}: { dialog: HTMLDialogElement; title?: string; content: Snippet } = $props();
 
 	const onClick = (e: Event) => {
 		if (e.target === e.currentTarget) {
@@ -26,7 +32,7 @@
 			</button>
 		</header>
 	{/if}
-	<slot />
+	{@render content()}
 </dialog>
 
 <style lang="scss">

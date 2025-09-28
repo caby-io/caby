@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import 'iconify-icon';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import { UploadGroup } from '$lib/files/upload/upload_group';
 	import NewFolderDialog from './NewFolderDialog.svelte';
 
 	let { onListChange }: { onListChange: any } = $props();
+	const path = $derived(page.params.path!);
 
 	// Upload files
 	let addEntryDialog: HTMLDialogElement;
@@ -17,7 +18,7 @@
 	const handleUploadFiles = async (files: FileList) => {
 		// for now we are always making an upload group for each file
 		for (const file of files) {
-			uploadManager.addUploads(new UploadGroup($page.params.path, file));
+			uploadManager.addUploads(new UploadGroup(path, file));
 		}
 	};
 

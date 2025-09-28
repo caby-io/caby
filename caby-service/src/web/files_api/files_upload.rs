@@ -325,11 +325,17 @@ pub async fn handle_complete_upload(
 
     // todo: improve err
     while let Some(dir_entry) = entries.next_entry().await.expect("couldn't get next entry") {
+        println!("{:?}", dir_entry.path());
+
         // let filename = dir_entry.file_name();
         let dest = cfg
             .live_path
             .join(&upload_token_payload.base_path)
             .join(dir_entry.file_name());
+
+        println!("{:?}", upload_token_payload.base_path);
+        println!("{:?}", dest);
+
         fs::rename(dir_entry.path(), dest)
             .await
             .expect("couldn't move file");

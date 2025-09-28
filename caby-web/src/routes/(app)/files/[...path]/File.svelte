@@ -1,26 +1,36 @@
 <script lang="ts">
 	import { join } from '$lib/fs';
-	import type { EntryProps, FileFields } from './entry';
+	import type { EntryProps, FileFields } from '$lib/files/entry';
 
 	let {
 		entry,
-		isSelected = false,
-		// temp
-		onSelect
-		// onDragStart = undefined,
-		// onDragEnd = undefined,
-		// onDragEnter = undefined,
-		// onDragOver = undefined,
-		// onDragLeave = undefined,
-		// onDrop = undefined
+		onSelect,
+		onDragStart,
+		onDragEnd,
+		// onDragEnter,
+		onDragOver,
+		// onDragLeave,
+		onDrop
 	}: EntryProps<FileFields> = $props();
+
+	let is_selected = $derived(entry.is_selected);
+	// let dragging = $state(false);
+
+	// const handleDragStart = (e: Event) => {
+
+	// }
 </script>
 
 <div
-	class="entry entry--file {isSelected ? 'entry--selected' : ''}"
+	class="entry entry--file"
+	class:is_selected
 	role="none"
 	draggable="true"
 	onclick={onSelect}
+	ondragstart={(e) => onDragStart!(e, entry)}
+	ondragend={(e) => onDragEnd!(e, entry)}
+	ondragover={(e) => onDragOver!(e, entry)}
+	ondrop={(e) => onDrop!(e, entry)}
 >
 	<section class="display fx fx--cc fx-grow">📃</section>
 	<section class="info">

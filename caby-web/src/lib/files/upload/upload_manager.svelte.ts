@@ -314,7 +314,7 @@ export class UploadManager {
 
 		upload_file.finalize_task_status = TaskStatus.COMPLETE;
 		console.debug('[caby/upload-manager] finished finalizing file');
-		this.tryCommitUploadGroup(upload_file);
+		await this.tryCommitUploadGroup(upload_file);
 	};
 
 	private tryCommitUploadGroup = async (upload_file: UploadFile) => {

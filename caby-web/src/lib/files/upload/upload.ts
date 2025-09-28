@@ -1,6 +1,7 @@
 export const CABY_UPLOAD_TOKEN = 'Caby-Upload-Token';
 export const CABY_CHUNK_INDEX = 'Caby-Chunk-Index';
 
+// todo: move to api dir
 export enum EntryType {
 	FILE = 'file',
 	DIRECTORY = 'directory'

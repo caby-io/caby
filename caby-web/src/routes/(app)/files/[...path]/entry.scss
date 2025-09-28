@@ -43,7 +43,7 @@ $td-main-width: 40rem;
         }
     }
 
-    &--selected {
+    &--selected, &.is_selected {
         background: var(--clr-secondary);
         border-color: var(--clr-accent);
 

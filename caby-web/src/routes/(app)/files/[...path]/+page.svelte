@@ -15,28 +15,22 @@
 </script>
 
 <script lang="ts">
-	import { page } from '$app/stores';
+	import { page } from '$app/state';
 	import * as fs from '$lib/fs';
 
 	import 'iconify-icon';
-	import Directory, { type DirEntry } from './Directory.svelte';
+	import Directory from './Directory.svelte';
 	import File from './File.svelte';
 	import Loading from './Loading.svelte';
 	import UploadBar from './UploadBar.svelte';
 	import AddAction from './AddAction.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
-	import { TaskStatus } from '$lib/files/upload/upload_file.svelte';
-	import { createEventDispatcher } from 'svelte';
-	import type { Entry } from './entry';
+	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
+	import type { FilesResponse } from '$lib/api/api_files';
+	import type { SelectedEntry } from '$lib/files/select';
+	import DeleteDialog from './DeleteDialog.svelte';
 
-	type FilesResponse = {
-		path: string | null;
-		parent_dir: string | null;
-		current_dir: string;
-		entries: Array<Entry>;
-	};
-
-	let onuploadComplete = $props();
+	const path = $derived(page.params.path!);
 
 	let filesResponse: FilesResponse = $state({
 		path: null,
@@ -45,13 +39,11 @@
 		entries: []
 	});
 
-	type FilesRender = {
-		entries: Array<Entry | undefined>;
-	};
+	let entries: Entry[] = $derived(filesResponse.entries);
+	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
+	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
 
-	let filesRender: FilesRender = $state({
-		entries: []
-	});
+	// File List Operations
 
 	let loading = $state(false);
 
@@ -67,67 +59,114 @@
 
 		filesResponse = data;
 
-		// temp?
-		// virtualizeList();
-
-		// Fix URL if it's incorrect
-		// if document.location.href != join("files", response.path) {
-		// 	document.location.href = join("files", response.path)
-		// }
-
 		loading = false;
-		// document.location.href = join("files", response.path)
 	};
 
-	const virtualizeList = () => {
-		// const filesList = document.getElementById('files-list');
-		const main = document.getElementById('main');
-		const height = window.innerHeight - (main!.offsetTop || 0);
-		const offset = main!.scrollTop;
+	const onListChange = async () => {
+		// todo: should we clear the delete and selected list?
+		await getFilesList(path);
+	};
 
-		// todo: get dynamically
-		const trHeadHeight = 44.17;
-		const trBodyHeight = 72.33;
+	// Select Operations
 
-		// we won't bother calculating when the bottom-most element appears
-		const maxTR = Math.ceil(height / trBodyHeight);
-		// todo: should be +1 when we have parent dir link
-		let elOffset = Math.floor(offset / trBodyHeight - trHeadHeight / trBodyHeight);
+	let selected_entries: Set<Entry> = $derived(
+		new Set(entries.filter((e) => e.is_selected === true))
+	);
+	let last_selected: SelectedEntry | undefined = $state();
 
-		const entryCount = filesResponse.entries.length;
+	const handleSelectOp = async (e: MouseEvent, selected: SelectedEntry) => {
+		// for now we will only allow selection across the same entry type
+		if (
+			e.shiftKey &&
+			last_selected &&
+			last_selected.entry.entry_type == selected.entry.entry_type
+		) {
+			let low_index = last_selected.index;
+			let high_index = selected.index;
+			if (last_selected.index > selected.index) {
+				low_index = selected.index;
+				high_index = last_selected.index;
+			}
 
-		filesRender.entries = Array(entryCount).fill(undefined);
+			entries.slice(low_index, high_index + 1).forEach((e) => {
+				e.is_selected = true;
+			});
 
-		if (elOffset < 1) {
-			elOffset = 0;
+			last_selected = selected;
+			return;
 		}
 
-		const filesOffset = elOffset - entryCount;
-		// console.log(filesOffset);
+		// if shift then try selecting across
+		// if not shift
+		selected.entry.is_selected = !selected.entry.is_selected;
+		last_selected = selected;
+	};
 
-		// Dirs
-		const dirsRendered = Math.min(elOffset + maxTR, entryCount - 1) - elOffset;
-		for (let i = elOffset; i <= Math.min(elOffset + maxTR, entryCount - 1); i++) {
-			filesRender.entries[i] = filesResponse.entries[i];
+	// Drag Operations
+
+	let dragged_entries: Set<Entry> = $state(new Set());
+	let drag_target: DragTarget = $state({ entry: undefined, count: 0 });
+	let targetEntry: Entry | undefined = $state();
+
+	const onDragStart = (e: DragEvent, entry: Entry) => {
+		// single file being moved
+		if (!selected_entries.has(entry)) {
+			dragged_entries = new Set([entry]);
+			return;
+		}
+
+		// multiple files being moved
+		dragged_entries = selected_entries;
+		console.log('todo: do UI stuff for multiple');
+	};
+
+	const onDragEnd = (e: DragEvent, entry: Entry) => {
+		dragged_entries = new Set();
+	};
+
+	const onDragOver = (e: DragEvent, _: Entry) => {
+		e.preventDefault();
+	};
+
+	const onDragEnter = (e: DragEvent, entry: Entry) => {
+		e.preventDefault();
+		// todo: skip if selected, unless dir?
+		if (dragged_entries.has(entry)) {
+			return;
+		}
+
+		if (entry !== drag_target.entry) {
+			drag_target.entry = entry;
+			drag_target.count = 0;
+		}
+		drag_target.count++;
+	};
+
+	const onDragLeave = (e: DragEvent, entry: Entry) => {
+		if (dragged_entries.has(entry)) {
+			return;
+		}
+
+		drag_target.count--;
+		if (drag_target.count === 0) {
+			drag_target.entry = undefined;
 		}
 	};
 
-	const deleteFiles = async (paths: [string]) => {
-		const response = await fetch('http://localhost:8080/v0/files/delete', {
-			method: 'post',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				entries: paths,
-				force: false
-			})
+	const onDrop = async (e: DragEvent, entry: Entry) => {
+		if (drag_target.entry === undefined || dragged_entries.size < 1) {
+			return;
+		}
+
+		let renames: [string, string][] = [];
+		dragged_entries.forEach((e) => {
+			renames.push([e.path, fs.join(entry.path, e.name)]);
 		});
-		// todo: handle errors
-		const payload = await response.json();
-		await getFilesList($page.params.path);
+		await moveFiles(renames);
+		console.log('execute move');
 	};
+
+	// CRUD Ops
 
 	const moveFiles = async (entries: [string, string][]) => {
 		const response = await fetch('http://localhost:8080/v0/files/move', {
@@ -143,82 +182,45 @@
 		});
 		// todo: handle errors
 		const payload = await response.json();
-		await getFilesList($page.params.path);
+		// todo: move this to onDrop?
+		await onListChange();
 	};
 
-	let renameEntry = $state({
-		srcName: '',
-		srcPath: '',
-		dstName: ''
-	});
+	// svelte-ignore non_reactive_update
+	let delete_entries_dialog: HTMLDialogElement;
+	let delete_entries: Entry[] = $state([]);
 
-	const renameEntryDialog = (entry: FileEntry | DirEntry) => {
-		renameEntry.srcName = entry.name;
-		renameEntry.srcPath = entry.path;
-		renameEntry.dstName = entry.name;
-
-		let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
-		dialog!.showModal();
+	const handleDeleteSelected = () => {
+		if (selected_entries.size < 1) {
+			return;
+		}
+		delete_entries = Array.from(selected_entries);
+		delete_entries_dialog!.showModal();
 	};
 
-	const handleSelectOp = async (e: MouseEvent, entry_index: number, entry: Entry<any>) => {
-		() => (entry.isSelected = !entry.isSelected);
-	};
+	const onKeyDown = (e: KeyboardEvent) => {
+		// `keydown` event is fired while the physical key is held down.
 
-	let dragged_entries: Set<Entry> = $state(new Set());
-	let targetEntry: Entry | undefined = $state();
+		// Assuming you only want to handle the first press, we early
+		// return to skip.
+		if (e.repeat) return;
 
-	const handleMoveOp = async (operation: MoveOp, entry: Entry) => {
-		switch (operation) {
-			case MoveOp.ADD_SRC:
-				dragged_entries.add(entry);
-				break;
-			case MoveOp.REM_SRC:
-				dragged_entries.delete(entry);
-				break;
-			case MoveOp.SET_DST:
-				targetEntry = entry;
-				break;
-			case MoveOp.REM_DST:
-				targetEntry = undefined;
-				break;
-			case MoveOp.EXEC:
-				if (dragged_entries.size < 1) {
-					console.error('missing src');
-					return;
-				}
+		// In the switch-case we're updating our boolean flags whenever the
+		// desired bound keys are pressed.
 
-				if (dragged_entries.size < 1) {
-					console.error('missing destination');
-					return;
-				}
-
-				let renames: [string, string][] = [];
-
-				dragged_entries.forEach((e) => {
-					renames.push([e.path, fs.join(entry.path, e.name)]);
-				});
-
-				await moveFiles(renames);
-				break;
+		switch (e.key) {
+			case 'Delete':
+				handleDeleteSelected();
 		}
 	};
 
-	const onListChange = async () => {
-		await getFilesList($page.params.path);
-	};
-
 	$effect(() => {
-		// TEMP
-		uploadManager.upload_groups_completed;
-		getFilesList($page.params.path);
-		// getFilesList($page.params.path);
+		// uploadManager.upload_groups_completed;
+		getFilesList(path);
 	});
-
-	// $effect(() => {
-	// 	virtualizeList();
-	// });
 </script>
+
+<svelte:window on:keydown={onKeyDown} />
 
 <div class="files-view fx">
 	<section class="left fx fx--col">
@@ -244,12 +246,16 @@
 			<section class="directories">
 				<h3>Directories</h3>
 				<div class="dir-list">
-					{#each filesResponse.entries.filter((e) => e?.entry_type === 'directory') as entry}
+					{#each dir_entries as entry, index}
 						<Directory
 							{entry}
-							onDelete={(path: string) => deleteFiles([path])}
-							onRename={(entry: DirEntry) => renameEntryDialog(entry)}
-							{handleMoveOp}
+							onSelect={(e: MouseEvent) => handleSelectOp(e, { index, entry })}
+							{onDragStart}
+							{onDragEnd}
+							{onDragEnter}
+							{onDragOver}
+							{onDragLeave}
+							{onDrop}
 						/>
 					{/each}
 				</div>
@@ -257,11 +263,15 @@
 			<section class="files">
 				<h3>Files</h3>
 				<div class="file-list">
-					{#each filesResponse.entries.filter((e) => e?.entry_type === 'file') as entry}
+					{#each file_entries as entry, index}
 						<File
 							{entry}
-							isSelected={entry.isSelected}
-							onSelect={() => (entry.isSelected = !entry.isSelected)}
+							onSelect={(e: MouseEvent) =>
+								handleSelectOp(e, { index: index + dir_entries.length, entry: entry })}
+							{onDragStart}
+							{onDragEnd}
+							{onDragOver}
+							{onDrop}
 						/>
 					{/each}
 				</div>
@@ -276,44 +286,7 @@
 	</section>
 </div>
 
-<dialog id="rename-modal" class="rename-modal">
-	<header class="fx">
-		<h2>Rename</h2>
-		<button
-			class="close fx fx-cc"
-			onclick={() => {
-				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
-				dialog!.close();
-			}}
-		>
-			<iconify-icon icon="lucide:x"></iconify-icon>
-		</button>
-	</header>
-	<main>
-		<p>Renaming '<span>{renameEntry.srcName}</span>'</p>
-		<input type="text" bind:value={renameEntry.dstName} />
-	</main>
-	<footer class="fx fx-cc">
-		<button
-			class="cancel"
-			onclick={() => {
-				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
-				dialog!.close();
-			}}>Cancel</button
-		>
-		<button
-			onclick={() => {
-				moveFiles([
-					[renameEntry.srcPath, fs.join(fs.parent(renameEntry.srcPath), renameEntry.dstName)]
-				]);
-				let dialog: HTMLDialogElement | null = document.querySelector('#rename-modal');
-				dialog!.close();
-			}}
-		>
-			Rename
-		</button>
-	</footer>
-</dialog>
+<DeleteDialog bind:dialog={delete_entries_dialog} {onListChange} entries={delete_entries} />
 
 <style lang="scss">
 	.files-view {

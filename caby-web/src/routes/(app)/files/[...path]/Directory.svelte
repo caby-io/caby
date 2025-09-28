@@ -1,91 +1,33 @@
 <script lang="ts">
+	import type { DirFields, EntryProps } from '$lib/files/entry';
 	import { join } from '$lib/fs';
-	import { MoveOp } from './+page.svelte';
-
-	export type DirEntry = {
-		entry_type: string;
-		name: string;
-		path: string;
-		created_at: string;
-		pretty_created_at: string;
-		modified_at: string;
-		pretty_modified_at: string;
-
-		selected: boolean;
-	};
 
 	let {
 		entry,
-		onDelete,
-		onRename,
-		handleMoveOp
-	}: { entry: DirEntry; onDelete: any; onRename: any; handleMoveOp: any } = $props();
+		onSelect,
+		onDragStart,
+		onDragEnd,
+		onDragEnter,
+		onDragOver,
+		onDragLeave,
+		onDrop
+	}: EntryProps<DirFields> = $props();
 
-	// Dragged Item
-	let dragging = $state(false);
-
-	const onDragStart = (e: DragEvent) => {
-		dragging = true;
-		handleMoveOp(MoveOp.ADD_SRC, entry);
-	};
-
-	const onDragEnd = (e: DragEvent) => {
-		dragging = false;
-		handleMoveOp(MoveOp.REM_SRC, entry);
-	};
-
-	// Dragged-To Item
-	let dragoverCt = $state(0);
-	let dragover = $derived(dragoverCt > 0);
-
-	const onDragEnter = (e: DragEvent) => {
-		if (dragging) {
-			return false;
-		}
-
-		dragoverCt += 1;
-		if (dragover) {
-			handleMoveOp(MoveOp.SET_DST, entry);
-		}
-	};
-
-	const onDragOver = (e: DragEvent) => {
-		if (dragging) {
-			return false;
-		}
-		e.preventDefault();
-	};
-
-	const onDragLeave = (e: DragEvent) => {
-		if (dragging) {
-			return false;
-		}
-
-		dragoverCt -= 1;
-		if (!dragover) {
-			handleMoveOp(MoveOp.REM_DST, entry);
-		}
-	};
-
-	const onDrop = (e: DragEvent) => {
-		handleMoveOp(MoveOp.EXEC, entry);
-		dragoverCt = 0;
-		// todo: bubble the event up
-	};
+	let is_selected = $derived(entry.is_selected);
 </script>
 
 <div
 	class="entry entry--directory"
 	role="none"
 	draggable="true"
-	class:dragging
-	class:dragover
-	ondragstart={onDragStart}
-	ondragend={onDragEnd}
-	ondragenter={onDragEnter}
-	ondragover={onDragOver}
-	ondragleave={onDragLeave}
-	ondrop={onDrop}
+	class:is_selected
+	onclick={onSelect}
+	ondragstart={(e) => onDragStart!(e, entry)}
+	ondragend={(e) => onDragEnd!(e, entry)}
+	ondragenter={(e) => onDragEnter!(e, entry)}
+	ondragover={(e) => onDragOver!(e, entry)}
+	ondragleave={(e) => onDragLeave!(e, entry)}
+	ondrop={(e) => onDrop!(e, entry)}
 >
 	<section class="display fx fx--cc fx-grow">📁</section>
 	<section class="info">
@@ -96,12 +38,4 @@
 
 <style lang="scss">
 	@use 'entry';
-
-	tr.dragging {
-		background: red;
-	}
-
-	tr.dragover {
-		background: yellow;
-	}
 </style>
