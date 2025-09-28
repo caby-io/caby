@@ -215,7 +215,8 @@
 	};
 
 	$effect(() => {
-		// uploadManager.upload_groups_completed;
+		// temp
+		uploadManager.upload_groups_completed;
 		getFilesList(path);
 	});
 </script>
