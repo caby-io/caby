@@ -225,7 +225,9 @@
 
 <div class="files-view fx">
 	<section class="left fx fx--col">
-		<button class="add-button button">Add</button>
+		<button class="fx fx--cc add-button button"
+			><iconify-icon icon="lucide-plus"></iconify-icon>Add</button
+		>
 	</section>
 	<section class="right fx-grow fx fx--col">
 		<header class="fx fx--ac">

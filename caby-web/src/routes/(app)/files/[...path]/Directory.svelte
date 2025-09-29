@@ -31,7 +31,12 @@
 >
 	<section class="display fx fx--cc fx-grow">📁</section>
 	<section class="info">
-		<h1><a href={`/${join('files', entry.path)}`}>{entry.name}</a></h1>
+		<h1>
+			<!-- todo: figure out a better solution for the double event -->
+			<a onclick={() => (onSelect = undefined)} href={`/${join('files', entry.path)}`}
+				>{entry.name}</a
+			>
+		</h1>
 		{entry.pretty_modified_at}
 	</section>
 </div>
