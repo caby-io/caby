@@ -29,9 +29,6 @@ pub static ROOT_PATH: &str = "/home/suhaib/caby-home";
 
 #[tokio::main]
 async fn main() {
-    // Build config
-    let cfg = Config::new();
-
     // Set up tracing
     tracing_subscriber::fmt()
         .with_target(false)
@@ -40,10 +37,15 @@ async fn main() {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
+    // Build config
+    let cfg = Config::new();
+
     // Initialize paths
     // todo: log something when dir is created
     fs::create_dir_all(&cfg.live_path).await.unwrap();
     fs::create_dir_all(&cfg.meta_path).await.unwrap();
+    // TEMP uploads housekeeping
+    fs::remove_dir_all(&cfg.uploads_path).await.unwrap();
     fs::create_dir_all(&cfg.uploads_path).await.unwrap();
 
     // TEMP

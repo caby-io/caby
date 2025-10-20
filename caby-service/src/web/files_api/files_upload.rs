@@ -317,7 +317,7 @@ pub async fn handle_complete_upload(
     // todo: check that all the files are complete
     // todo: get the base path
     let upload_path = cfg.uploads_path.join(id_path);
-    let mut entries = match fs::read_dir(upload_path).await {
+    let mut entries = match fs::read_dir(&upload_path).await {
         Ok(e) => e,
         // todo: improve this error
         Err(err) => return resp.internal_error().into_response(),
@@ -325,20 +325,20 @@ pub async fn handle_complete_upload(
 
     // todo: improve err
     while let Some(dir_entry) = entries.next_entry().await.expect("couldn't get next entry") {
-        println!("{:?}", dir_entry.path());
-
         // let filename = dir_entry.file_name();
         let dest = cfg
             .live_path
             .join(&upload_token_payload.base_path)
             .join(dir_entry.file_name());
 
-        println!("{:?}", upload_token_payload.base_path);
-        println!("{:?}", dest);
-
         fs::rename(dir_entry.path(), dest)
             .await
             .expect("couldn't move file");
+    }
+
+    if let Err(err) = fs::remove_dir_all(upload_path).await {
+        error!("couldn't clear upload directory: {}", err);
+        return resp.internal_error().into_response();
     }
 
     resp.status_code(StatusCode::CREATED)

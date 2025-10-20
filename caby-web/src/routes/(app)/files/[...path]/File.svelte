@@ -14,6 +14,7 @@
 	}: EntryProps<FileFields> = $props();
 
 	let is_selected = $derived(entry.is_selected);
+	let is_processing = $derived(entry.is_processing);
 	// let dragging = $state(false);
 
 	// const handleDragStart = (e: Event) => {
@@ -24,6 +25,7 @@
 <div
 	class="entry entry--file"
 	class:is_selected
+	class:is_processing
 	role="none"
 	draggable="true"
 	onclick={onSelect}

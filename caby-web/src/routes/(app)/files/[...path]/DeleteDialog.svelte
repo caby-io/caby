@@ -10,6 +10,8 @@
 	}: { dialog: HTMLDialogElement; onListChange: any; entries: Array<Entry> } = $props();
 
 	const tryDelete = async () => {
+		entries.forEach((e) => (e.is_processing = true));
+
 		const response = await fetch('http://localhost:8080/v0/files/delete', {
 			method: 'post',
 			headers: {
@@ -39,7 +41,7 @@
 			</div>
 			<div class="actions fx">
 				<button class="button" onclick={() => dialog.close()}>Cancel</button>
-				<button class="button delete" onclick={() => tryDelete()}>Delete</button>
+				<button class="button primary" onclick={() => tryDelete()}>Delete</button>
 			</div>
 		</section>
 	{/snippet}
@@ -57,7 +59,8 @@
 
 		> button {
 			&.delete {
-				background: var(--clr-error);
+				color: var(--clr-background);
+				background: linear-gradient(320deg, var(--clr-primary), var(--clr-accent));
 			}
 		}
 	}

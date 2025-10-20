@@ -2,6 +2,7 @@
 	import 'iconify-icon';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import { prettyBytes, secondsToHms } from '$lib/fs';
+	import Dialog from '$lib/Dialog.svelte';
 
 	let progress_percent = $derived(
 		Math.floor((uploadManager.upload_progress.progress * 100) / uploadManager.upload_progress.total)
@@ -15,13 +16,21 @@
 				uploadManager.upload_progress.total_rate
 		)
 	);
+
+	let dialog: HTMLDialogElement;
 </script>
 
-<div class="upload-bar border-0 box-shadow-0-card">
+<Dialog bind:dialog title="Tasks">
+	{#snippet content()}
+		<section><h1>Helo there</h1></section>
+	{/snippet}
+</Dialog>
+
+<div class="progress-bar border-0 box-shadow-0-card">
 	<header class="fx fx--ac">
 		<h1>Upload Progress</h1>
 		<h2>{progress_percent}%</h2>
-		<span class="fx fx--cc border-0 box-shadow-0-card">
+		<span class="fx fx--cc border-0 box-shadow-0-card" on:click={() => dialog.show()}>
 			<iconify-icon icon="lucide:chevron-up"></iconify-icon>
 		</span>
 	</header>
@@ -39,7 +48,7 @@
 </div>
 
 <style lang="scss">
-	.upload-bar {
+	.progress-bar {
 		background: var(--clr-background-1);
 		border-radius: 3px;
 		width: clamp(20rem, 60%, 40rem);

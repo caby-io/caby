@@ -14,6 +14,8 @@
 	}: EntryProps<DirFields> = $props();
 
 	let is_selected = $derived(entry.is_selected);
+	let is_targetted = $derived(entry.is_targetted);
+	let is_processing = $derived(entry.is_processing);
 </script>
 
 <div
@@ -21,6 +23,8 @@
 	role="none"
 	draggable="true"
 	class:is_selected
+	class:is_targetted
+	class:is_processing
 	onclick={onSelect}
 	ondragstart={(e) => onDragStart!(e, entry)}
 	ondragend={(e) => onDragEnd!(e, entry)}

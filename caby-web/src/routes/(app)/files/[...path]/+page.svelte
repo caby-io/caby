@@ -22,13 +22,15 @@
 	import Directory from './Directory.svelte';
 	import File from './File.svelte';
 	import Loading from './Loading.svelte';
-	import UploadBar from './UploadBar.svelte';
+	import TasksList from './TasksList.svelte';
 	import AddAction from './AddAction.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
 	import type { FilesResponse } from '$lib/api/api_files';
 	import type { SelectedEntry } from '$lib/files/select';
 	import DeleteDialog from './DeleteDialog.svelte';
+	import EntriesBar from './EntriesBar.svelte';
+	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
 
 	const path = $derived(page.params.path!);
 
@@ -53,9 +55,6 @@
 		const payload = await response.json();
 
 		let data = payload.data;
-		data.entries.forEach((d: any) => {
-			d.selected = false;
-		});
 
 		filesResponse = data;
 
@@ -140,6 +139,7 @@
 			drag_target.count = 0;
 		}
 		drag_target.count++;
+		entry.is_targetted = true;
 	};
 
 	const onDragLeave = (e: DragEvent, entry: Entry) => {
@@ -150,6 +150,7 @@
 		drag_target.count--;
 		if (drag_target.count === 0) {
 			drag_target.entry = undefined;
+			entry.is_targetted = false;
 		}
 	};
 
@@ -161,12 +162,16 @@
 		let renames: [string, string][] = [];
 		dragged_entries.forEach((e) => {
 			renames.push([e.path, fs.join(entry.path, e.name)]);
+			e.is_processing = true;
 		});
 		await moveFiles(renames);
 		console.log('execute move');
 	};
 
 	// CRUD Ops
+
+	// svelte-ignore non_reactive_update
+	let add_content_dialog: HTMLDialogElement;
 
 	const moveFiles = async (entries: [string, string][]) => {
 		const response = await fetch('http://localhost:8080/v0/files/move', {
@@ -230,21 +235,7 @@
 		>
 	</section>
 	<section class="right fx-grow fx fx--col">
-		<header class="fx fx--ac">
-			<div class="breadcrumbs fx fx--ac">
-				<div class="breadcrumb fx fx--ac">
-					<a class="fx fx--ac" href="/files">
-						<iconify-icon icon="ci:house-02"></iconify-icon>
-					</a>
-				</div>
-				<div class="breadcrumb fx fx--ac">
-					<a class="fx fx--ac" href="#">Folder A</a>
-				</div>
-				<div class="breadcrumb fx fx--ac">
-					<a class="fx fx--ac" href="#">Folder B</a>
-				</div>
-			</div>
-		</header>
+		<EntriesBar {selected_entries} {add_content_dialog} {handleDeleteSelected} />
 		<main class="entries fx-grow">
 			<section class="directories">
 				<h3>Directories</h3>
@@ -280,7 +271,7 @@
 				</div>
 			</section>
 			<aside class="upload-bar fx fx--cc">
-				<UploadBar />
+				<TasksList />
 			</aside>
 			<aside class="add-action fx fx--cc">
 				<AddAction {onListChange} />
@@ -289,6 +280,7 @@
 	</section>
 </div>
 
+<AddContentDialog bind:dialog={add_content_dialog} {onListChange} />
 <DeleteDialog bind:dialog={delete_entries_dialog} {onListChange} entries={delete_entries} />
 
 <style lang="scss">
@@ -309,39 +301,6 @@
 	.right {
 		border-left: 1px solid var(--clr-border);
 		min-height: calc(100vh - var(--top-nav-height) - 1px);
-
-		> header {
-			height: 2.6rem;
-			background-color: var(--clr-background-1);
-			border-bottom: 1px solid var(--clr-border);
-			padding: 0 1rem;
-		}
-
-		.breadcrumbs {
-			.breadcrumb > a {
-				// display: block;
-				padding: 0 0.25rem;
-				height: 2rem;
-				text-decoration: none;
-				transition: opacity 0.2s;
-				opacity: 1;
-				border-radius: 3px;
-
-				&:hover {
-					color: inherit;
-					opacity: 0.7;
-				}
-			}
-
-			div + div:before {
-				font-family: serif;
-				font-weight: bold;
-				display: block;
-				content: '/';
-				margin: 0.25rem;
-				opacity: 0.4;
-			}
-		}
 	}
 
 	// todo: redo this after moving the entities

@@ -162,10 +162,15 @@ input {
 .button {
 	padding: 0.5rem 1rem;
 	border-radius: 5px;
-	background-color: var(--clr-info);
+	background: var(--clr-background-2);
 	border: 1px solid var(--clr-border);
 	box-shadow: var(--box-shadow-0);
 	cursor: pointer;
+}
+
+.button.primary {
+	color: var(--clr-background-2);
+	background: linear-gradient(320deg, var(--clr-primary), var(--clr-accent));
 }
 
 /* Utility */

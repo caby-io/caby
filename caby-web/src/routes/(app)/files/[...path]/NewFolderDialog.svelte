@@ -32,7 +32,7 @@
 		<section>
 			<form class="fx fx--col">
 				<input id="input-folder-name" type="text" placeholder="Folder Name" bind:value />
-				<button class="button" onclick={() => tryCreateDir()}>Create</button>
+				<button class="button primary" onclick={() => tryCreateDir()}>Create</button>
 			</form>
 		</section>
 	{/snippet}

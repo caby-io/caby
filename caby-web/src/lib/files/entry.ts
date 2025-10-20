@@ -10,6 +10,8 @@ export type Entry<T = any> = {
 
 	// extra fields for frontend
 	is_selected: boolean;
+	is_targetted: boolean;
+	is_processing: boolean;
 };
 
 export type FileFields = {

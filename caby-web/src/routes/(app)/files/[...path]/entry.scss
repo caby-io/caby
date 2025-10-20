@@ -15,7 +15,7 @@ $td-main-width: 40rem;
     border-radius: 3px;
     box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
     border: 1px solid var(--clr-border);
-    transition: box-shadow .3s, background-color .1s, border-color .1s;
+    transition: box-shadow .3s, background-color .1s, border-color .1s, opacity .1s;
 
     &:hover {
         box-shadow: 0 4px 0.5rem -1px var(--clr-shadow);
@@ -43,13 +43,17 @@ $td-main-width: 40rem;
         }
     }
 
-    &--selected, &.is_selected {
+    &.is_selected {
         background: var(--clr-secondary);
         border-color: var(--clr-accent);
+    }
 
-        section.display {
-            // background: var(--clr-accent);
-        }
+    &.is_targetted {
+        border-color: var(--clr-accent);
+    }
+
+    &.is_processing {
+        opacity: 0.7;
     }
 }
 
