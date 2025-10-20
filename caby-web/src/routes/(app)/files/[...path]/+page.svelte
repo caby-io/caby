@@ -23,7 +23,6 @@
 	import File from './File.svelte';
 	import Loading from './Loading.svelte';
 	import TasksList from './TasksList.svelte';
-	import AddAction from './AddAction.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
 	import type { FilesResponse } from '$lib/api/api_files';
@@ -272,9 +271,6 @@
 			</section>
 			<aside class="upload-bar fx fx--cc">
 				<TasksList />
-			</aside>
-			<aside class="add-action fx fx--cc">
-				<AddAction {onListChange} />
 			</aside>
 		</main>
 	</section>

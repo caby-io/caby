@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Entry } from '$lib/files/entry';
 	import 'iconify-icon';
+	import EntriesBreadcrumbs from './EntriesBreadcrumbs.svelte';
 
 	let {
 		selected_entries,
@@ -14,22 +15,7 @@
 </script>
 
 <header class="fx fx--ac">
-	<div class="breadcrumbs fx fx--ac">
-		<a class="fx fx--ac">
-			<iconify-icon icon="lucide:corner-left-up"></iconify-icon>
-		</a>
-		<div class="breadcrumb fx fx--ac">
-			<a class="fx fx--ac" href="/files">
-				<iconify-icon icon="ci:house-02"></iconify-icon>
-			</a>
-		</div>
-		<div class="breadcrumb fx fx--ac">
-			<a class="fx fx--ac" href="#">Folder A</a>
-		</div>
-		<div class="breadcrumb fx fx--ac">
-			<a class="fx fx--ac" href="#">Folder B</a>
-		</div>
-	</div>
+	<EntriesBreadcrumbs />
 	<div class="actions fx fx--ac">
 		{#if selected_entries.size > 0}
 			<span>{selected_entries.size} selected</span>
@@ -58,32 +44,6 @@
 		background-color: var(--clr-background-1);
 		border-bottom: 1px solid var(--clr-border);
 		padding: 0 1rem;
-	}
-
-	.breadcrumbs {
-		.breadcrumb > a {
-			// display: block;
-			padding: 0 0.25rem;
-			height: 2rem;
-			text-decoration: none;
-			transition: opacity 0.2s;
-			opacity: 1;
-			border-radius: 3px;
-
-			&:hover {
-				color: inherit;
-				opacity: 0.7;
-			}
-		}
-
-		div + div:before {
-			font-family: serif;
-			font-weight: bold;
-			display: block;
-			content: '/';
-			margin: 0.25rem;
-			opacity: 0.4;
-		}
 	}
 
 	.actions {

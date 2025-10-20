@@ -40,7 +40,7 @@
 	let newFolderDialog: HTMLDialogElement;
 
 	const openNewFolderDialog = () => {
-		// newFolderDialog.showModal();
+		newFolderDialog.showModal();
 		dialog.close();
 	};
 </script>
