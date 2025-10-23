@@ -100,13 +100,78 @@
 		last_selected = selected;
 	};
 
-	// Drag Operations
+	// Self Drag Operations
+	let drag_over_ct: number = $state(0);
 
+	const onDragEnter = (e: DragEvent) => {
+		if (!e.dataTransfer || e.dataTransfer.items.length < 1) {
+			return;
+		}
+		// e.preventDefault();
+		// e.stopImmediatePropagation();
+
+		drag_over_ct++;
+		if (drag_over_ct > 1) {
+			return;
+		}
+
+		const items = [...e.dataTransfer.items];
+		console.log('adding drag effect');
+		console.log(items);
+		items.forEach((item) => {
+			console.log(item.kind);
+			console.log(item.type);
+		});
+	};
+
+	const onDragOver = (e: DragEvent) => {
+		if (drag_over_ct < 1) {
+			return;
+		}
+
+		e.preventDefault();
+	};
+
+	const onDragLeave = (e: DragEvent) => {
+		if (drag_over_ct < 1) {
+			return;
+		}
+
+		drag_over_ct--;
+		if (drag_over_ct === 0) {
+			console.log('removing drag effect: leave');
+			// todo
+		}
+	};
+
+	const onDrop = (e: DragEvent) => {
+		if (drag_over_ct < 1) {
+			return;
+		}
+		e.preventDefault();
+		const items = [...e.dataTransfer!.items];
+		items.forEach((item) => {
+			console.log(items);
+		});
+
+		drag_over_ct = 0;
+		console.log('removing drag effect: drop');
+	};
+
+	const onDragEnd = (e: DragEvent) => {
+		if (drag_over_ct < 1) {
+			return;
+		}
+
+		drag_over_ct = 0;
+		console.log('removing drag effect: end');
+	};
+
+	// Entry Drag Operations
 	let dragged_entries: Set<Entry> = $state(new Set());
-	let drag_target: DragTarget = $state({ entry: undefined, count: 0 });
-	let targetEntry: Entry | undefined = $state();
+	let entry_drag_target: DragTarget = $state({ entry: undefined, count: 0 });
 
-	const onDragStart = (e: DragEvent, entry: Entry) => {
+	const onEntryDragStart = (e: DragEvent, entry: Entry) => {
 		// single file being moved
 		if (!selected_entries.has(entry)) {
 			dragged_entries = new Set([entry]);
@@ -118,43 +183,43 @@
 		console.log('todo: do UI stuff for multiple');
 	};
 
-	const onDragEnd = (e: DragEvent, entry: Entry) => {
+	const onEntryDragEnd = (e: DragEvent, entry: Entry) => {
 		dragged_entries = new Set();
 	};
 
-	const onDragOver = (e: DragEvent, _: Entry) => {
+	const onEntryDragOver = (e: DragEvent, _: Entry) => {
 		e.preventDefault();
 	};
 
-	const onDragEnter = (e: DragEvent, entry: Entry) => {
+	const onEntryDragEnter = (e: DragEvent, entry: Entry) => {
 		e.preventDefault();
 		// todo: skip if selected, unless dir?
 		if (dragged_entries.has(entry)) {
 			return;
 		}
 
-		if (entry !== drag_target.entry) {
-			drag_target.entry = entry;
-			drag_target.count = 0;
+		if (entry !== entry_drag_target.entry) {
+			entry_drag_target.entry = entry;
+			entry_drag_target.count = 0;
 		}
-		drag_target.count++;
+		entry_drag_target.count++;
 		entry.is_targetted = true;
 	};
 
-	const onDragLeave = (e: DragEvent, entry: Entry) => {
+	const onEntryDragLeave = (e: DragEvent, entry: Entry) => {
 		if (dragged_entries.has(entry)) {
 			return;
 		}
 
-		drag_target.count--;
-		if (drag_target.count === 0) {
-			drag_target.entry = undefined;
+		entry_drag_target.count--;
+		if (entry_drag_target.count === 0) {
+			entry_drag_target.entry = undefined;
 			entry.is_targetted = false;
 		}
 	};
 
-	const onDrop = async (e: DragEvent, entry: Entry) => {
-		if (drag_target.entry === undefined || dragged_entries.size < 1) {
+	const onEntryDrop = async (e: DragEvent, entry: Entry) => {
+		if (entry_drag_target.entry === undefined || dragged_entries.size < 1) {
 			return;
 		}
 
@@ -164,7 +229,6 @@
 			e.is_processing = true;
 		});
 		await moveFiles(renames);
-		console.log('execute move');
 	};
 
 	// CRUD Ops
@@ -235,7 +299,15 @@
 	</section>
 	<section class="right fx-grow fx fx--col">
 		<EntriesBar {selected_entries} {add_content_dialog} {handleDeleteSelected} />
-		<main class="entries fx-grow">
+		<main
+			class="entries fx-grow"
+			class:drag-over={drag_over_ct > 0}
+			ondragenter={onDragEnter}
+			ondragover={onDragOver}
+			ondragleave={onDragLeave}
+			ondragend={onDragEnd}
+			ondrop={onDrop}
+		>
 			<section class="directories">
 				<h3>Directories</h3>
 				<div class="dir-list">
@@ -243,12 +315,12 @@
 						<Directory
 							{entry}
 							onSelect={(e: MouseEvent) => handleSelectOp(e, { index, entry })}
-							{onDragStart}
-							{onDragEnd}
-							{onDragEnter}
-							{onDragOver}
-							{onDragLeave}
-							{onDrop}
+							onDragStart={onEntryDragStart}
+							onDragEnd={onEntryDragEnd}
+							onDragEnter={onEntryDragEnter}
+							onDragOver={onEntryDragOver}
+							onDragLeave={onEntryDragLeave}
+							onDrop={onEntryDrop}
 						/>
 					{/each}
 				</div>
@@ -261,10 +333,10 @@
 							{entry}
 							onSelect={(e: MouseEvent) =>
 								handleSelectOp(e, { index: index + dir_entries.length, entry: entry })}
-							{onDragStart}
-							{onDragEnd}
-							{onDragOver}
-							{onDrop}
+							onDragStart={onEntryDragStart}
+							onDragEnd={onEntryDragEnd}
+							onDragOver={onEntryDragOver}
+							onDrop={onEntryDrop}
 						/>
 					{/each}
 				</div>
@@ -305,6 +377,22 @@
 		background: var(--clr-background);
 		padding: 1rem;
 		position: relative;
+
+		&.drag-over {
+			opacity: 0.5;
+			// pointer-events: none;
+
+			&::after {
+				position: absolute;
+				top: 0;
+				left: 0;
+				content: '';
+				width: 100%;
+				height: 100%;
+				background: var(--clr-background);
+				opacity: 0.4;
+			}
+		}
 
 		> aside.upload-bar {
 			position: fixed;
