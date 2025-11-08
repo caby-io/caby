@@ -10,11 +10,13 @@
 		// onDragEnter,
 		onDragOver,
 		// onDragLeave,
-		onDrop
+		onDrop,
+		onContextMenu
 	}: EntryProps<FileFields> = $props();
 
 	let is_selected = $derived(entry.is_selected);
 	let is_processing = $derived(entry.is_processing);
+	let is_targetted = $derived(entry.is_targetted);
 	// let dragging = $state(false);
 
 	// const handleDragStart = (e: Event) => {
@@ -25,6 +27,7 @@
 <div
 	class="entry entry--file"
 	class:is_selected
+	class:is_targetted
 	class:is_processing
 	role="none"
 	draggable="true"
@@ -33,6 +36,7 @@
 	ondragend={(e) => onDragEnd!(e, entry)}
 	ondragover={(e) => onDragOver!(e, entry)}
 	ondrop={(e) => onDrop!(e, entry)}
+	oncontextmenu={(e) => onContextMenu!(e, entry)}
 >
 	<section class="display fx fx--cc fx-grow">📃</section>
 	<section class="info">

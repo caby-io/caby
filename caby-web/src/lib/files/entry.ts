@@ -37,6 +37,9 @@ export type EntryProps<T> = {
 	onDragOver?: (e: DragEvent, entry: Entry) => void;
 	onDragLeave?: (e: DragEvent, entry: Entry) => void;
 	onDrop?: (e: DragEvent, entry: Entry) => void;
+
+	// contextmenu events
+	onContextMenu?: (e: MouseEvent, entry: Entry) => void;
 };
 
 export type DragTarget = {

@@ -6,11 +6,13 @@
 	let {
 		selected_entries,
 		add_content_dialog,
-		handleDeleteSelected
+		handleDeleteSelected,
+		handleDeselect
 	}: {
 		selected_entries: Set<Entry>;
 		add_content_dialog: HTMLDialogElement;
 		handleDeleteSelected: any;
+		handleDeselect: any;
 	} = $props();
 </script>
 
@@ -20,8 +22,16 @@
 		{#if selected_entries.size > 0}
 			<span>{selected_entries.size} selected</span>
 			<button
+				class="action fx fx--cc border-0 box-shadow-0-card"
+				onclick={handleDeselect}
+				title="Deselect"
+			>
+				<iconify-icon icon="lucide:file-x"></iconify-icon>
+			</button>
+			<button
 				class="action selected fx fx--cc border-0 box-shadow-0-card"
 				onclick={handleDeleteSelected}
+				title="Delete selected"
 			>
 				<iconify-icon icon="lucide:trash-2"></iconify-icon>
 			</button>
@@ -32,6 +42,7 @@
 		<button
 			class="action add fx fx--cc border-0 box-shadow-0-card"
 			onclick={() => add_content_dialog.showModal()}
+			title="Add/Upload content"
 		>
 			<iconify-icon icon="lets-icons:add-duotone"></iconify-icon>
 		</button>

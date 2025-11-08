@@ -30,6 +30,7 @@
 	import DeleteDialog from './DeleteDialog.svelte';
 	import EntriesBar from './EntriesBar.svelte';
 	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
+	import ContextMenu, { type ContextMenuProps } from '$lib/files/ContextMenu.svelte';
 
 	const path = $derived(page.params.path!);
 
@@ -100,6 +101,14 @@
 		last_selected = selected;
 	};
 
+	const handleDeselect = () => {
+		entries
+			.filter((e) => e.is_selected === true)
+			.forEach((e) => {
+				e.is_selected = false;
+			});
+	};
+
 	// Self Drag Operations
 	let drag_over_ct: number = $state(0);
 
@@ -116,8 +125,6 @@
 		}
 
 		const items = [...e.dataTransfer.items];
-		console.log('adding drag effect');
-		console.log(items);
 		items.forEach((item) => {
 			console.log(item.kind);
 			console.log(item.type);
@@ -231,6 +238,45 @@
 		await moveFiles(renames);
 	};
 
+	// Context Menu (right-click)
+
+	// svelte-ignore non_reactive_update
+	let contextMenuDialog: HTMLDialogElement;
+	let contextMenuProps: { position: { x: number; y: number }; entry?: Entry } = $state({
+		position: {
+			x: 0,
+			y: 0
+		},
+		entry: undefined
+	});
+
+	const handleContextMenu = (e: MouseEvent, entry?: Entry) => {
+		e.preventDefault();
+		e.stopPropagation();
+
+		// Determine position
+		// todo: improve
+		const offset = 264;
+		let x = e.pageX;
+		let y = e.pageY;
+		if (e.view && e.view!.innerWidth - x < offset) {
+			x = e.view!.innerWidth - offset;
+		}
+
+		// Open or Move the menu
+		contextMenuProps = {
+			position: {
+				x: x,
+				y: y
+			},
+			entry: entry
+		};
+		if (entry) {
+			entry.is_targetted = true;
+		}
+		contextMenuDialog.showPopover();
+	};
+
 	// CRUD Ops
 
 	// svelte-ignore non_reactive_update
@@ -298,7 +344,7 @@
 		>
 	</section>
 	<section class="right fx-grow fx fx--col">
-		<EntriesBar {selected_entries} {add_content_dialog} {handleDeleteSelected} />
+		<EntriesBar {selected_entries} {add_content_dialog} {handleDeleteSelected} {handleDeselect} />
 		<main
 			class="entries fx-grow"
 			class:drag-over={drag_over_ct > 0}
@@ -307,6 +353,7 @@
 			ondragleave={onDragLeave}
 			ondragend={onDragEnd}
 			ondrop={onDrop}
+			oncontextmenu={(e) => handleContextMenu(e)}
 		>
 			<section class="directories">
 				<h3>Directories</h3>
@@ -337,6 +384,7 @@
 							onDragEnd={onEntryDragEnd}
 							onDragOver={onEntryDragOver}
 							onDrop={onEntryDrop}
+							onContextMenu={handleContextMenu}
 						/>
 					{/each}
 				</div>
@@ -350,6 +398,11 @@
 
 <AddContentDialog bind:dialog={add_content_dialog} {onListChange} />
 <DeleteDialog bind:dialog={delete_entries_dialog} {onListChange} entries={delete_entries} />
+<ContextMenu
+	bind:dialog={contextMenuDialog}
+	position={contextMenuProps.position}
+	bind:entry={contextMenuProps.entry}
+/>
 
 <style lang="scss">
 	.files-view {

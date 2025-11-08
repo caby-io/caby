@@ -9,9 +9,9 @@
 		$props();
 	const path = $derived(page.params.path!);
 
-	const openAddDialog = () => {
-		dialog.showModal();
-	};
+	// const openAddDialog = () => {
+	// 	dialog.showModal();
+	// };
 
 	const handleUploadFiles = async (files: FileList) => {
 		// for now we are always making an upload group for each file

@@ -10,7 +10,8 @@
 		content
 	}: { dialog: HTMLDialogElement; title?: string; content: Snippet } = $props();
 
-	const onClick = (e: Event) => {
+	// close the dialog if a click is detected outside
+	const onclick = (e: Event) => {
 		if (e.target === e.currentTarget) {
 			dialog.close();
 		}
@@ -23,7 +24,7 @@
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-<dialog bind:this={dialog} class="dialog border-0 box-shadow-0-card" onclick={onClick}>
+<dialog bind:this={dialog} class="dialog border-0 box-shadow-0-card" {onclick}>
 	{#if title}
 		<header class="title fx fx--ac">
 			<h3 class="fx-grow">{title}</h3>
