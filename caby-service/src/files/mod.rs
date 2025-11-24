@@ -12,6 +12,7 @@ use serde_json::error;
 use tokio::fs::{self, metadata, read_dir, read_link, DirEntry, ReadDir};
 use tracing::{debug, error, warn};
 
+pub mod overview;
 pub mod pretty;
 
 #[derive(Serialize, Default)]
@@ -82,10 +83,9 @@ impl Entry {
 
         let mut entry = Self {
             entry_type: EntryType::default(),
-            name: value
-                .file_name()
-                .into_string()
-                .map_err(|err| io::Error::new(ErrorKind::Other, "couldn't convert to string"))?,
+            name: value.file_name().into_string().map_err(|err| {
+                io::Error::new(ErrorKind::Other, "couldn't convert entry name to string")
+            })?,
             // path: root_path
             //     .join(value.file_name())
             //     .to_str()
@@ -179,7 +179,6 @@ pub fn joined_path(root_path: &Path, relative_path: &Path) -> Option<PathBuf> {
 }
 
 pub async fn build_entries(root_path: &Path, path: &Path) -> io::Result<Vec<Entry>> {
-    let full_path = Path::new("/").join(path);
     let mut entries = read_dir(path).await?;
 
     let mut result = vec![];

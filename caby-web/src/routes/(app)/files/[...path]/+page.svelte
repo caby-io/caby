@@ -31,6 +31,7 @@
 	import EntriesBar from './EntriesBar.svelte';
 	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
 	import ContextMenu, { type ContextMenuProps } from '$lib/files/ContextMenu.svelte';
+	import EntriesOverview from '$lib/files/overview/EntriesOverview.svelte';
 
 	const path = $derived(page.params.path!);
 
@@ -41,11 +42,26 @@
 		entries: []
 	});
 
+	// File Overview
+
+	// todo
+	let overview_entries: any = $state();
+
+	// todo: improve
+	const getFilesOverview = async () => {
+		const response = await fetch('http://localhost:8080/v0/files/overview/');
+		const payload = await response.json();
+
+		let data = payload.data;
+
+		overview_entries = data.entries;
+	};
+
+	// File List Operations
+
 	let entries: Entry[] = $derived(filesResponse.entries);
 	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
 	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
-
-	// File List Operations
 
 	let loading = $state(false);
 
@@ -278,9 +294,10 @@
 	};
 
 	// CRUD Ops
-
 	// svelte-ignore non_reactive_update
 	let add_content_dialog: HTMLDialogElement;
+
+	const handleAddContent = () => add_content_dialog.showModal();
 
 	const moveFiles = async (entries: [string, string][]) => {
 		const response = await fetch('http://localhost:8080/v0/files/move', {
@@ -304,12 +321,16 @@
 	let delete_entries_dialog: HTMLDialogElement;
 	let delete_entries: Entry[] = $state([]);
 
+	const handleDeleteEntries = (entries: Entry[]) => {
+		delete_entries = entries;
+		delete_entries_dialog!.showModal();
+	};
+
 	const handleDeleteSelected = () => {
 		if (selected_entries.size < 1) {
 			return;
 		}
-		delete_entries = Array.from(selected_entries);
-		delete_entries_dialog!.showModal();
+		handleDeleteEntries(Array.from(selected_entries));
 	};
 
 	const onKeyDown = (e: KeyboardEvent) => {
@@ -323,6 +344,11 @@
 		// desired bound keys are pressed.
 
 		switch (e.key) {
+			case 'n':
+				if (!e.altKey) {
+					return;
+				}
+				handleAddContent();
 			case 'Delete':
 				handleDeleteSelected();
 		}
@@ -332,6 +358,7 @@
 		// temp
 		uploadManager.upload_groups_completed;
 		getFilesList(path);
+		getFilesOverview();
 	});
 </script>
 
@@ -342,6 +369,7 @@
 		<button class="fx fx--cc add-button button"
 			><iconify-icon icon="lucide-plus"></iconify-icon>Add</button
 		>
+		<EntriesOverview {overview_entries} />
 	</section>
 	<section class="right fx-grow fx fx--col">
 		<EntriesBar {selected_entries} {add_content_dialog} {handleDeleteSelected} {handleDeselect} />
@@ -402,6 +430,8 @@
 	bind:dialog={contextMenuDialog}
 	position={contextMenuProps.position}
 	bind:entry={contextMenuProps.entry}
+	{handleAddContent}
+	{handleDeleteEntries}
 />
 
 <style lang="scss">
@@ -411,7 +441,8 @@
 
 	.left {
 		background-color: var(--clr-background-1);
-		min-width: var(--sidebar-width);
+		width: var(--sidebar-width);
+		overflow-x: scroll;
 
 		.add-button {
 			margin: 1rem;

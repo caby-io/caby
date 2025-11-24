@@ -24,6 +24,7 @@
 	--top-nav-height: 3.5rem;
 	--standard-negative: 2rem;
 	--sidebar-width: clamp(16rem, 18vw, 20rem);
+	interpolate-size: allow-keywords;
 }
 
 /* :root[data-theme='light'] {

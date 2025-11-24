@@ -1,7 +1,7 @@
 <script lang="ts">
 	import type { Entry } from '$lib/files/entry';
-	import 'iconify-icon';
 	import EntriesBreadcrumbs from './EntriesBreadcrumbs.svelte';
+	import 'iconify-icon';
 
 	let {
 		selected_entries,

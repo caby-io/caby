@@ -1,25 +1,35 @@
-use crate::{
-    config::Config,
-    ctx::Ctx,
-    error::Result,
-    files::{build_entries, joined_path, Entry},
-    jsend,
-};
+use std::path::PathBuf;
+
 use axum::{
     extract::{Path, State},
     response::{IntoResponse, Response},
 };
 use serde::Serialize;
-use std::path::PathBuf;
+
+use crate::{
+    config::Config,
+    ctx::Ctx,
+    error::Result,
+    files::{
+        build_entries, joined_path,
+        overview::{build_overview, EntryOverview},
+        Entry,
+    },
+    jsend,
+};
+
+// struct SummarizeFilesRequest {
+//     pub
+// }
 
 #[derive(Serialize)]
-struct ListFilesResponse {
+struct SummarizeFilesResponse {
     pub path: String,
     pub parent_dir: Option<String>,
-    pub entries: Vec<Entry>,
+    pub entries: Vec<EntryOverview>,
 }
 
-pub async fn handle_list_files(
+pub async fn handle_files_overview(
     State(cfg): State<Config>,
     ctx: Result<Ctx>,
     files_path: Option<Path<String>>,
@@ -35,9 +45,7 @@ pub async fn handle_list_files(
 
     let resp = jsend::JSendBuilder::new();
 
-    // todo: consider santizing after join
-    // todo: check that it is a dir? OR return something else for files
-    let entries = match build_entries(&cfg.live_path, &path).await {
+    let entries = match build_overview(&cfg.live_path, &path, 3).await {
         Ok(r) => r,
         Err(err) => {
             return resp
@@ -55,7 +63,7 @@ pub async fn handle_list_files(
     let parent_dir = rel_path.parent().map(|p| p.to_str().unwrap().to_owned());
 
     jsend::JSendBuilder::new()
-        .success(ListFilesResponse {
+        .success(SummarizeFilesResponse {
             path: rel_path.to_str().unwrap().to_owned(), // todo: make safe
             parent_dir,
             entries,

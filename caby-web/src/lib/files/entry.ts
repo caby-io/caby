@@ -20,7 +20,7 @@ export type FileFields = {
 };
 
 export type DirFields = {
-	//todo
+	sub_entries: Entry[];
 };
 
 export type EntryProps<T> = {
@@ -45,4 +45,14 @@ export type EntryProps<T> = {
 export type DragTarget = {
 	entry?: Entry;
 	count: number;
+};
+
+export const getDownloadURL = (base_url: String, entries: Entry[]): string => {
+	if (entries.length > 1) {
+		// todo
+		console.error('multi-download not implemented');
+		return '';
+	}
+
+	return `${base_url}/v0/files/download/${entries[0].path}`;
 };

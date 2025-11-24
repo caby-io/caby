@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Dialog from '$lib/Dialog.svelte';
-	import { page } from '$app/state';
 	import type { Entry } from '$lib/files/entry';
 
 	let {

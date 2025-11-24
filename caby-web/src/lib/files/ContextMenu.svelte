@@ -1,15 +1,24 @@
 <script module>
-	import type { Entry } from './entry';
+	import { getDownloadURL, type Entry } from './entry';
 
 	export type ContextMenuProps = {
 		dialog: HTMLElement;
 		position: { x: number; y: number };
 		entry?: Entry;
+
+		handleAddContent: any;
+		handleDeleteEntries: any; // todo
 	};
 </script>
 
 <script lang="ts">
-	let { dialog = $bindable(), position, entry = $bindable() }: ContextMenuProps = $props();
+	let {
+		dialog = $bindable(),
+		position,
+		entry = $bindable(),
+		handleAddContent,
+		handleDeleteEntries
+	}: ContextMenuProps = $props();
 
 	// todo: check that this isn't too expensive
 	const handleWindowClick = (e: MouseEvent) => {
@@ -46,36 +55,38 @@
 	popover
 	{onbeforetoggle}
 >
-	<div class="context-item fx">
-		<div class="icon fx fx--cc">
-			<iconify-icon icon="lucide:plus"></iconify-icon>
-		</div>
-		<div class="title fx-grow">Add New File</div>
-		<div class="tip fx fx--ac">CTRL + N</div>
-	</div>
-	{#if entry}
-		<div class="context-item fx">
+	<section class="context-menu-container fx fx--col">
+		<button class="context-item fx" onclick={() => handleAddContent([entry])}>
 			<div class="icon fx fx--cc">
-				<iconify-icon icon="lucide:folder-input"></iconify-icon>
+				<iconify-icon icon="lucide:plus"></iconify-icon>
 			</div>
-			<div class="title fx-grow">Move To..</div>
-			<div class="tip fx fx--ac"></div>
-		</div>
-		<div class="context-item fx">
-			<div class="icon fx fx--cc">
-				<iconify-icon icon="lucide:download"></iconify-icon>
+			<div class="title fx-grow">Add Content</div>
+			<div class="tip fx fx--ac">ALT + N</div>
+		</button>
+		{#if entry}
+			<div class="context-item fx">
+				<div class="icon fx fx--cc">
+					<iconify-icon icon="lucide:folder-input"></iconify-icon>
+				</div>
+				<div class="title fx-grow">Move To..</div>
+				<div class="tip fx fx--ac"></div>
 			</div>
-			<div class="title fx-grow">Download File</div>
-			<div class="tip fx fx--ac">D</div>
-		</div>
-		<div class="context-item fx">
-			<div class="icon fx fx--cc">
-				<iconify-icon icon="lucide:trash-2"></iconify-icon>
-			</div>
-			<div class="title fx-grow">Delete File</div>
-			<div class="tip fx fx--ac">DEL</div>
-		</div>
-	{/if}
+			<a href={getDownloadURL('http://localhost:8080', [entry])} class="context-item fx" download>
+				<div class="icon fx fx--cc">
+					<iconify-icon icon="lucide:download"></iconify-icon>
+				</div>
+				<div class="title fx-grow">Download File</div>
+				<div class="tip fx fx--ac">D</div>
+			</a>
+			<button class="context-item fx" onclick={() => handleDeleteEntries([entry])}>
+				<div class="icon fx fx--cc">
+					<iconify-icon icon="lucide:trash-2"></iconify-icon>
+				</div>
+				<div class="title fx-grow">Delete File</div>
+				<div class="tip fx fx--ac">DEL</div>
+			</button>
+		{/if}
+	</section>
 </div>
 
 <style lang="scss">
@@ -87,38 +98,36 @@
 		padding: 0;
 		outline: none;
 
-		// &.open {
-		// 	display: flex;
-		// 	flex-direction: column;
-		// }
+		.context-menu-container {
+			> .context-item {
+				cursor: pointer;
+				padding: 0.5rem;
+				text-decoration: none;
+				color: inherit;
+				// border-bottom: 1px solid var(--clr-border);
 
-		> .context-item {
-			cursor: pointer;
-			padding: 0.5rem;
-			// border-bottom: 1px solid var(--clr-border);
+				// &:last-of-type {
+				// 	border-bottom: none;
+				// }
 
-			// &:last-of-type {
-			// 	border-bottom: none;
-			// }
+				&:hover {
+					background: var(--clr-background);
+				}
 
-			&:hover {
-				background: var(--clr-background);
-			}
+				> .icon {
+					width: 1.5rem;
+				}
 
-			> .icon {
-				width: 1.5rem;
-			}
+				> .title {
+					margin: 0 1rem;
+				}
 
-			> .title {
-				margin: 0 1rem;
-			}
-
-			> .tip {
-				width: 4rem;
-				display: flex;
-				color: var(--clr-text-2);
-				opacity: 0.5; // temp
-				font-size: 0.8em;
+				> .tip {
+					width: 4rem;
+					color: var(--clr-text-2);
+					opacity: 0.5; // temp
+					font-size: 0.8em;
+				}
 			}
 		}
 	}
