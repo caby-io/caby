@@ -25,6 +25,12 @@ pub enum Error {
     IoError(Arc<io::Error>),
 }
 
+impl Error {
+    pub fn into_generic(reason: impl Into<String>, err: Arc<dyn std::error::Error>) -> Error {
+        return Self::Generic(format!("{}: {}", reason.into(), err));
+    }
+}
+
 impl From<io::Error> for Error {
     fn from(value: io::Error) -> Self {
         Error::IoError(Arc::new(value))

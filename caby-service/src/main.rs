@@ -1,5 +1,7 @@
 #![allow(unused)]
 
+use crate::config::config_file::{get_config_path, ConfigFile};
+
 pub use self::error::{Error, Result};
 
 use axum::{
@@ -17,6 +19,7 @@ use tower_http::{
     trace::TraceLayer,
 };
 
+mod auth;
 mod config;
 mod ctx;
 mod error;
@@ -40,13 +43,17 @@ async fn main() {
     // Build config
     let cfg = Config::new();
 
+    // TEMP TEMP TEMP
+    let cfg_path = get_config_path().unwrap();
+    let cfg_file = ConfigFile::new_from_path(cfg_path).await.unwrap();
+
     // Initialize paths
     // todo: log something when dir is created
-    fs::create_dir_all(&cfg.live_path).await.unwrap();
-    fs::create_dir_all(&cfg.meta_path).await.unwrap();
+    // fs::create_dir_all(&cfg.live_path).await.unwrap();
+    // fs::create_dir_all(&cfg.meta_path).await.unwrap();
     // TEMP uploads housekeeping
-    fs::remove_dir_all(&cfg.uploads_path).await.unwrap();
-    fs::create_dir_all(&cfg.uploads_path).await.unwrap();
+    // fs::remove_dir_all(&cfg.uploads_path).await.unwrap();
+    // fs::create_dir_all(&cfg.uploads_path).await.unwrap();
 
     // TEMP
     let cors_layer = CorsLayer::new()

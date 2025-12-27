@@ -7,7 +7,7 @@ use std::{
 };
 
 use path_clean::PathClean;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::error;
 use tokio::fs::{self, metadata, read_dir, read_link, DirEntry, ReadDir};
 use tracing::{debug, error, warn};
@@ -15,7 +15,7 @@ use tracing::{debug, error, warn};
 pub mod overview;
 pub mod pretty;
 
-#[derive(Serialize, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Default)]
 // #[strum(serialize_all = "snake_case")]
 #[serde(rename_all = "lowercase")]
 pub enum EntryType {

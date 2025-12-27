@@ -1,10 +1,11 @@
 use std::path::PathBuf;
 
 use axum::{
-    extract::{Path, State},
+    extract::{Path, Query, State},
     response::{IntoResponse, Response},
+    Json,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     config::Config,
@@ -13,14 +14,18 @@ use crate::{
     files::{
         build_entries, joined_path,
         overview::{build_overview, EntryOverview},
-        Entry,
+        Entry, EntryType,
     },
     jsend,
 };
 
-// struct SummarizeFilesRequest {
-//     pub
-// }
+// #[derive(Deserialize)]
+// pub struct SummarizeFilesRequest {}
+
+#[derive(Deserialize)]
+pub struct FilesOverviewParams {
+    pub dirs_only: Option<bool>,
+}
 
 #[derive(Serialize)]
 struct SummarizeFilesResponse {
@@ -33,27 +38,27 @@ pub async fn handle_files_overview(
     State(cfg): State<Config>,
     ctx: Result<Ctx>,
     files_path: Option<Path<String>>,
+    Query(params): Query<FilesOverviewParams>,
 ) -> Response {
+    let resp = jsend::JSendBuilder::new();
+
     // todo: sanitize path, more
     let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
 
     let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
-        return jsend::JSendBuilder::new()
-            .fail("invalid path")
-            .into_response();
+        return resp.fail("invalid path").into_response();
     };
 
-    let resp = jsend::JSendBuilder::new();
-
-    let entries = match build_overview(&cfg.live_path, &path, 3).await {
-        Ok(r) => r,
-        Err(err) => {
-            return resp
-                // todo: don't send this down in production, just log the actual error
-                .error(format!("could not access files: {}", err))
-                .into_response();
-        }
-    };
+    let entries =
+        match build_overview(&cfg.live_path, &path, 3, params.dirs_only.unwrap_or(false)).await {
+            Ok(r) => r,
+            Err(err) => {
+                return resp
+                    // todo: don't send this down in production, just log the actual error
+                    .error(format!("could not access files: {}", err))
+                    .into_response();
+            }
+        };
     // let Ok((dirs, files)) = get_entries(PathBuf::from("/").join(&path).clean().as_path()).await
     // else {
     //     return resp.error("could not access files: {}").into_response();

@@ -49,7 +49,7 @@
 
 	// todo: improve
 	const getFilesOverview = async () => {
-		const response = await fetch('http://localhost:8080/v0/files/overview/');
+		const response = await fetch('http://localhost:8080/v0/files/overview/?dirs_only=true');
 		const payload = await response.json();
 
 		let data = payload.data;

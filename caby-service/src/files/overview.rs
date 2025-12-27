@@ -58,11 +58,13 @@ pub async fn build_overview(
     root_path: &Path,
     path: &Path,
     depth: u32,
+    dirs_only: bool,
 ) -> Result<Vec<EntryOverview>> {
     let mut entries = read_dir(path).await?;
 
     let mut result = vec![];
 
+    // todo: filter earlier to save on compute
     while let Some(dir_entry) = entries.next_entry().await? {
         let filename = dir_entry.file_name();
         let mut entry = match EntryOverview::try_from(root_path, dir_entry).await {
@@ -76,7 +78,12 @@ pub async fn build_overview(
         // todo: check that it's a dir
         if matches!(entry.entry_type, EntryType::Directory) && depth > 1 {
             let entry_path = root_path.join(entry.path.clone());
-            entry.children = Box::pin(build_overview(root_path, &entry_path, depth - 1)).await?;
+            entry.children =
+                Box::pin(build_overview(root_path, &entry_path, depth - 1, dirs_only)).await?;
+        }
+
+        if dirs_only && !matches!(entry.entry_type, EntryType::Directory) {
+            continue;
         }
 
         result.push(entry);

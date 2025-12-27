@@ -40,7 +40,7 @@
 			</div>
 			<div class="actions fx">
 				<button class="button" onclick={() => dialog.close()}>Cancel</button>
-				<button class="button primary" onclick={() => tryDelete()}>Delete</button>
+				<button class="button primary" onclick={() => tryDelete()} autofocus>Delete</button>
 			</div>
 		</section>
 	{/snippet}
