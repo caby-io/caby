@@ -5,6 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub mod config_env;
 pub mod config_file;
 
 #[derive(Clone, Deserialize)]

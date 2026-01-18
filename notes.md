@@ -33,5 +33,8 @@ paths:
   spaces_path: "spaces"
 spaces:
   - name: home
+    archetype: users
+    path: /some/other/path
+    readonly: false
   - name: media
 ```

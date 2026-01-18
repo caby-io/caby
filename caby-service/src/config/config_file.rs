@@ -17,7 +17,7 @@ pub struct ConfigFileSpace {
 
 #[derive(Default)]
 pub struct ConfigFile {
-    spaces: Option<Vec<ConfigFileSpace>>,
+    pub spaces: Option<Vec<ConfigFileSpace>>,
 }
 
 pub fn get_config_path() -> Result<PathBuf> {
