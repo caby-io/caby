@@ -3,6 +3,7 @@ use crate::{
     ctx::Ctx,
     error::Result,
     jsend::JSendBuilder,
+    space::Space,
     web::{headers::get_required_header, upload::*},
 };
 use axum::{
@@ -45,7 +46,7 @@ struct RegisterUploadResponse {
 // todo: return error on empty entries
 pub async fn handle_register_upload(
     cfg: State<Config>,
-    ctx: Result<Ctx>,
+    space: Space,
     Json(req): Json<RegisterUploadRequest>,
 ) -> Response {
     // Validate?

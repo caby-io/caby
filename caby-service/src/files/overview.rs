@@ -3,6 +3,7 @@ use std::{
     path::Path,
 };
 
+use anyhow::anyhow;
 use futures_util::TryFutureExt;
 use serde::{de, Serialize};
 use tokio::fs::{read_dir, DirEntry};
@@ -31,7 +32,8 @@ impl EntryOverview {
 
         let mut entry = Self {
             name: value.file_name().into_string().map_err(|err| {
-                return Error::Generic("couldn't convert entry name to string".to_string());
+                return anyhow!("couldn't convert entry name to string")
+                    .context(anyhow!("{:?}", err));
             })?,
             path: value
                 .path()

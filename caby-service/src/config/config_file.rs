@@ -1,10 +1,10 @@
+use crate::{Error, Result};
+use anyhow::anyhow;
 use std::{
     env::var,
     path::{Path, PathBuf},
     sync::Arc,
 };
-
-use crate::{Error, Result};
 use tokio::{
     fs::{self, File},
     io::AsyncReadExt,
@@ -29,36 +29,32 @@ pub fn get_config_path() -> Result<PathBuf> {
         return Ok(Path::new(&home_path).join("config/config.yaml"));
     }
 
-    Err(Error::Generic(
-        "couldn't find a valid config location".to_string(),
-    ))
+    Err(anyhow!("couldn't find a valid config location")
+        .context(format!("CABY_HOME_PATH: '{:?}'", var("CABY_HOME_PATH")))
+        .context(format!("CABY_CONFIG_PATH: '{:?}'", var("CABY_CONFIG_PATH"))))
 }
 
 impl ConfigFile {
     pub async fn new_from_path(path: PathBuf) -> Result<ConfigFile> {
         let mut content = fs::read_to_string(&path).await?;
         let docs = YamlLoader::load_from_str(&content).map_err(|err| {
-            Error::Generic(format!(
-                "could not open config file at '{:?}': {}",
-                path, err
-            ))
+            return anyhow!("could not load from config file at '{:?}'", path).context(err);
         })?;
 
         if docs.len() < 1 {
             return Ok(ConfigFile::default());
         }
-        let config = &docs[0];
+        let config_yaml = &docs[0];
 
-        if matches!(config["spaces"], Yaml::Array(_)) {
-            config["spaces"]
-                .as_vec()
-                .unwrap()
-                .into_iter()
-                .for_each(|space| {
-                    println!("{:?}", space["name"].as_str().unwrap());
-                    // println!("{:?}", space["test"].as_str().unwrap());
-                });
-            // config["spaces"].as_vec()
+        for space in config_yaml["spaces"]
+            .as_vec()
+            .ok_or(anyhow!(".spaces is not an array or is empty"))?
+        {
+            let name = space["name"]
+                .as_str()
+                .ok_or(anyhow!("a space is missing a string name"))?;
+
+            println!("{}", name);
         }
 
         Ok(ConfigFile::default())

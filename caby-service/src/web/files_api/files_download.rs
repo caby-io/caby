@@ -1,4 +1,4 @@
-use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend};
+use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend, space::Space};
 use axum::{
     body::Body,
     extract::{Path, State},
@@ -10,7 +10,7 @@ use tokio_util::io::ReaderStream;
 
 pub async fn handle_download_files(
     State(cfg): State<Config>,
-    ctx: Result<Ctx>,
+    space: Space,
     files_path: Option<Path<String>>,
 ) -> Response {
     let rel_path = match files_path {
@@ -18,7 +18,7 @@ pub async fn handle_download_files(
         None => return (StatusCode::NOT_FOUND, "file path required").into_response(),
     };
 
-    let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
+    let Ok(path) = space.join(&rel_path) else {
         return jsend::JSendBuilder::new()
             .fail("invalid path")
             .into_response();

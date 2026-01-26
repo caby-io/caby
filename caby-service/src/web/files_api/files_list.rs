@@ -4,6 +4,7 @@ use crate::{
     error::Result,
     files::{build_entries, joined_path, Entry},
     jsend,
+    space::Space,
 };
 use axum::{
     extract::{Path, State},
@@ -22,12 +23,13 @@ struct ListFilesResponse {
 pub async fn handle_list_files(
     State(cfg): State<Config>,
     ctx: Result<Ctx>,
+    space: Space,
     files_path: Option<Path<String>>,
 ) -> Response {
     // todo: sanitize path, more
     let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
 
-    let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
+    let Ok(path) = space.join(&rel_path) else {
         return jsend::JSendBuilder::new()
             .fail("invalid path")
             .into_response();

@@ -6,42 +6,52 @@ use axum::{
 use crate::config::Config;
 
 mod auth_api;
+mod extractors;
 mod files_api;
 mod headers;
 mod upload;
 
 pub fn api_router() -> Router<Config> {
     Router::new()
-        .nest(
-            "/auth",
-            Router::new().route("/login", post(auth_api::handle_login)),
-        )
+        // .nest(
+        //     "/auth",
+        //     Router::new().route("/login", post(auth_api::handle_login)),
+        // )
         .nest(
             "/files",
             Router::new()
                 // Wildcards don't support the base path so this is required
-                .route("/list", get(files_api::handle_list_files))
-                .route("/list/{*file_path}", get(files_api::handle_list_files))
-                .route("/overview", get(files_api::handle_files_overview))
+                // .route("/list/{space}", get(files_api::handle_list_files))
+                // .route(
+                //     "/list/{space}/{*file_path}",
+                //     get(files_api::handle_list_files),
+                // )
+                // .route("/overview", get(files_api::handle_files_overview))
+                // .route(
+                //     "/overview/{space}/{*file_path}",
+                //     get(files_api::handle_files_overview),
+                // )
                 .route(
-                    "/overview/{*file_path}",
-                    get(files_api::handle_files_overview),
-                )
-                .route(
-                    "/download/{*file_path}",
+                    "/download/{space}/{*file_path}",
                     get(files_api::handle_download_files),
                 )
-                .route("/", put(files_api::handle_put_files))
-                .route("/{*file_path}", put(files_api::handle_put_files))
-                .route("/upload", post(files_api::handle_register_upload))
-                .route(
-                    "/upload/chunk/{id}/{*file}",
-                    put(files_api::handle_chunk_upload),
-                )
-                .route("/upload/{id}/{*file}", patch(files_api::handle_update_file))
-                .route("/upload/{id}", post(files_api::handle_complete_upload))
+                .route("/{space}", put(files_api::handle_put_files))
+                .route("/{space}/{*file_path}", put(files_api::handle_put_files))
+                // .route("/{space}/upload", post(files_api::handle_register_upload))
+                // .route(
+                //     "/upload/{space}/chunk/{id}/{*file}",
+                //     put(files_api::handle_chunk_upload),
+                // )
+                // .route(
+                //     "/upload/{space}/{id}/{*file}",
+                //     patch(files_api::handle_update_file),
+                // )
+                // .route(
+                //     "/upload/{space}/{id}",
+                //     post(files_api::handle_complete_upload),
+                // )
                 // .route("/upload/complete", post(files_api::handle_complete_upload))
-                .route("/delete", post(files_api::handle_delete_files))
-                .route("/move", post(files_api::handle_move_files)),
+                .route("/delete/{space}", post(files_api::handle_delete_files))
+                .route("/move/{space}", post(files_api::handle_move_files)),
         )
 }

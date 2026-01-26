@@ -10,17 +10,22 @@
 
 # Dir structure
 
-caby-home
+```
+/app/cabynet
+  ├── configs
+  ├── users
+  └── spaces
+    ├── user
+      ├── live
+      └── meta
+    └── media
+      ├── live
+      └── meta
+```
 
-- /configs
-- /users
-- /spaces
-  - /user
-    - /live
-    - /meta
-  - /media
-    - /live
-    - /meta
+# Request Paths
+
+/list/{space}/
 
 # Configs
 

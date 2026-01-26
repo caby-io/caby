@@ -25,6 +25,7 @@ mod ctx;
 mod error;
 mod files;
 mod jsend;
+mod space;
 mod web;
 
 // TEMP
@@ -41,7 +42,8 @@ async fn main() {
         .init();
 
     // Build config
-    let cfg = Config::new();
+    // todo: wrap
+    let cfg = Config::new().expect("couldn't generate config");
 
     // TEMP TEMP TEMP
     let cfg_path = get_config_path().unwrap();

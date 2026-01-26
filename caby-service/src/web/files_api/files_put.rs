@@ -4,6 +4,7 @@ use crate::{
     error::Result,
     files::joined_path,
     jsend::{self, JSendBuilder},
+    space::Space,
 };
 use axum::{
     extract::{Path, State},
@@ -35,13 +36,13 @@ pub struct PutEntryRequest {
 // used to create directories and small, inline, files
 pub async fn handle_put_files(
     State(cfg): State<Config>,
-    ctx: Result<Ctx>,
+    space: Space,
     files_path: Option<Path<String>>,
     Json(payload): Json<PutEntryRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
     let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
-    let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
+    let Ok(path) = space.join(&rel_path) else {
         return resp.fail("invalid path").into_response();
     };
 

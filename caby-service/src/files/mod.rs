@@ -170,8 +170,8 @@ impl Entry {
 }
 
 // Returns a sanitized full path from the input path
-pub fn joined_path(root_path: &Path, relative_path: &Path) -> Option<PathBuf> {
-    let path = root_path.join(relative_path.clean()).clean();
+pub fn joined_path(root_path: &Path, space: &Path, relative_path: &Path) -> Option<PathBuf> {
+    let path = root_path.join(space).join(relative_path.clean()).clean();
     if path.starts_with(root_path) {
         return Some(path);
     }

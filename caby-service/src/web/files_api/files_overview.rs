@@ -17,6 +17,7 @@ use crate::{
         Entry, EntryType,
     },
     jsend,
+    space::Space,
 };
 
 // #[derive(Deserialize)]
@@ -36,7 +37,7 @@ struct SummarizeFilesResponse {
 
 pub async fn handle_files_overview(
     State(cfg): State<Config>,
-    ctx: Result<Ctx>,
+    space: Space,
     files_path: Option<Path<String>>,
     Query(params): Query<FilesOverviewParams>,
 ) -> Response {
@@ -45,7 +46,7 @@ pub async fn handle_files_overview(
     // todo: sanitize path, more
     let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
 
-    let Some(path) = joined_path(&cfg.live_path, &rel_path) else {
+    let Ok(path) = space.join(&rel_path) else {
         return resp.fail("invalid path").into_response();
     };
 
