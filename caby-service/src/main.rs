@@ -10,6 +10,7 @@ use axum::{
     Router, ServiceExt,
 };
 use config::Config;
+use init::init;
 use std::path::PathBuf;
 use tokio::{fs, net::TcpListener};
 use tower::Layer;
@@ -24,12 +25,10 @@ mod config;
 mod ctx;
 mod error;
 mod files;
+mod init;
 mod jsend;
 mod space;
 mod web;
-
-// TEMP
-pub static ROOT_PATH: &str = "/home/suhaib/caby-home";
 
 #[tokio::main]
 async fn main() {
@@ -42,12 +41,8 @@ async fn main() {
         .init();
 
     // Build config
-    // todo: wrap
-    let cfg = Config::new().expect("couldn't generate config");
-
-    // TEMP TEMP TEMP
-    let cfg_path = get_config_path().unwrap();
-    let cfg_file = ConfigFile::new_from_path(cfg_path).await.unwrap();
+    let cfg = Config::new().await.expect("could not load config");
+    init(&cfg).await.expect("init error");
 
     // Initialize paths
     // todo: log something when dir is created

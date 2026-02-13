@@ -1,3 +1,4 @@
+use axum::extract::{Path as ExtractPath, RawPathParams};
 use std::{any, path::Path, sync::Arc};
 
 // use crate::{Result};
@@ -35,18 +36,26 @@ where
     type Rejection = JSendBuilder<Fail<&'static str>>;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let config = Config::from_ref(state);
+        let cfg = Config::from_ref(state);
 
-        // todo: find in config
+        let Ok(path_params) = parts.extract::<RawPathParams>().await else {
+            // todo: message err
+            return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
+        };
 
-        let resp = JSendBuilder::new().fail(FILE_NOT_FOUND);
+        let Some((_, space)) = path_params.iter().find(|(k, _)| *k == "space") else {
+            // todo: message warn
+            return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
+        };
 
-        return Err(resp);
+        // let Ok(space) = ExtractPath::<(String)>::from_request_parts(parts, &()).await else {
+        //     return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
+        // };
 
         // todo: test
         Ok(Space {
             name: "test".to_string(),
-            path: Path::new(&config.spaces_path).join("test"),
+            path: Path::new(&cfg.spaces_path).join("test"),
         })
     }
 

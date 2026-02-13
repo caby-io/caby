@@ -39,7 +39,7 @@ pub async fn handle_list_files(
 
     // todo: consider santizing after join
     // todo: check that it is a dir? OR return something else for files
-    let entries = match build_entries(&cfg.live_path, &path).await {
+    let entries = match build_entries(&space.path, &path).await {
         Ok(r) => r,
         Err(err) => {
             return resp

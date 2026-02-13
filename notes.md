@@ -12,15 +12,19 @@
 
 ```
 /app/cabynet
-  ├── configs
-  ├── users
-  └── spaces
-    ├── user
-      ├── live
-      └── meta
-    └── media
-      ├── live
-      └── meta
+  ├── /users
+  ├── /spaces
+    ├── /user
+      ├── /live
+      ├── /meta
+      ├── /shares
+      └── /uploads
+    └── /media
+      ├── /live
+      ├── /meta
+      ├── /shares
+      └── /uploads
+  └── config.yaml
 ```
 
 # Request Paths
@@ -30,7 +34,7 @@
 # Configs
 
 ```yaml
-# server.yaml
+# config.yaml
 ---
 registration_enabled: false
 paths:

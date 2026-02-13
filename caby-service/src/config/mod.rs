@@ -1,4 +1,11 @@
-use crate::Result;
+use crate::{
+    config::{
+        config_file::{get_config_path, ConfigFile},
+        validate_config::is_valid_meta_filename,
+    },
+    space::Space,
+    Result,
+};
 use anyhow::{anyhow, Context, Error};
 use serde::Deserialize;
 use std::{
@@ -9,17 +16,30 @@ use std::{
 };
 
 pub mod config_file;
+mod validate_config;
 
 #[derive(Clone, Deserialize)]
 pub struct SpaceConfig {
-    name: String,
-    path: PathBuf,
+    pub name: String,
+    pub path: PathBuf,
+}
+
+impl Into<Space> for SpaceConfig {
+    fn into(self) -> Space {
+        Space {
+            name: self.name,
+            path: self.path,
+        }
+    }
 }
 
 #[derive(Clone, Deserialize)]
 pub struct Config {
+    // global settings
+    pub directory_meta_filename: String,
+
+    // application settings
     pub home_path: PathBuf,
-    pub config_path: PathBuf,
     pub users_path: PathBuf,
     pub spaces_path: PathBuf,
 
@@ -27,21 +47,30 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new() -> Result<Self> {
+    pub async fn new() -> Result<Self> {
         let mut builder = ConfigBuilder::new();
         let home_path = var("CABY_HOME_PATH").map_err(|err| anyhow!("missing CABY_HOME_PATH"))?;
 
-        // Load from env
+        // Load minimal settings from env
         builder
+            .try_set_dir_meta_filename(var("CABY_DIRECTORY_META_FILENAME").ok())?
             .try_set_home_path(Some(home_path))?
-            .try_set_configs_path(var("CABY_CONFIGS_PATH").ok())?
             .try_set_users_path(var("CABY_USERS_PATH").ok())?
             .try_set_spaces_path(var("CABY_SPACES_PATH").ok())?;
 
         // Load from config
-        // let config_path = Self::get_config_path()?;
-        // todo: parse
-        // todo: map values
+        let config_file = ConfigFile::new_from_path(get_config_path()?).await?;
+        // todo: improve this hack
+        let spaces_path = builder.spaces_path.clone().unwrap();
+        builder.try_set_spaces(Some(
+            config_file
+                .spaces
+                .into_iter()
+                .map(|s| s.into_space_config(&spaces_path))
+                .collect(),
+        ))?;
+
+        // todo: load overrides from env
 
         builder.build()
     }
@@ -49,10 +78,10 @@ impl Config {
 
 #[derive(Default)]
 pub struct ConfigBuilder {
+    directory_meta_filename: Option<String>,
     home_path: Option<PathBuf>,
-    config_path: Option<PathBuf>,
     users_path: Option<PathBuf>,
-    spaces_path: Option<PathBuf>,
+    pub spaces_path: Option<PathBuf>,
     spaces: HashMap<String, SpaceConfig>,
 }
 
@@ -71,24 +100,21 @@ impl ConfigBuilder {
         *field = value
     }
 
+    pub fn try_set_dir_meta_filename(&mut self, filename: Option<String>) -> Result<&mut Self> {
+        let Some(f) = filename else { return Ok(self) };
+        is_valid_meta_filename(&f)?;
+        self.directory_meta_filename = Some(f);
+        Ok(self)
+    }
+
     pub fn try_set_home_path(&mut self, path: Option<impl Into<PathBuf>>) -> Result<&mut Self> {
         let Some(p) = path else {
             return Ok(self);
         };
         let pb = p.into();
         self.home_path = Some(pb.clone());
-        self.try_set_configs_path(Some(pb.join("/configs")));
-        self.try_set_users_path(Some(pb.join("/users")));
-        self.try_set_spaces_path(Some(pb.join("/spaces")));
-        // todo: set other paths from this
-        return Ok(self);
-    }
-
-    pub fn try_set_configs_path(&mut self, path: Option<impl Into<PathBuf>>) -> Result<&mut Self> {
-        let Some(p) = path else {
-            return Ok(self);
-        };
-        self.config_path = Some(p.into());
+        self.try_set_users_path(Some(pb.join("users")));
+        self.try_set_spaces_path(Some(pb.join("spaces")));
         return Ok(self);
     }
 
@@ -108,10 +134,22 @@ impl ConfigBuilder {
         return Ok(self);
     }
 
+    pub fn try_set_spaces(&mut self, spaces: Option<Vec<SpaceConfig>>) -> Result<&mut Self> {
+        let Some(sv) = spaces else {
+            return Ok(self);
+        };
+        sv.iter().for_each(|s| {
+            self.spaces.insert(s.name.clone(), s.clone());
+        });
+        return Ok(self);
+    }
+
     pub fn build(self) -> Result<Config> {
         return Ok(Config {
+            directory_meta_filename: self.directory_meta_filename.ok_or(anyhow!(
+                "missing directory meta filename (CABY_DIRECTORY_META_FILENAME)"
+            ))?,
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
-            config_path: self.config_path.ok_or(anyhow!("missing config path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
             spaces: self.spaces,
