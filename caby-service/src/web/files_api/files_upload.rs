@@ -1,7 +1,7 @@
 use crate::{
     config::Config,
     ctx::Ctx,
-    error::Result,
+    error::{RequestError, Result},
     jsend::JSendBuilder,
     space::Space,
     web::{headers::get_required_header, upload::*},
@@ -20,6 +20,7 @@ use std::{
     io::{self},
     os::unix::fs::MetadataExt,
     path::PathBuf,
+    sync::Arc,
 };
 use tokio::{
     fs::{self, remove_file, File, OpenOptions},
@@ -53,7 +54,7 @@ pub async fn handle_register_upload(
     // Generate an ID for this request
     let id = xid::new();
     // Create an upload dir for this upload
-    fs::create_dir(&cfg.uploads_path.join(id.to_string())).await;
+    fs::create_dir(&space.uploads().join(id.to_string())).await;
 
     // Create an meta file for this upload
     // TODO
@@ -83,11 +84,17 @@ pub async fn handle_register_upload(
         .into_response()
 }
 
-pub async fn handle_chunk_upload(
+#[derive(Deserialize)]
+pub struct UploadChunkParams {
+    pub id: String,
+    pub file_path: String,
+}
+
+pub async fn handle_upload_chunk(
     cfg: State<Config>,
-    ctx: Result<Ctx>,
+    space: Space,
     headers: HeaderMap,
-    Path((id, file)): Path<(String, String)>,
+    path_params: Path<UploadChunkParams>,
     body: Body,
 ) -> Response {
     let resp = JSendBuilder::new();
@@ -118,7 +125,7 @@ pub async fn handle_chunk_upload(
     // todo: check content length header against the chunk size
 
     // check that the file is registered to this token
-    if id != upload_token_payload.id {
+    if path_params.id != upload_token_payload.id {
         return resp
             .status_code(StatusCode::UNAUTHORIZED)
             .fail("token/request upload id mismatch")
@@ -126,7 +133,11 @@ pub async fn handle_chunk_upload(
     }
 
     // Check that the file was registered in the token
-    let Some(token_file) = upload_token_payload.files.iter().find(|f| f.name == file) else {
+    let Some(token_file) = upload_token_payload
+        .files
+        .iter()
+        .find(|f| f.name == path_params.file_path)
+    else {
         return resp
             .fail("requested file is not a part of this upload token")
             .into_response();
@@ -153,10 +164,13 @@ pub async fn handle_chunk_upload(
 
     // we have validated the upload, start processing the chunks
 
-    let id_path = PathBuf::from(id);
-    let file_path = PathBuf::from(file);
+    // let id_path = PathBuf::from(id);
+    // let file_path = PathBuf::from(file);
 
-    let full_path = cfg.uploads_path.join(id_path).join(file_path);
+    let full_path = space
+        .uploads()
+        .join(&path_params.id)
+        .join(&path_params.file_path);
 
     let mut file = match OpenOptions::new()
         .write(true)
@@ -205,13 +219,19 @@ pub struct UpdateFileRequest {
     xxh_digest: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub struct UpdateUploadParams {
+    pub id: String,
+    pub file_path: String,
+}
+
 // todo: actually store this data somewhere
 // this handler is for updating file metadata such as the hash or whether the file is complete
-pub async fn handle_update_file(
+pub async fn handle_update_upload(
     cfg: State<Config>,
-    ctx: Result<Ctx>,
+    space: Space,
     headers: HeaderMap,
-    Path((id, file)): Path<(String, String)>,
+    path_params: Path<UpdateUploadParams>,
     Json(body): Json<UpdateFileRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
@@ -227,10 +247,10 @@ pub async fn handle_update_file(
         Err(err) => return err.into_response(),
     };
 
-    let id_path = PathBuf::from(id.clone());
-    let file_path = PathBuf::from(file.clone());
+    // let id_path = PathBuf::from(path_params.id.clone());
+    // let file_path = PathBuf::from(path_params.file_path.unwrap().clone());
 
-    if id != upload_token_payload.id {
+    if path_params.id != upload_token_payload.id {
         return resp
             .status_code(StatusCode::UNAUTHORIZED)
             .fail("token/request upload id mismatch")
@@ -241,7 +261,7 @@ pub async fn handle_update_file(
     let Some(token_file) = upload_token_payload
         .files
         .into_iter()
-        .find(|f| f.name == file)
+        .find(|f| f.name == path_params.file_path)
     else {
         return resp
             .fail("requested file is not a part of this upload token")
@@ -266,10 +286,13 @@ pub async fn handle_update_file(
             .into_response();
     }
 
-    let full_path = cfg.uploads_path.join(id_path).join(file_path);
+    let full_path = space
+        .uploads()
+        .join(&path_params.id)
+        .join(&path_params.file_path);
     let (disk_digest, disk_size) = match get_file_digest_size(full_path).await {
         Ok(d) => d,
-        Err(err) => return err.into_response(),
+        Err(err) => return RequestError::from(err).into_response(),
     };
 
     if disk_digest != body_digest {
@@ -281,17 +304,22 @@ pub async fn handle_update_file(
     }
 
     // note: this doesn't actually do anything
-    // this should, eventually, compile the chunk files to indicate that the file is ready
+    // this should, eventually, compile the chunk files to indicate that the upload is complete
     resp.success("file marked as completed")
         .status_code(StatusCode::OK)
         .into_response()
 }
 
+#[derive(Deserialize)]
+pub struct CompleteUploadParams {
+    pub id: String,
+}
+
 pub async fn handle_complete_upload(
     cfg: State<Config>,
-    ctx: Result<Ctx>,
+    space: Space,
     headers: HeaderMap,
-    Path((id)): Path<(String)>,
+    path_params: Path<CompleteUploadParams>,
 ) -> Response {
     let resp = JSendBuilder::new();
 
@@ -306,9 +334,9 @@ pub async fn handle_complete_upload(
         Err(e) => return e.into_response(),
     };
 
-    let id_path = PathBuf::from(id.clone());
+    // let id_path = PathBuf::from(path_params.id);
 
-    if id != upload_token_payload.id {
+    if path_params.id != upload_token_payload.id {
         return resp
             .status_code(StatusCode::UNAUTHORIZED)
             .fail("token/request upload id mismatch")
@@ -317,7 +345,7 @@ pub async fn handle_complete_upload(
 
     // todo: check that all the files are complete
     // todo: get the base path
-    let upload_path = cfg.uploads_path.join(id_path);
+    let upload_path = space.uploads().join(&path_params.id);
     let mut entries = match fs::read_dir(&upload_path).await {
         Ok(e) => e,
         // todo: improve this error
@@ -327,8 +355,8 @@ pub async fn handle_complete_upload(
     // todo: improve err
     while let Some(dir_entry) = entries.next_entry().await.expect("couldn't get next entry") {
         // let filename = dir_entry.file_name();
-        let dest = cfg
-            .live_path
+        let dest = space
+            .live()
             .join(&upload_token_payload.base_path)
             .join(dir_entry.file_name());
 

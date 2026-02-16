@@ -1,5 +1,8 @@
 use path_clean::PathClean;
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use crate::{config::SpaceConfig, Result};
 
@@ -10,9 +13,25 @@ pub struct Space {
 }
 
 impl Space {
-    pub fn join(&self, path: &PathBuf) -> Result<PathBuf> {
+    pub fn join(&self, path: &Path) -> Result<PathBuf> {
         // todo: check if is valid
         Ok(self.path.join(path.clean()).clean())
+    }
+
+    pub fn live(&self) -> PathBuf {
+        self.path.join("live")
+    }
+
+    pub fn meta(&self) -> PathBuf {
+        self.path.join("meta")
+    }
+
+    pub fn shares(&self) -> PathBuf {
+        self.path.join("shares")
+    }
+
+    pub fn uploads(&self) -> PathBuf {
+        self.path.join("uploads")
     }
 }
 

@@ -23,6 +23,12 @@ impl IntoResponse for RequestError {
     }
 }
 
+// impl From<Error> for RequestError {
+//     fn from(value: Error) -> Self {
+//         Self(Arc::new(value))
+//     }
+// }
+
 // This enables using `?` on functions that return `Result<_, anyhow::Error>` to turn them into
 // `Result<_, RequestError>`. That way you don't need to do that manually.
 impl<E> From<E> for RequestError

@@ -6,11 +6,14 @@ use std::{
     time::SystemTime,
 };
 
+use anyhow::anyhow;
 use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
 use serde_json::error;
 use tokio::fs::{self, metadata, read_dir, read_link, DirEntry, ReadDir};
 use tracing::{debug, error, warn};
+
+use crate::{error::Result, space::Space};
 
 pub mod overview;
 pub mod pretty;
@@ -70,10 +73,11 @@ pub struct Entry {
 // }
 
 impl Entry {
-    async fn try_from(root_path: &Path, value: DirEntry) -> Result<Self, io::Error> {
+    // todo: accept meta path
+    async fn try_from(live_path: &Path, value: DirEntry) -> Result<Self> {
         let metadata = value.metadata().await?;
 
-        value.path().strip_prefix(root_path);
+        value.path().strip_prefix(live_path);
 
         // Fill common fields
         let created_at = metadata.created().ok();
@@ -84,25 +88,14 @@ impl Entry {
         let mut entry = Self {
             entry_type: EntryType::default(),
             name: value.file_name().into_string().map_err(|err| {
-                io::Error::new(ErrorKind::Other, "couldn't convert entry name to string")
+                anyhow!("could not convert entry name to string").context(format!("{:?}", err))
             })?,
-            // path: root_path
-            //     .join(value.file_name())
-            //     .to_str()
-            //     .ok_or(io::Error::new(
-            //         ErrorKind::Other,
-            //         "couldn't convert root path to string",
-            //     ))?
-            //     .to_owned(),
             path: value
                 .path()
-                .strip_prefix(root_path)
+                .strip_prefix(live_path)
                 .map_err(|err| io::Error::new(ErrorKind::Other, "couldn't strip prefix"))?
                 .to_str()
-                .ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "couldn't convert root path to string",
-                ))?
+                .ok_or(anyhow!("could not convert entry name to string"))?
                 .to_owned(),
             created_at,
             pretty_created_at,
@@ -165,7 +158,7 @@ impl Entry {
             return Ok(entry);
         }
 
-        return Err(io::Error::new(ErrorKind::Other, "unhandled entry type"));
+        return Err(anyhow!("unhandled entry type"));
     }
 }
 
@@ -178,16 +171,18 @@ pub fn joined_path(root_path: &Path, space: &Path, relative_path: &Path) -> Opti
     None
 }
 
-pub async fn build_entries(root_path: &Path, path: &Path) -> io::Result<Vec<Entry>> {
-    let mut entries = read_dir(path).await?;
+pub async fn build_entries(space: &Space, path: &Path) -> Result<Vec<Entry>> {
+    // todo: read meta and live in parallel?
+    let live_path = space.live();
+    let mut entries = read_dir(live_path.join(path)).await?;
 
     let mut result = vec![];
-
     while let Some(dir_entry) = entries.next_entry().await? {
         let filename = dir_entry.file_name();
-        match Entry::try_from(root_path, dir_entry).await {
+        match Entry::try_from(&live_path, dir_entry).await {
             Ok(e) => result.push(e),
             Err(err) => {
+                // todo: send errored entries with the list
                 error!("couldn't process file: {:?} {}", filename, err);
             }
         }

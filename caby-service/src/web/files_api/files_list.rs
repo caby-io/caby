@@ -2,7 +2,7 @@ use crate::{
     config::Config,
     ctx::Ctx,
     error::Result,
-    files::{build_entries, joined_path, Entry},
+    files::{build_entries, Entry},
     jsend,
     space::Space,
 };
@@ -10,8 +10,16 @@ use axum::{
     extract::{Path, State},
     response::{IntoResponse, Response},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+
+pub const FILE_NOT_FOUND: &'static str = "file not found";
+
+#[derive(Deserialize)]
+pub struct FilesPathParams {
+    pub space: String,
+    pub file_path: Option<String>,
+}
 
 #[derive(Serialize)]
 struct ListFilesResponse {
@@ -22,24 +30,25 @@ struct ListFilesResponse {
 
 pub async fn handle_list_files(
     State(cfg): State<Config>,
-    ctx: Result<Ctx>,
     space: Space,
-    files_path: Option<Path<String>>,
+    path_params: Path<FilesPathParams>,
 ) -> Response {
-    // todo: sanitize path, more
-    let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
-
-    let Ok(path) = space.join(&rel_path) else {
-        return jsend::JSendBuilder::new()
-            .fail("invalid path")
-            .into_response();
-    };
-
     let resp = jsend::JSendBuilder::new();
+    // todo: sanitize path, more
+
+    // temp
+    let rel_path = path_params
+        .file_path
+        .clone()
+        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
+
+    // let Ok(path) = space.join(&rel_path) else {
+    //     return resp.fail("invalid path").into_response();
+    // };
 
     // todo: consider santizing after join
     // todo: check that it is a dir? OR return something else for files
-    let entries = match build_entries(&space.path, &path).await {
+    let entries = match build_entries(&space, &rel_path).await {
         Ok(r) => r,
         Err(err) => {
             return resp

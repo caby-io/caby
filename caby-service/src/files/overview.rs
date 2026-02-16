@@ -11,6 +11,7 @@ use tracing::error;
 
 use crate::{
     files::{pretty, EntryType},
+    space::Space,
     Error, Result,
 };
 
@@ -57,7 +58,7 @@ impl EntryOverview {
 }
 
 pub async fn build_overview(
-    root_path: &Path,
+    space: &Space,
     path: &Path,
     depth: u32,
     dirs_only: bool,
@@ -68,8 +69,9 @@ pub async fn build_overview(
 
     // todo: filter earlier to save on compute
     while let Some(dir_entry) = entries.next_entry().await? {
+        let live_path = space.live();
         let filename = dir_entry.file_name();
-        let mut entry = match EntryOverview::try_from(root_path, dir_entry).await {
+        let mut entry = match EntryOverview::try_from(&live_path, dir_entry).await {
             Ok(e) => e,
             Err(err) => {
                 error!("couldn't process file: {:?} {}", filename, err);
@@ -79,9 +81,9 @@ pub async fn build_overview(
 
         // todo: check that it's a dir
         if matches!(entry.entry_type, EntryType::Directory) && depth > 1 {
-            let entry_path = root_path.join(entry.path.clone());
+            let entry_path = live_path.join(entry.path.clone());
             entry.children =
-                Box::pin(build_overview(root_path, &entry_path, depth - 1, dirs_only)).await?;
+                Box::pin(build_overview(space, &entry_path, depth - 1, dirs_only)).await?;
         }
 
         if dirs_only && !matches!(entry.entry_type, EntryType::Directory) {

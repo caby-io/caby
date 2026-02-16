@@ -1,12 +1,12 @@
-use axum::extract::{Path as ExtractPath, RawPathParams};
-use std::{any, path::Path, sync::Arc};
+use axum::extract::{Path, RawPathParams};
+use std::{any, sync::Arc};
 
 // use crate::{Result};
 use crate::{
     config::Config,
-    error::RequestError,
     jsend::{Fail, JSendBuilder},
     space::Space,
+    web::files_api::files_list::{FilesPathParams, FILE_NOT_FOUND},
 };
 use anyhow::anyhow;
 use axum::{
@@ -16,17 +16,6 @@ use axum::{
     Extension, RequestPartsExt,
 };
 use serde::Serialize;
-
-// #[derive(Clone, Debug)]
-// pub struct Ctx {}
-
-// impl Ctx {
-//     pub fn new() -> Self {
-//         Self {}
-//     }
-// }
-
-const FILE_NOT_FOUND: &'static str = "file not found";
 
 impl<S> FromRequestParts<S> for Space
 where
@@ -38,39 +27,16 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let cfg = Config::from_ref(state);
 
-        let Ok(path_params) = parts.extract::<RawPathParams>().await else {
-            // todo: message err
+        let Ok(Path(path_params)) = parts.extract::<Path<FilesPathParams>>().await else {
+            // todo: log specific err
             return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
         };
 
-        let Some((_, space)) = path_params.iter().find(|(k, _)| *k == "space") else {
-            // todo: message warn
+        let Some(space_config) = cfg.spaces.get(&path_params.space) else {
+            // todo: log specific err
             return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
         };
 
-        // let Ok(space) = ExtractPath::<(String)>::from_request_parts(parts, &()).await else {
-        //     return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
-        // };
-
-        // todo: test
-        Ok(Space {
-            name: "test".to_string(),
-            path: Path::new(&cfg.spaces_path).join("test"),
-        })
+        Ok(space_config.clone().into())
     }
-
-    // async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, RequestError> {
-    //     // let Extension(cfg) = parts
-    //     //     .extract::<Extension<Config>>()
-    //     //     .await
-    //     //     .map_err(anyhow!("failed"))?;
-
-    //     let Extension(cfg) = parts
-    //         .extract_with_state::
-    //         .get::<Result<Config, RequestError>>()
-    //         .ok_or(anyhow!("missing context"))?
-    //         .clone();
-
-    //     Ok(Space)
-    // }
 }
