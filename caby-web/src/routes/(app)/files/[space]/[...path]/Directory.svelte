@@ -4,6 +4,7 @@
 
 	let {
 		entry,
+		space,
 		onSelect,
 		onDragStart,
 		onDragEnd,
@@ -37,7 +38,7 @@
 	<section class="info">
 		<h1>
 			<!-- todo: figure out a better solution for the double event -->
-			<a onclick={() => (onSelect = undefined)} href={`/${join('files', entry.path)}`}
+			<a onclick={() => (onSelect = undefined)} href={`/${join('files', space!, entry.path)}`}
 				>{entry.name}</a
 			>
 		</h1>

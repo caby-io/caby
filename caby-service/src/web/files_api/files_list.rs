@@ -3,7 +3,7 @@ use crate::{
     ctx::Ctx,
     error::Result,
     files::{build_entries, Entry},
-    jsend,
+    jsend::JSendBuilder,
     space::Space,
 };
 use axum::{
@@ -33,7 +33,7 @@ pub async fn handle_list_files(
     space: Space,
     path_params: Path<FilesPathParams>,
 ) -> Response {
-    let resp = jsend::JSendBuilder::new();
+    let resp = JSendBuilder::new();
     // todo: sanitize path, more
 
     // temp
@@ -57,19 +57,14 @@ pub async fn handle_list_files(
                 .into_response();
         }
     };
-    // let Ok((dirs, files)) = get_entries(PathBuf::from("/").join(&path).clean().as_path()).await
-    // else {
-    //     return resp.error("could not access files: {}").into_response();
-    // };
 
     // todo: make safe
     let parent_dir = rel_path.parent().map(|p| p.to_str().unwrap().to_owned());
 
-    jsend::JSendBuilder::new()
-        .success(ListFilesResponse {
-            path: rel_path.to_str().unwrap().to_owned(), // todo: make safe
-            parent_dir,
-            entries,
-        })
-        .into_response()
+    resp.success(ListFilesResponse {
+        path: rel_path.to_str().unwrap().to_owned(), // todo: make safe
+        parent_dir,
+        entries,
+    })
+    .into_response()
 }

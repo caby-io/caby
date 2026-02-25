@@ -25,17 +25,20 @@
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
-	import type { FilesResponse } from '$lib/api/api_files';
+	import { filesOverview, listFiles, type ListFilesResp } from '$lib/api/api_files';
 	import type { SelectedEntry } from '$lib/files/select';
 	import DeleteDialog from './DeleteDialog.svelte';
 	import EntriesBar from './EntriesBar.svelte';
 	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
 	import ContextMenu, { type ContextMenuProps } from '$lib/files/ContextMenu.svelte';
 	import EntriesOverview from '$lib/files/overview/EntriesOverview.svelte';
+	import SpacesSelector from './SpacesSelector.svelte';
+	import { client } from '$lib/stores/client.svelte';
 
+	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
 
-	let filesResponse: FilesResponse = $state({
+	let filesResponse: ListFilesResp = $state({
 		path: null,
 		parent_dir: null,
 		current_dir: '',
@@ -49,12 +52,8 @@
 
 	// todo: improve
 	const getFilesOverview = async () => {
-		const response = await fetch('http://localhost:8080/v0/files/overview/?dirs_only=true');
-		const payload = await response.json();
-
-		let data = payload.data;
-
-		overview_entries = data.entries;
+		const resp = await filesOverview(client, space, '');
+		overview_entries = resp.data!.entries;
 	};
 
 	// File List Operations
@@ -67,13 +66,8 @@
 
 	const getFilesList = async (path: string) => {
 		loading = true;
-		const response = await fetch('http://localhost:8080/v0/files/list/' + path);
-		const payload = await response.json();
-
-		let data = payload.data;
-
-		filesResponse = data;
-
+		const resp = await listFiles(client, space, path);
+		filesResponse = resp.data!;
 		loading = false;
 	};
 
@@ -366,9 +360,7 @@
 
 <div class="files-view fx">
 	<section class="left fx fx--col">
-		<button class="fx fx--cc add-button button"
-			><iconify-icon icon="lucide-plus"></iconify-icon>Add</button
-		>
+		<SpacesSelector />
 		<EntriesOverview {overview_entries} />
 	</section>
 	<section class="right fx-grow fx fx--col">
@@ -389,6 +381,7 @@
 					{#each dir_entries as entry, index}
 						<Directory
 							{entry}
+							{space}
 							onSelect={(e: MouseEvent) => handleSelectOp(e, { index, entry })}
 							onDragStart={onEntryDragStart}
 							onDragEnd={onEntryDragEnd}
@@ -406,6 +399,7 @@
 					{#each file_entries as entry, index}
 						<File
 							{entry}
+							{space}
 							onSelect={(e: MouseEvent) =>
 								handleSelectOp(e, { index: index + dir_entries.length, entry: entry })}
 							onDragStart={onEntryDragStart}
@@ -443,11 +437,6 @@
 		background-color: var(--clr-background-1);
 		width: var(--sidebar-width);
 		overflow-x: scroll;
-
-		.add-button {
-			margin: 1rem;
-			text-align: center;
-		}
 	}
 
 	.right {

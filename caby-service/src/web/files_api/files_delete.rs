@@ -1,6 +1,6 @@
 use crate::{config::Config, files::joined_path, jsend, space::Space};
 use axum::{
-    extract::{self, Path, State},
+    extract::{Json, Path, State},
     response::{IntoResponse, Response},
 };
 use path_clean::PathClean;
@@ -24,7 +24,7 @@ struct DeleteEntriesResponse {
 pub async fn handle_delete_files(
     State(cfg): State<Config>,
     space: Space,
-    extract::Json(req): extract::Json<DeleteEntriesRequest>,
+    Json(req): Json<DeleteEntriesRequest>,
 ) -> Response {
     let mut deleted = vec![];
     let mut errors = vec![];

@@ -9,6 +9,7 @@ mod auth_api;
 mod extractors;
 mod files_api;
 mod headers;
+mod spaces_api;
 mod upload;
 
 pub fn api_router() -> Router<Config> {
@@ -18,6 +19,12 @@ pub fn api_router() -> Router<Config> {
         //     Router::new().route("/login", post(auth_api::handle_login)),
         // )
         .nest(
+            "/spaces",
+            Router::new()
+                .route("/", get(spaces_api::handle_list_spaces))
+                .route("/{space}", get(spaces_api::handle_show_space)),
+        )
+        .nest(
             "/files",
             Router::new()
                 // Wildcards don't support the base path so this is required
@@ -26,7 +33,7 @@ pub fn api_router() -> Router<Config> {
                     "/list/{space}/{*file_path}",
                     get(files_api::handle_list_files),
                 )
-                .route("/overview", get(files_api::handle_files_overview))
+                .route("/overview/{space}", get(files_api::handle_files_overview))
                 .route(
                     "/overview/{space}/{*file_path}",
                     get(files_api::handle_files_overview),

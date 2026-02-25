@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import Dialog from '$lib/Dialog.svelte';
-	import NewFolderDialog from '../../routes/(app)/files/[...path]/NewFolderDialog.svelte';
+	import NewFolderDialog from '../../routes/(app)/files/[space]/[...path]/NewFolderDialog.svelte';
 	import { UploadGroup } from './upload/upload_group';
 	import { uploadManager } from './upload/upload_manager.svelte';
 

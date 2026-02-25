@@ -25,6 +25,7 @@ export type DirFields = {
 
 export type EntryProps<T> = {
 	entry: Entry<T>;
+	space?: string;
 
 	// general events
 	// used to select the card when appropriate

@@ -1,4 +1,5 @@
 use path_clean::PathClean;
+use serde::Serialize;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -6,7 +7,7 @@ use std::{
 
 use crate::{config::SpaceConfig, Result};
 
-#[derive(Clone, Debug)]
+#[derive(Serialize, Clone, Debug)]
 pub struct Space {
     pub name: String,
     pub path: PathBuf,

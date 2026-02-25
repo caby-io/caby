@@ -77,8 +77,6 @@ impl Entry {
     async fn try_from(live_path: &Path, value: DirEntry) -> Result<Self> {
         let metadata = value.metadata().await?;
 
-        value.path().strip_prefix(live_path);
-
         // Fill common fields
         let created_at = metadata.created().ok();
         let pretty_created_at = pretty::date(&created_at);
@@ -93,7 +91,7 @@ impl Entry {
             path: value
                 .path()
                 .strip_prefix(live_path)
-                .map_err(|err| io::Error::new(ErrorKind::Other, "couldn't strip prefix"))?
+                .map_err(|err| anyhow!("could not strip prefix").context(err))?
                 .to_str()
                 .ok_or(anyhow!("could not convert entry name to string"))?
                 .to_owned(),

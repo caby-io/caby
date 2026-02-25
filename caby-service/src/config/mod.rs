@@ -60,8 +60,9 @@ impl Config {
 
         // Load from config
         let config_file = ConfigFile::new_from_path(get_config_path()?).await?;
-        // todo: improve this hack
-        let spaces_path = builder.spaces_path.clone().unwrap();
+        let Some(spaces_path) = builder.spaces_path.clone() else {
+            return Err(anyhow!("no valid spaces path from environment variables"));
+        };
         builder.try_set_spaces(Some(
             config_file
                 .spaces
@@ -70,6 +71,7 @@ impl Config {
                 .collect(),
         ))?;
 
+        // Load overrides from env
         // todo: load overrides from env
 
         builder.build()
@@ -81,7 +83,7 @@ pub struct ConfigBuilder {
     directory_meta_filename: Option<String>,
     home_path: Option<PathBuf>,
     users_path: Option<PathBuf>,
-    pub spaces_path: Option<PathBuf>,
+    spaces_path: Option<PathBuf>,
     spaces: HashMap<String, SpaceConfig>,
 }
 

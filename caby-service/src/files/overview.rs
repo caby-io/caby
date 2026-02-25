@@ -16,40 +16,39 @@ use crate::{
 };
 
 #[derive(Serialize)]
-pub struct EntryOverview {
+pub struct OverviewEntry {
     pub entry_type: EntryType,
     pub name: String,
     pub path: String, // relative path of the file from the mount root
-    pub children: Vec<EntryOverview>,
+    pub children: Vec<OverviewEntry>,
 }
 
-impl EntryOverview {
-    async fn try_from(root_path: &Path, value: DirEntry) -> Result<Self> {
+impl OverviewEntry {
+    async fn try_from(live_path: &Path, value: DirEntry) -> Result<Self> {
         let metadata = value.metadata().await?;
 
         // Fill common fields
+        // todo: fill in
         let created_at = metadata.created().ok();
         let modified_at = metadata.modified().ok();
 
         let mut entry = Self {
+            entry_type: match metadata.is_dir() {
+                true => EntryType::Directory,
+                false => EntryType::File,
+            },
             name: value.file_name().into_string().map_err(|err| {
                 return anyhow!("couldn't convert entry name to string")
                     .context(anyhow!("{:?}", err));
             })?,
             path: value
                 .path()
-                .strip_prefix(root_path)
-                .map_err(|err| io::Error::new(ErrorKind::Other, "couldn't strip prefix"))?
+                .strip_prefix(live_path)
+                .map_err(|err| anyhow!("could not strip prefix").context(err))?
                 .to_str()
-                .ok_or(io::Error::new(
-                    ErrorKind::Other,
-                    "couldn't convert root path to string",
-                ))?
+                .ok_or(anyhow!("could not convert root path to string"))?
                 .to_owned(),
-            entry_type: match metadata.is_dir() {
-                true => EntryType::Directory,
-                false => EntryType::File,
-            },
+            // todo: common fields
             children: vec![],
         };
 
@@ -60,18 +59,17 @@ impl EntryOverview {
 pub async fn build_overview(
     space: &Space,
     path: &Path,
-    depth: u32,
+    max_depth: u32,
     dirs_only: bool,
-) -> Result<Vec<EntryOverview>> {
-    let mut entries = read_dir(path).await?;
+) -> Result<Vec<OverviewEntry>> {
+    let live_path = space.live();
+    let mut entries = read_dir(live_path.join(path)).await?;
 
     let mut result = vec![];
-
     // todo: filter earlier to save on compute
     while let Some(dir_entry) = entries.next_entry().await? {
-        let live_path = space.live();
         let filename = dir_entry.file_name();
-        let mut entry = match EntryOverview::try_from(&live_path, dir_entry).await {
+        let mut entry = match OverviewEntry::try_from(&live_path, dir_entry).await {
             Ok(e) => e,
             Err(err) => {
                 error!("couldn't process file: {:?} {}", filename, err);
@@ -80,10 +78,10 @@ pub async fn build_overview(
         };
 
         // todo: check that it's a dir
-        if matches!(entry.entry_type, EntryType::Directory) && depth > 1 {
+        if matches!(entry.entry_type, EntryType::Directory) && max_depth > 1 {
             let entry_path = live_path.join(entry.path.clone());
             entry.children =
-                Box::pin(build_overview(space, &entry_path, depth - 1, dirs_only)).await?;
+                Box::pin(build_overview(space, &entry_path, max_depth - 1, dirs_only)).await?;
         }
 
         if dirs_only && !matches!(entry.entry_type, EntryType::Directory) {

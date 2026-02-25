@@ -1,4 +1,6 @@
-use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend, space::Space};
+use crate::{
+    config::Config, ctx::Ctx, error::Result, files::joined_path, jsend::JSendBuilder, space::Space,
+};
 use axum::{
     extract::{Json, State},
     response::{IntoResponse, Response},
@@ -99,7 +101,7 @@ pub async fn handle_move_files(
         ));
     }
 
-    jsend::JSendBuilder::new()
+    JSendBuilder::new()
         .success(RenamedEntriesResponse { renamed, errors })
         .into_response()
 }

@@ -5,6 +5,7 @@ use crate::{
     files::joined_path,
     jsend::{self, JSendBuilder},
     space::Space,
+    web::files_api::files_list::FilesPathParams,
 };
 use axum::{
     extract::{Path, State},
@@ -16,7 +17,7 @@ use path_clean::PathClean;
 use serde::Deserialize;
 use std::path::PathBuf;
 use tokio::fs;
-use tracing::error;
+use tracing::{debug, error};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -37,14 +38,19 @@ pub struct PutEntryRequest {
 pub async fn handle_put_files(
     State(cfg): State<Config>,
     space: Space,
-    files_path: Option<Path<String>>,
+    path_params: Path<FilesPathParams>,
     Json(payload): Json<PutEntryRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
-    let rel_path = files_path.map_or(PathBuf::from(""), |Path(p)| PathBuf::from(p));
-    let Ok(path) = space.join(&rel_path) else {
-        return resp.fail("invalid path").into_response();
-    };
+    let rel_path = path_params
+        .file_path
+        .clone()
+        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
+    // let Ok(path) = space.join(&rel_path) else {
+    //     return resp.fail("invalid path").into_response();
+    // };
+
+    let path = space.live().join(&rel_path);
 
     // todo: validate path is valid
 
@@ -57,7 +63,7 @@ pub async fn handle_put_files(
                     .into_response()
             }
             Err(err) => {
-                error!("could not create dir: {}", err);
+                error!("could not create dir at {:?}: {}", path, err);
                 return resp.fail("could not create directory").into_response();
             }
         },

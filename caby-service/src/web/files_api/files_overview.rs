@@ -12,7 +12,7 @@ use crate::{
     error::Result,
     files::{
         build_entries, joined_path,
-        overview::{build_overview, EntryOverview},
+        overview::{build_overview, OverviewEntry},
         Entry, EntryType,
     },
     jsend,
@@ -32,7 +32,7 @@ pub struct FilesOverviewParams {
 struct SummarizeFilesResponse {
     pub path: String,
     pub parent_dir: Option<String>,
-    pub entries: Vec<EntryOverview>,
+    pub entries: Vec<OverviewEntry>,
 }
 
 pub async fn handle_files_overview(
@@ -49,19 +49,20 @@ pub async fn handle_files_overview(
         .clone()
         .map_or(PathBuf::from(""), |p| PathBuf::from(p));
 
-    let Ok(path) = space.join(&rel_path) else {
-        return resp.fail("invalid path").into_response();
-    };
+    // let Ok(path) = space.join(&rel_path) else {
+    //     return resp.fail("invalid path").into_response();
+    // };
 
-    let entries = match build_overview(&space, &path, 3, params.dirs_only.unwrap_or(false)).await {
-        Ok(r) => r,
-        Err(err) => {
-            return resp
-                // todo: don't send this down in production, just log the actual error
-                .error(format!("could not access files: {}", err))
-                .into_response();
-        }
-    };
+    let entries =
+        match build_overview(&space, &rel_path, 3, params.dirs_only.unwrap_or(false)).await {
+            Ok(r) => r,
+            Err(err) => {
+                return resp
+                    // todo: don't send this down in production, just log the actual error
+                    .error(format!("could not access files: {}", err))
+                    .into_response();
+            }
+        };
     // let Ok((dirs, files)) = get_entries(PathBuf::from("/").join(&path).clean().as_path()).await
     // else {
     //     return resp.error("could not access files: {}").into_response();
