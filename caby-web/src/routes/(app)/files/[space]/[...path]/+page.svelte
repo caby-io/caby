@@ -360,7 +360,7 @@
 
 <div class="files-view fx">
 	<section class="left fx fx--col">
-		<SpacesSelector />
+		<SpacesSelector current_space={space} />
 		<EntriesOverview {overview_entries} />
 	</section>
 	<section class="right fx-grow fx fx--col">
