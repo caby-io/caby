@@ -7,6 +7,8 @@
 // 	};
 // }
 
+import { putChunk } from '$lib/api/api_files';
+import { client } from '$lib/stores/client.svelte';
 import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '../upload';
 import {
 	MessageType,
@@ -32,9 +34,9 @@ self.onmessage = function (e: MessageEvent<Message<any>>) {
 let progress = 0;
 
 const start_upload = (payload: StartUploadPayload) => {
-	const id = payload.registration!.id;
+	// const id = payload.registration!.id;
 	// todo: better name?
-	const name = payload.file.name;
+	// const name = payload.file.name;
 
 	let index = 0;
 
@@ -66,16 +68,7 @@ const start_upload = (payload: StartUploadPayload) => {
 			// console.debug('[caby/upload-manager] finished uploading chunks');
 			return;
 		}
-
-		const response = await fetch(`http://localhost:8080/v0/files/upload/chunk/${id}/${name}`, {
-			method: 'put',
-			headers: {
-				// todo: make these constants
-				[CABY_UPLOAD_TOKEN]: payload.registration!.token,
-				[CABY_CHUNK_INDEX]: index.toString()
-			},
-			body: event.target!.result
-		});
+		const resp = await putChunk(client, payload, index, event.target!.result);
 		// todo: handle response and error
 
 		// todo: store this in worker scope to make it clear that we have no access to the original upload_file obj

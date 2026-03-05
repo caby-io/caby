@@ -2,6 +2,8 @@
 	import { page } from '$app/state';
 	// const path = $derived(page.params.path!);
 
+	let { current_space }: { current_space: string } = $props();
+
 	const dirs = $derived(page.params.path!.split('/'));
 
 	const getPath = (index: number) => {
@@ -14,7 +16,7 @@
 		<iconify-icon icon="lucide:corner-left-up"></iconify-icon>
 	</a> -->
 	<div class="breadcrumb fx fx--ac">
-		<a class="fx fx--ac" href="/files">
+		<a class="fx fx--ac" href="/files/{current_space}">
 			<iconify-icon icon="ci:house-02"></iconify-icon>
 		</a>
 	</div>

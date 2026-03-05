@@ -25,7 +25,7 @@
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
-	import { filesOverview, listFiles, type ListFilesResp } from '$lib/api/api_files';
+	import { filesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
 	import type { SelectedEntry } from '$lib/files/select';
 	import DeleteDialog from './DeleteDialog.svelte';
 	import EntriesBar from './EntriesBar.svelte';
@@ -61,12 +61,23 @@
 	let entries: Entry[] = $derived(filesResponse.entries);
 	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
 	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
+	// let file_entries = $derived.by(() => entries.filter((e) => e.entry_type === 'file'));
 
 	let loading = $state(false);
 
 	const getFilesList = async (path: string) => {
 		loading = true;
 		const resp = await listFiles(client, space, path);
+		if (resp.status != 'success') {
+			filesResponse = {
+				path: null,
+				parent_dir: null,
+				current_dir: '',
+				entries: []
+			};
+			loading = false;
+			return;
+		}
 		filesResponse = resp.data!;
 		loading = false;
 	};
@@ -85,6 +96,7 @@
 
 	const handleSelectOp = async (e: MouseEvent, selected: SelectedEntry) => {
 		// for now we will only allow selection across the same entry type
+		// if shift then try selecting across
 		if (
 			e.shiftKey &&
 			last_selected &&
@@ -105,7 +117,6 @@
 			return;
 		}
 
-		// if shift then try selecting across
 		// if not shift
 		selected.entry.is_selected = !selected.entry.is_selected;
 		last_selected = selected;
@@ -156,7 +167,6 @@
 
 		drag_over_ct--;
 		if (drag_over_ct === 0) {
-			console.log('removing drag effect: leave');
 			// todo
 		}
 	};
@@ -172,7 +182,6 @@
 		});
 
 		drag_over_ct = 0;
-		console.log('removing drag effect: drop');
 	};
 
 	const onDragEnd = (e: DragEvent) => {
@@ -181,7 +190,6 @@
 		}
 
 		drag_over_ct = 0;
-		console.log('removing drag effect: end');
 	};
 
 	// Entry Drag Operations
@@ -245,7 +253,7 @@
 			renames.push([e.path, fs.join(entry.path, e.name)]);
 			e.is_processing = true;
 		});
-		await moveFiles(renames);
+		await handleMoveFiles(renames);
 	};
 
 	// Context Menu (right-click)
@@ -293,20 +301,25 @@
 
 	const handleAddContent = () => add_content_dialog.showModal();
 
-	const moveFiles = async (entries: [string, string][]) => {
-		const response = await fetch('http://localhost:8080/v0/files/move', {
-			method: 'post',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				entries,
-				force: false
-			})
-		});
+	const handleMoveFiles = async (entries: [string, string][]) => {
+		let resp = await moveFiles(client, space, entries);
+		if (resp.status != 'success') {
+			console.error(`could not move files: ${resp.message}`);
+			return;
+		}
+		// const response = await fetch('http://localhost:8080/v0/files/move', {
+		// 	method: 'post',
+		// 	headers: {
+		// 		Accept: 'application/json',
+		// 		'Content-Type': 'application/json'
+		// 	},
+		// 	body: JSON.stringify({
+		// 		entries,
+		// 		force: false
+		// 	})
+		// });
 		// todo: handle errors
-		const payload = await response.json();
+		// const payload = await response.json();
 		// todo: move this to onDrop?
 		await onListChange();
 	};
@@ -361,13 +374,20 @@
 <div class="files-view fx">
 	<section class="left fx fx--col">
 		<SpacesSelector current_space={space} />
-		<EntriesOverview {overview_entries} />
+		<EntriesOverview {overview_entries} {space} />
 	</section>
 	<section class="right fx-grow fx fx--col">
-		<EntriesBar {selected_entries} {add_content_dialog} {handleDeleteSelected} {handleDeselect} />
+		<EntriesBar
+			{selected_entries}
+			{add_content_dialog}
+			current_space={space}
+			{handleDeleteSelected}
+			{handleDeselect}
+		/>
 		<main
 			class="entries fx-grow"
 			class:drag-over={drag_over_ct > 0}
+			class:loading
 			ondragenter={onDragEnter}
 			ondragover={onDragOver}
 			ondragleave={onDragLeave}
@@ -418,11 +438,12 @@
 	</section>
 </div>
 
-<AddContentDialog bind:dialog={add_content_dialog} {onListChange} />
-<DeleteDialog bind:dialog={delete_entries_dialog} {onListChange} entries={delete_entries} />
+<AddContentDialog bind:dialog={add_content_dialog} {space} {onListChange} />
+<DeleteDialog bind:dialog={delete_entries_dialog} {space} {onListChange} entries={delete_entries} />
 <ContextMenu
 	bind:dialog={contextMenuDialog}
 	position={contextMenuProps.position}
+	{space}
 	bind:entry={contextMenuProps.entry}
 	{handleAddContent}
 	{handleDeleteEntries}
@@ -436,7 +457,7 @@
 	.left {
 		background-color: var(--clr-background-1);
 		width: var(--sidebar-width);
-		overflow-x: scroll;
+		overflow-x: auto;
 	}
 
 	.right {
@@ -450,6 +471,11 @@
 		background: var(--clr-background);
 		padding: 1rem;
 		position: relative;
+		transition: opacity 0.2s;
+
+		&.loading {
+			opacity: 0.5;
+		}
 
 		&.drag-over {
 			opacity: 0.5;

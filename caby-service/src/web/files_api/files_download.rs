@@ -1,4 +1,12 @@
-use crate::{config::Config, ctx::Ctx, error::Result, files::joined_path, jsend, space::Space};
+use crate::{
+    config::Config,
+    ctx::Ctx,
+    error::Result,
+    files::joined_path,
+    jsend,
+    space::{Space, SpaceDir},
+    web::files_api::files_list::FilesPathParams,
+};
 use axum::{
     body::Body,
     extract::{Path, State},
@@ -11,14 +19,14 @@ use tokio_util::io::ReaderStream;
 pub async fn handle_download_files(
     State(cfg): State<Config>,
     space: Space,
-    files_path: Option<Path<String>>,
+    path_params: Path<FilesPathParams>,
 ) -> Response {
-    let rel_path = match files_path {
-        Some(Path(p)) => PathBuf::from(p),
-        None => return (StatusCode::NOT_FOUND, "file path required").into_response(),
-    };
+    let rel_path = path_params
+        .file_path
+        .clone()
+        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
 
-    let Ok(path) = space.join(&rel_path) else {
+    let Ok(path) = space.join(SpaceDir::LIVE, &rel_path) else {
         return jsend::JSendBuilder::new()
             .fail("invalid path")
             .into_response();
@@ -52,7 +60,7 @@ pub async fn handle_download_files(
     let body = Body::from_stream(stream);
 
     let headers = [
-        (header::CONTENT_TYPE, &format!("{:?}", content_type)),
+        (header::CONTENT_TYPE, &format!("{}", content_type)),
         (
             header::CONTENT_DISPOSITION,
             &format!("attachment; filename=\"{}\"", filename.to_str().unwrap()),

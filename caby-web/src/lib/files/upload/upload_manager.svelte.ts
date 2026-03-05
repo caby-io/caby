@@ -1,10 +1,5 @@
 import xxhash from 'xxhash-wasm';
-import {
-	CABY_CHUNK_INDEX,
-	CABY_UPLOAD_TOKEN,
-	ConflictStrategy,
-	type RegisterUploadRequest
-} from './upload';
+import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from './upload';
 import { TaskStatus, type UploadFile } from './upload_file.svelte';
 import type { UploadGroup, UploadRegistration } from './upload_group';
 import UploadWorker from './workers/upload_worker?worker';
@@ -15,6 +10,14 @@ import {
 	type Message
 } from './workers';
 import { CombinedProgress, Progress } from './progress.svelte';
+import { client } from '$lib/stores/client.svelte';
+import {
+	commitUpload,
+	ConflictStrategy,
+	finalizeUpload,
+	putChunk,
+	registerUpload
+} from '$lib/api/api_files';
 
 export const MAX_HASH_THREADS = 3;
 export const MAX_UPLOAD_THREADS = 3;
@@ -25,24 +28,21 @@ type UploadFileCb = (upload_file: UploadFile) => void;
 // todo: update the total
 // todo: we may want to eventually batch registrations
 const startRegisterFileWorker = async (on_done: UploadGroupCb, upload_group: UploadGroup) => {
-	let register_request: RegisterUploadRequest = {
-		base_path: upload_group.base_path,
-		entries: [...upload_group.upload_files.map((f) => f.intoUploadEntry())],
-		conflict_strategy: ConflictStrategy.OVERRIDE // todo: make this a param
-	};
+	// let register_request: RegisterUploadRequest = {
+	// 	base_path: upload_group.base_path,
+	// 	entries: [...upload_group.upload_files.map((f) => f.intoUploadEntry())],
+	// 	conflict_strategy: ConflictStrategy.OVERRIDE // todo: make this a param
+	// };
 
-	const response = await fetch('http://localhost:8080/v0/files/upload', {
-		method: 'post',
-		headers: {
-			Accept: 'application/json',
-			'Content-Type': 'application/json'
-		},
-		body: JSON.stringify(register_request)
-	});
-
-	const response_payload = await response.json();
+	const resp = await registerUpload(
+		client,
+		upload_group.space,
+		upload_group.base_path,
+		[...upload_group.upload_files.map((f) => f.intoUploadEntry())],
+		ConflictStrategy.OVERRIDE
+	);
 	// todo: check for error
-	Object.assign(upload_group.registration, response_payload.data as UploadRegistration);
+	Object.assign(upload_group.registration, resp.data as UploadRegistration);
 
 	console.debug(`[caby/upload-manager] registered upload ${upload_group.registration!.id}`);
 	upload_group.registration_task_status = TaskStatus.COMPLETE;
@@ -107,16 +107,8 @@ const startUploadFileWorker = async (
 			return;
 		}
 
-		const response = await fetch(`http://localhost:8080/v0/files/upload/chunk/${id}/${name}`, {
-			method: 'put',
-			headers: {
-				// todo: make these constants
-				[CABY_UPLOAD_TOKEN]: upload_file.registration!.token,
-				[CABY_CHUNK_INDEX]: index.toString()
-			},
-			body: event.target!.result
-		});
-		// todo: handle response and error
+		// todo: handle
+		const resp = await putChunk(client, upload_file, index, event.target!.result);
 
 		// update file progress
 		// const last_progress = upload_file.upload_progress.progress;
@@ -294,23 +286,8 @@ export class UploadManager {
 		}
 		upload_file.finalize_task_status = TaskStatus.STARTED;
 
-		const id = upload_file.registration!.id;
-		const name = upload_file.file.webkitRelativePath || upload_file.file.name;
-
-		const response = await fetch(`http://localhost:8080/v0/files/upload/${id}/${name}`, {
-			method: 'PATCH',
-			headers: {
-				[CABY_UPLOAD_TOKEN]: upload_file.registration!.token,
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				size: upload_file.file.size,
-				xxh_digest: `${upload_file.xxh_digest}`,
-				is_complete: true
-			})
-		});
-
 		// todo: handle response and error
+		const resp = await finalizeUpload(client, upload_file);
 
 		upload_file.finalize_task_status = TaskStatus.COMPLETE;
 		console.debug('[caby/upload-manager] finished finalizing file');
@@ -327,18 +304,13 @@ export class UploadManager {
 			return;
 		}
 
-		const response = await fetch(`http://localhost:8080/v0/files/upload/${upload_id}`, {
-			method: 'post',
-			headers: {
-				[CABY_UPLOAD_TOKEN]: upload_file!.registration!.token
-				// 'Content-Type': 'application/json'
-			}
-		});
+		// todo: handle errors
+		const resp = await commitUpload(client, upload_group!);
 
 		console.debug(`[caby/upload-manager] completed ${upload_id}`);
 
 		// TEMP
-		this.upload_groups_completed++;
+		this.upload_groups_completed = Date.now();
 	};
 }
 

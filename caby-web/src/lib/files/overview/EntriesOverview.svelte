@@ -4,8 +4,9 @@
 
 	let {
 		selected = $bindable(undefined),
-		overview_entries
-	}: { selected?: Entry; overview_entries: any } = $props();
+		overview_entries,
+		space
+	}: { selected?: Entry; overview_entries: any; space: string } = $props();
 
 	let overview_dirs = $derived(overview_entries?.filter((e: any) => e.entry_type === 'directory'));
 
@@ -14,7 +15,7 @@
 
 <div class="entry-overview">
 	{#each overview_dirs as _, i}
-		<OverviewEntry bind:entry={overview_dirs[i]} />
+		<OverviewEntry bind:entry={overview_dirs[i]} {space} />
 	{/each}
 </div>
 

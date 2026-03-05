@@ -1,3 +1,4 @@
+use anyhow::{anyhow, Ok};
 use path_clean::PathClean;
 use serde::Serialize;
 use std::{
@@ -13,10 +14,29 @@ pub struct Space {
     pub path: PathBuf,
 }
 
+pub enum SpaceDir {
+    LIVE,
+    META,
+    SHARES,
+    UPLOADS,
+}
+
 impl Space {
-    pub fn join(&self, path: &Path) -> Result<PathBuf> {
-        // todo: check if is valid
-        Ok(self.path.join(path.clean()).clean())
+    pub fn join(&self, dir: SpaceDir, path: &Path) -> Result<PathBuf> {
+        // todo: check if is valid?
+        let cleaned_path = path.clean();
+        let parent_path = match dir {
+            SpaceDir::LIVE => self.live(),
+            SpaceDir::META => self.meta(),
+            SpaceDir::SHARES => self.shares(),
+            SpaceDir::UPLOADS => self.uploads(),
+        };
+        let joined_path = parent_path.join(cleaned_path).clean();
+        if (!joined_path.starts_with(parent_path)) {
+            return Err(anyhow!("final path out of bounds of parent path"));
+        };
+
+        Ok(joined_path)
     }
 
     pub fn live(&self) -> PathBuf {

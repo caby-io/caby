@@ -1,4 +1,9 @@
-use crate::{config::Config, files::joined_path, jsend, space::Space};
+use crate::{
+    config::Config,
+    files::joined_path,
+    jsend,
+    space::{Space, SpaceDir},
+};
 use axum::{
     extract::{Json, Path, State},
     response::{IntoResponse, Response},
@@ -31,7 +36,7 @@ pub async fn handle_delete_files(
 
     for relative_path in req.entries {
         let rel_path = PathBuf::from(relative_path.clone()).clean();
-        let Ok(path) = space.join(&rel_path) else {
+        let Ok(path) = space.join(SpaceDir::LIVE, &rel_path) else {
             // todo
             errors.push(format!("{:?} invaild path", relative_path));
             continue;

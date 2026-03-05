@@ -5,8 +5,11 @@
 	import { UploadGroup } from './upload/upload_group';
 	import { uploadManager } from './upload/upload_manager.svelte';
 
-	let { dialog = $bindable(), onListChange }: { dialog: HTMLDialogElement; onListChange: any } =
-		$props();
+	let {
+		dialog = $bindable(),
+		space,
+		onListChange
+	}: { dialog: HTMLDialogElement; space: string; onListChange: any } = $props();
 	const path = $derived(page.params.path!);
 
 	// const openAddDialog = () => {
@@ -16,7 +19,7 @@
 	const handleUploadFiles = async (files: FileList) => {
 		// for now we are always making an upload group for each file
 		for (const file of files) {
-			uploadManager.addUploads(new UploadGroup(path, file));
+			uploadManager.addUploads(new UploadGroup(space, path, file));
 		}
 	};
 

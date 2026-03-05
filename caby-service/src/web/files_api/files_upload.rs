@@ -176,7 +176,7 @@ pub async fn handle_upload_chunk(
         .write(true)
         .append(true)
         .create(true)
-        .open(full_path.clone())
+        .open(&full_path)
         .await
     {
         Ok(f) => f,
@@ -222,7 +222,7 @@ pub struct UpdateFileRequest {
 #[derive(Deserialize)]
 pub struct UpdateUploadParams {
     pub id: String,
-    pub file_path: String,
+    pub file_path: Option<String>,
 }
 
 // todo: actually store this data somewhere
@@ -235,6 +235,11 @@ pub async fn handle_update_upload(
     Json(body): Json<UpdateFileRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
+
+    let rel_path = path_params
+        .file_path
+        .clone()
+        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
 
     // parse the upload token
     let upload_token_str = match get_required_header(&headers, HEADER_UPLOAD_TOKEN) {
@@ -261,7 +266,7 @@ pub async fn handle_update_upload(
     let Some(token_file) = upload_token_payload
         .files
         .into_iter()
-        .find(|f| f.name == path_params.file_path)
+        .find(|f| PathBuf::from(f.name.clone()) == rel_path)
     else {
         return resp
             .fail("requested file is not a part of this upload token")
@@ -286,10 +291,7 @@ pub async fn handle_update_upload(
             .into_response();
     }
 
-    let full_path = space
-        .uploads()
-        .join(&path_params.id)
-        .join(&path_params.file_path);
+    let full_path = space.uploads().join(&path_params.id).join(&rel_path);
     let (disk_digest, disk_size) = match get_file_digest_size(full_path).await {
         Ok(d) => d,
         Err(err) => return RequestError::from(err).into_response(),

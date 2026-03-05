@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { join } from '$lib/fs';
+	import type { OverviewEntry } from './overview_entry';
 	import Self from './OverviewEntry.svelte';
 
-	let { entry = $bindable() } = $props();
+	let { entry = $bindable(), space }: { entry: OverviewEntry; space: string } = $props();
 </script>
 
 <section class="entry-branch">
@@ -10,14 +11,14 @@
 		<div class="control fx fx--cc" onclick={() => (entry.is_expanded = !entry.is_expanded)}>
 			<iconify-icon icon="lucide:chevron-right"></iconify-icon>
 		</div>
-		<a class="fx" href={`/${join(`files`, entry.path)}`}>
+		<a class="fx" href={`/${join(`files`, space, entry.path)}`}>
 			<div class="icon">📁</div>
 			<div class="name fx-grow">{entry.name}</div>
 		</a>
 	</div>
 	<section class="children" class:expanded={entry.is_expanded}>
 		{#each entry.children as _, i}
-			<Self bind:entry={entry.children[i]} />
+			<Self bind:entry={entry.children[i]} {space} />
 		{/each}
 	</section>
 </section>

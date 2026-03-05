@@ -44,7 +44,6 @@
 	}
 
 	#space-selector-menu {
-		position: auto;
 		position-anchor: --spaces-button;
 		width: anchor-size(width);
 		margin: 0;

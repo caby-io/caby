@@ -6,18 +6,20 @@
 	let {
 		selected_entries,
 		add_content_dialog,
+		current_space,
 		handleDeleteSelected,
 		handleDeselect
 	}: {
 		selected_entries: Set<Entry>;
 		add_content_dialog: HTMLDialogElement;
+		current_space: string;
 		handleDeleteSelected: any;
 		handleDeselect: any;
 	} = $props();
 </script>
 
 <header class="fx fx--ac">
-	<EntriesBreadcrumbs />
+	<EntriesBreadcrumbs {current_space} />
 	<div class="actions fx fx--ac">
 		{#if selected_entries.size > 0}
 			<span>{selected_entries.size} selected</span>

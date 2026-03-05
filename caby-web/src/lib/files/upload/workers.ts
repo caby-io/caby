@@ -12,6 +12,7 @@ export type Message<T> = {
 };
 
 export type StartUploadPayload = {
+	space: string;
 	base_path: string;
 	file: File;
 	registration: UploadRegistration;

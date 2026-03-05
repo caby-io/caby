@@ -1,9 +1,12 @@
 <script module>
-	import { getDownloadURL, type Entry } from './entry';
+	import { getDownloadURL } from '$lib/api/api_files';
+	import { client } from '$lib/stores/client.svelte';
+	import { type Entry } from './entry';
 
 	export type ContextMenuProps = {
 		dialog: HTMLElement;
 		position: { x: number; y: number };
+		space: string;
 		entry?: Entry;
 
 		handleAddContent: any;
@@ -15,6 +18,7 @@
 	let {
 		dialog = $bindable(),
 		position,
+		space,
 		entry = $bindable(),
 		handleAddContent,
 		handleDeleteEntries
@@ -71,7 +75,7 @@
 				<div class="title fx-grow">Move To..</div>
 				<div class="tip fx fx--ac"></div>
 			</div>
-			<a href={getDownloadURL('http://localhost:8080', [entry])} class="context-item fx" download>
+			<a href={getDownloadURL(client, space, [entry])} class="context-item fx" download>
 				<div class="icon fx fx--cc">
 					<iconify-icon icon="lucide:download"></iconify-icon>
 				</div>

@@ -1,3 +1,5 @@
+import { join } from '$lib/fs';
+
 export type Entry<T = any> = {
 	entry_type: string;
 	name: string;
@@ -9,9 +11,9 @@ export type Entry<T = any> = {
 	entry_fields: T;
 
 	// extra fields for frontend
-	is_selected: boolean;
-	is_targetted: boolean;
-	is_processing: boolean;
+	is_selected?: boolean;
+	is_targetted?: boolean;
+	is_processing?: boolean;
 };
 
 export type FileFields = {
@@ -46,14 +48,4 @@ export type EntryProps<T> = {
 export type DragTarget = {
 	entry?: Entry;
 	count: number;
-};
-
-export const getDownloadURL = (base_url: String, entries: Entry[]): string => {
-	if (entries.length > 1) {
-		// todo
-		console.error('multi-download not implemented');
-		return '';
-	}
-
-	return `${base_url}/v0/files/download/${entries[0].path}`;
 };

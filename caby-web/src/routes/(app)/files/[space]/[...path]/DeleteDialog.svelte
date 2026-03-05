@@ -1,29 +1,29 @@
 <script lang="ts">
+	import { deleteFiles } from '$lib/api/api_files';
 	import Dialog from '$lib/Dialog.svelte';
 	import type { Entry } from '$lib/files/entry';
+	import { client } from '$lib/stores/client.svelte';
 
 	let {
 		dialog = $bindable(),
+		space,
 		onListChange,
 		entries
-	}: { dialog: HTMLDialogElement; onListChange: any; entries: Array<Entry> } = $props();
+	}: {
+		dialog: HTMLDialogElement;
+		space: string;
+		onListChange: any;
+		entries: Array<Entry>;
+	} = $props();
 
 	const tryDelete = async () => {
 		entries.forEach((e) => (e.is_processing = true));
-
-		const response = await fetch('http://localhost:8080/v0/files/delete', {
-			method: 'post',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				entries: entries.map((e) => e.path),
-				force: true
-			})
-		});
-
-		onListChange();
+		const resp = await deleteFiles(client, space, entries, true);
+		if (resp.status != 'success') {
+			console.error(`could not delete files: ${resp.message}`);
+			return;
+		}
+		await onListChange();
 		dialog.close();
 	};
 </script>

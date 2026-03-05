@@ -1,5 +1,10 @@
 use crate::{
-    config::Config, ctx::Ctx, error::Result, files::joined_path, jsend::JSendBuilder, space::Space,
+    config::Config,
+    ctx::Ctx,
+    error::Result,
+    files::joined_path,
+    jsend::JSendBuilder,
+    space::{Space, SpaceDir},
 };
 use axum::{
     extract::{Json, State},
@@ -11,25 +16,25 @@ use std::path::PathBuf;
 use tokio::fs;
 
 #[derive(Deserialize)]
-pub struct RenamedEntriesRequest {
+pub struct MoveEntriesRequest {
     pub entries: Vec<(String, String)>,
     pub force: bool,
 }
 
 #[derive(Serialize)]
-struct RenamedEntriesResponse {
-    pub renamed: Vec<(String, String)>,
-    pub errors: Vec<RenameError>,
+struct MoveEntriesResponse {
+    pub moved: Vec<(String, String)>,
+    pub errors: Vec<MoveError>,
 }
 
 #[derive(Serialize)]
-struct RenameError {
+struct MoveError {
     pub src: String,
     pub dst: String,
     pub error: String,
 }
 
-impl RenameError {
+impl MoveError {
     pub fn new(src: impl Into<String>, dst: impl Into<String>, error: impl Into<String>) -> Self {
         Self {
             src: src.into(),
@@ -42,38 +47,34 @@ impl RenameError {
 pub async fn handle_move_files(
     State(cfg): State<Config>,
     space: Space,
-    Json(req): Json<RenamedEntriesRequest>,
+    Json(req): Json<MoveEntriesRequest>,
 ) -> Response {
-    let mut renamed = vec![];
+    let mut moved = vec![];
     let mut errors = vec![];
 
     for (input_src, input_dst) in req.entries {
         // Build & validate source path
         let src_rpath = PathBuf::from(input_src.clone()).clean();
-        let Ok(src_path) = space.join(&src_rpath) else {
-            errors.push(RenameError::new(input_src, input_dst, "invalid source"));
+        let Ok(src_path) = space.join(SpaceDir::LIVE, &src_rpath) else {
+            errors.push(MoveError::new(input_src, input_dst, "invalid source"));
             continue;
         };
 
         let Ok(src_metadata) = fs::metadata(src_path.clone()).await else {
-            errors.push(RenameError::new(input_src, input_dst, "source not found"));
+            errors.push(MoveError::new(input_src, input_dst, "source not found"));
             continue;
         };
 
         // Build & validate destination path
         let dst_rpath = PathBuf::from(input_dst.clone()).clean();
-        let Ok(dst_path) = space.join(&dst_rpath) else {
-            errors.push(RenameError::new(
-                input_src,
-                input_dst,
-                "invalid destination",
-            ));
+        let Ok(dst_path) = space.join(SpaceDir::LIVE, &dst_rpath) else {
+            errors.push(MoveError::new(input_src, input_dst, "invalid destination"));
             continue;
         };
 
         let Ok(exists) = fs::try_exists(dst_path.clone()).await else {
             // todo: log base error
-            errors.push(RenameError::new(
+            errors.push(MoveError::new(
                 input_src,
                 input_dst,
                 "could not check if destination exists",
@@ -82,26 +83,26 @@ pub async fn handle_move_files(
         };
 
         if exists {
-            errors.push(RenameError::new(input_src, input_dst, "destination exists"));
+            errors.push(MoveError::new(input_src, input_dst, "destination exists"));
             continue;
         }
 
         if let Err(err) = fs::rename(src_path, dst_path).await {
-            errors.push(RenameError::new(
+            errors.push(MoveError::new(
                 input_src,
                 input_dst,
-                format!("could not rename: {}", err),
+                format!("could not move: {}", err),
             ));
             continue;
         }
 
-        renamed.push((
+        moved.push((
             src_rpath.to_str().unwrap().to_owned(),
             dst_rpath.to_str().unwrap().to_owned(),
         ));
     }
 
     JSendBuilder::new()
-        .success(RenamedEntriesResponse { renamed, errors })
+        .success(MoveEntriesResponse { moved, errors })
         .into_response()
 }

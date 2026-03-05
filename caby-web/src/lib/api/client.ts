@@ -1,9 +1,9 @@
 export enum Method {
-	GET = 'get',
-	PATCH = 'patch',
-	POST = 'post',
-	PUT = 'put',
-	DELETE = 'delete'
+	GET = 'GET',
+	POST = 'POST',
+	PUT = 'PUT',
+	PATCH = 'PATCH',
+	DELETE = 'DELETE'
 }
 
 export type ApiRequest = {
@@ -21,42 +21,48 @@ export class ApiRequestBuilder {
 
 	constructor(method: Method, path: string) {
 		this.path = path;
-		this.method = Method.GET;
+		this.method = method;
 		this.headers = {
-			Accept: 'application/json',
-			'Content-Type': 'application/json'
+			Accept: 'application/json'
 		};
 	}
 
-	static get(path: string) {
+	static get(path: string): ApiRequestBuilder {
 		return new ApiRequestBuilder(Method.GET, path);
 	}
 
-	static post(path: string) {
+	static post(path: string): ApiRequestBuilder {
 		return new ApiRequestBuilder(Method.POST, path);
 	}
 
-	static put(path: string) {
+	static put(path: string): ApiRequestBuilder {
 		return new ApiRequestBuilder(Method.PUT, path);
 	}
 
-	static delete(path: string) {
+	static patch(path: string): ApiRequestBuilder {
+		return new ApiRequestBuilder(Method.PATCH, path);
+	}
+
+	static delete(path: string): ApiRequestBuilder {
 		return new ApiRequestBuilder(Method.DELETE, path);
 	}
 
-	public setPath = (path: string) => {
+	public setPath = (path: string): ApiRequestBuilder => {
 		this.path = path;
+		return this;
 	};
 
-	public setMethod = (method: Method) => {
+	public withMethod = (method: Method): ApiRequestBuilder => {
 		this.method = method;
+		return this;
 	};
 
-	public setHeaders = (path: string) => {
+	public withHeaders = (path: string): ApiRequestBuilder => {
 		this.path = path;
+		return this;
 	};
 
-	public addHeaders = (headers: HeadersInit) => {
+	public addHeaders = (headers: HeadersInit): ApiRequestBuilder => {
 		let joinedHeaders = new Headers(this.headers);
 		let incomingHeaders = new Headers(headers);
 
@@ -65,10 +71,18 @@ export class ApiRequestBuilder {
 		}
 
 		this.headers = joinedHeaders;
+		return this;
 	};
 
-	public setBody = (body: any) => {
+	public withBody = (body: any): ApiRequestBuilder => {
 		this.body = body;
+		return this;
+	};
+
+	public withJsonBody = (body: any): ApiRequestBuilder => {
+		this.body = JSON.stringify(body);
+		this.addHeaders({ 'Content-Type': 'application/json' });
+		return this;
 	};
 
 	public intoRequest = (): ApiRequest => {
@@ -110,7 +124,6 @@ export type Auth = {
 // };
 
 // todo: rotate session
-// todo: build endpoint
 export class ApiClient {
 	public api_base: string;
 	public auth: Auth = {};
@@ -120,12 +133,11 @@ export class ApiClient {
 	}
 
 	public exec = async <T>(req: ApiRequest): Promise<ApiResponse<T>> => {
-		const body = req.body ? JSON.stringify(req.body) : null;
 		try {
 			const response = await fetch(`${this.api_base}/${req.path}`, {
 				method: req.method,
 				headers: req.headers,
-				body
+				body: req.body
 			});
 			return await response.json();
 		} catch (err) {

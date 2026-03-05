@@ -1,5 +1,6 @@
 import { Progress } from './progress.svelte';
-import { EntryType, type UploadEntry as RegisterUploadEntry } from './upload';
+import { EntryType } from './upload';
+import { type UploadEntry as RegisterUploadEntry } from '$lib/api/api_files';
 import type { UploadRegistration } from './upload_group';
 import type { StartUploadPayload } from './workers';
 
@@ -28,6 +29,7 @@ export enum TaskStatus {
 // }
 
 export class UploadFile {
+	public space: string;
 	public base_path: string;
 	public file: File;
 	public registration: UploadRegistration;
@@ -41,7 +43,8 @@ export class UploadFile {
 	public upload_progress: Progress;
 	public upload_id?: number;
 
-	constructor(base_path: string, registration: UploadRegistration, file: File) {
+	constructor(space: string, base_path: string, registration: UploadRegistration, file: File) {
+		this.space = space;
 		this.base_path = base_path;
 		this.file = file;
 		this.registration = registration;
@@ -76,6 +79,7 @@ export class UploadFile {
 
 	public intoStartUploadPayload = (): StartUploadPayload => {
 		return {
+			space: this.space,
 			base_path: this.base_path,
 			file: this.file,
 			registration: this.registration
