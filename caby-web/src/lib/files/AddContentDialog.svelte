@@ -87,7 +87,7 @@
 	{/snippet}
 </Dialog>
 
-<NewFolderDialog bind:dialog={newFolderDialog} {onListChange} />
+<NewFolderDialog {space} bind:dialog={newFolderDialog} {onListChange} />
 
 <style lang="scss">
 	.add-button {

@@ -2,24 +2,20 @@
 	import Dialog from '$lib/Dialog.svelte';
 	import { page } from '$app/state';
 	import { PutEntryType } from '$lib/files/api';
+	import { putEntry } from '$lib/api/api_files';
+	import { client } from '$lib/stores/client.svelte';
 
-	let { dialog = $bindable(), onListChange }: { dialog: HTMLDialogElement; onListChange: any } =
-		$props();
-	let value = $state();
+	let {
+		space,
+		dialog = $bindable(),
+		onListChange
+	}: { space: string; dialog: HTMLDialogElement; onListChange: any } = $props();
+	let value: string = $state('');
 	const path = $derived(page.params.path!);
 
 	const tryCreateDir = async () => {
-		const response = await fetch('http://localhost:8080/v0/files/' + path, {
-			method: 'put',
-			headers: {
-				Accept: 'application/json',
-				'Content-Type': 'application/json'
-			},
-			body: JSON.stringify({
-				entry_type: PutEntryType.DIRECTORY,
-				name: value
-			})
-		});
+		const resp = await putEntry(client, space, path, PutEntryType.DIRECTORY, value);
+		console.log(resp);
 
 		onListChange();
 		dialog.close();

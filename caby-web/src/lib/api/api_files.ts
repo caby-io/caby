@@ -1,3 +1,4 @@
+import { PutEntryType } from '$lib/files/api';
 import type { Entry } from '$lib/files/entry';
 import type { OverviewEntry } from '$lib/files/overview/overview_entry';
 import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '$lib/files/upload/upload';
@@ -74,6 +75,17 @@ export const getDownloadURL = (client: ApiClient, space: string, entries: Array<
 		encodeURIComponent(entries[0].path)
 	);
 };
+
+export const putEntry = async (client: ApiClient, space: string, path: string, entry_type: PutEntryType, name: string, content?: any) => {
+	const req = ApiRequestBuilder.put(`files/${space}/${path}`)
+		.withJsonBody({
+			entry_type,
+			name,
+			...(content) && { content }
+		})
+		.intoRequest();
+	return await client.exec(req);
+}
 
 export type UploadEntry = {
 	entry_type: string;
