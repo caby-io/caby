@@ -1,13 +1,13 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	// const path = $derived(page.params.path!);
+	import { join } from '$lib/fs';
 
 	let { current_space }: { current_space: string } = $props();
 
 	const dirs = $derived(page.params.path!.split('/'));
 
 	const getPath = (index: number) => {
-		return '/files/' + dirs.slice(0, index + 1).join('/');
+		return `/${join('files', current_space, dirs.slice(0, index + 1).join('/'))}`;
 	};
 </script>
 

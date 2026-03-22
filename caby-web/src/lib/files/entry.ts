@@ -1,5 +1,3 @@
-import { join } from '$lib/fs';
-
 export type Entry<T = any> = {
 	entry_type: string;
 	name: string;
