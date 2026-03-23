@@ -34,9 +34,10 @@ export type FilesOverviewResp = {
 export const filesOverview = async (
 	client: ApiClient,
 	space: string,
-	path: string
+	path: string,
+	dirs_only: boolean = false,
 ): Promise<ApiResponse<FilesOverviewResp>> => {
-	const req = ApiRequestBuilder.get(`files/overview/${space}/${path}`).intoRequest();
+	const req = ApiRequestBuilder.get(`files/overview/${space}/${path}${dirs_only ? `?dirs_only=${dirs_only}` : ''}`).intoRequest();
 	return await client.exec(req);
 };
 

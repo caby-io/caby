@@ -52,7 +52,7 @@
 
 	// todo: improve
 	const getFilesOverview = async () => {
-		const resp = await filesOverview(client, space, '');
+		const resp = await filesOverview(client, space, '', true);
 		overview_entries = resp.data!.entries;
 	};
 

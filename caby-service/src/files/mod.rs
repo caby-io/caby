@@ -18,7 +18,7 @@ use crate::{error::Result, space::Space};
 pub mod overview;
 pub mod pretty;
 
-#[derive(Serialize, Deserialize, PartialEq, Default)]
+#[derive(Serialize, Deserialize, PartialEq, Default, Debug)]
 // #[strum(serialize_all = "snake_case")]
 #[serde(rename_all = "lowercase")]
 pub enum EntryType {
