@@ -11,6 +11,7 @@
 
 		handleAddContent: any;
 		handleDeleteEntries: any; // todo
+		handleRenameEntry: any;
 	};
 </script>
 
@@ -21,7 +22,8 @@
 		space,
 		entry = $bindable(),
 		handleAddContent,
-		handleDeleteEntries
+		handleDeleteEntries,
+		handleRenameEntry
 	}: ContextMenuProps = $props();
 
 	// todo: check that this isn't too expensive
@@ -82,6 +84,13 @@
 				<div class="title fx-grow">Download File</div>
 				<div class="tip fx fx--ac">D</div>
 			</a>
+			<button class="context-item fx" onclick={() => handleRenameEntry(entry)}>
+				<div class="icon fx fx--cc">
+					<iconify-icon icon="lucide:pencil-line"></iconify-icon>
+				</div>
+				<div class="title fx-grow">Rename File</div>
+				<div class="tip fx fx--ac">ALT + R</div>
+			</button>
 			<button class="context-item fx" onclick={() => handleDeleteEntries([entry])}>
 				<div class="icon fx fx--cc">
 					<iconify-icon icon="lucide:trash-2"></iconify-icon>

@@ -34,6 +34,7 @@
 	import EntriesOverview from '$lib/files/overview/EntriesOverview.svelte';
 	import SpacesSelector from './SpacesSelector.svelte';
 	import { client } from '$lib/stores/client.svelte';
+	import RenameDialog from './RenameDialog.svelte';
 
 	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
@@ -307,17 +308,6 @@
 			console.error(`could not move files: ${resp.message}`);
 			return;
 		}
-		// const response = await fetch('http://localhost:8080/v0/files/move', {
-		// 	method: 'post',
-		// 	headers: {
-		// 		Accept: 'application/json',
-		// 		'Content-Type': 'application/json'
-		// 	},
-		// 	body: JSON.stringify({
-		// 		entries,
-		// 		force: false
-		// 	})
-		// });
 		// todo: handle errors
 		// const payload = await response.json();
 		// todo: move this to onDrop?
@@ -338,6 +328,15 @@
 			return;
 		}
 		handleDeleteEntries(Array.from(selected_entries));
+	};
+
+	// svelte-ignore non_reactive_update
+	let rename_entry_dialog: HTMLDialogElement;
+	let target_rename_entry: Entry | undefined = $state();
+
+	const handleRenameEntry = (entry: Entry) => {
+		target_rename_entry = entry;
+		rename_entry_dialog.showModal();
 	};
 
 	const onKeyDown = (e: KeyboardEvent) => {
@@ -440,6 +439,7 @@
 
 <AddContentDialog bind:dialog={add_content_dialog} {space} {onListChange} />
 <DeleteDialog bind:dialog={delete_entries_dialog} {space} {onListChange} entries={delete_entries} />
+<RenameDialog bind:dialog={rename_entry_dialog} {space} {target_rename_entry} {onListChange} />
 <ContextMenu
 	bind:dialog={contextMenuDialog}
 	position={contextMenuProps.position}
@@ -447,6 +447,7 @@
 	bind:entry={contextMenuProps.entry}
 	{handleAddContent}
 	{handleDeleteEntries}
+	{handleRenameEntry}
 />
 
 <style lang="scss">
