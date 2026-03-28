@@ -46,4 +46,10 @@ spaces:
     path: /some/other/path
     readonly: false
   - name: media
+users:
+  - name: suhaib
+    email: scrolltro0l@gmail.com
+    spaces:
+      - name: home
+        permissions: "*"
 ```

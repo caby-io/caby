@@ -21,6 +21,7 @@ mod validate_config;
 #[derive(Clone, Deserialize)]
 pub struct SpaceConfig {
     pub name: String,
+    pub display: String,
     pub path: PathBuf,
 }
 
@@ -28,9 +29,23 @@ impl Into<Space> for SpaceConfig {
     fn into(self) -> Space {
         Space {
             name: self.name,
+            display: self.display,
             path: self.path,
         }
     }
+}
+
+#[derive(Clone, Deserialize)]
+pub struct UserSpaceConfig {
+    name: String,
+    permissions: Vec<String>,
+}
+
+#[derive(Clone, Deserialize)]
+pub struct UserConfig {
+    pub name: String,
+    pub email: Option<String>,
+    pub spaces: Vec<UserSpaceConfig>,
 }
 
 #[derive(Clone, Deserialize)]
@@ -44,6 +59,7 @@ pub struct Config {
     pub spaces_path: PathBuf,
 
     pub spaces: HashMap<String, SpaceConfig>,
+    pub users: HashMap<String, UserConfig>,
 }
 
 impl Config {
@@ -71,6 +87,10 @@ impl Config {
                 .collect(),
         ))?;
 
+        builder.try_set_users(Some(
+            config_file.users.into_iter().map(|u| u.into()).collect(),
+        ));
+
         // Load overrides from env
         // todo: load overrides from env
 
@@ -85,6 +105,7 @@ pub struct ConfigBuilder {
     users_path: Option<PathBuf>,
     spaces_path: Option<PathBuf>,
     spaces: HashMap<String, SpaceConfig>,
+    users: HashMap<String, UserConfig>,
 }
 
 impl ConfigBuilder {
@@ -146,6 +167,16 @@ impl ConfigBuilder {
         return Ok(self);
     }
 
+    pub fn try_set_users(&mut self, users: Option<Vec<UserConfig>>) -> Result<&mut Self> {
+        let Some(uv) = users else {
+            return Ok(self);
+        };
+        uv.iter().for_each(|u| {
+            self.users.insert(u.name.clone(), u.clone());
+        });
+        return Ok(self);
+    }
+
     pub fn build(self) -> Result<Config> {
         return Ok(Config {
             directory_meta_filename: self.directory_meta_filename.ok_or(anyhow!(
@@ -155,6 +186,7 @@ impl ConfigBuilder {
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
             spaces: self.spaces,
+            users: self.users,
         });
     }
 }

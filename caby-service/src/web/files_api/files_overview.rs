@@ -54,7 +54,7 @@ pub async fn handle_files_overview(
     // };
 
     let entries =
-        match build_overview(&space, &rel_path, 3, params.dirs_only.unwrap_or(false)).await {
+        match build_overview(&space, &rel_path, 20, params.dirs_only.unwrap_or(false)).await {
             Ok(r) => r,
             Err(err) => {
                 return resp

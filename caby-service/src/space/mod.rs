@@ -11,6 +11,7 @@ use crate::{config::SpaceConfig, Result};
 #[derive(Serialize, Clone, Debug)]
 pub struct Space {
     pub name: String,
+    pub display: String,
     pub path: PathBuf,
 }
 

@@ -26,6 +26,8 @@
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
 	import { getFilesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
+	import { getSpaces } from '$lib/api/api_spaces';
+	import type { Space } from '$lib/space';
 	import type { SelectedEntry } from '$lib/files/select';
 	import DeleteDialog from './DeleteDialog.svelte';
 	import EntriesBar from './EntriesBar.svelte';
@@ -39,6 +41,14 @@
 
 	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
+
+	let spaces: Space[] = $state([]);
+	let current_space = $derived(spaces.find((s) => s.name === space));
+
+	const fetchSpaces = async () => {
+		const resp = await getSpaces(client);
+		if (resp.status === 'success') spaces = resp.data!;
+	};
 
 	let filesResponse: ListFilesResp = $state({
 		path: null,
@@ -377,6 +387,7 @@
 		uploadManager.upload_groups_completed;
 		getFilesList(path);
 		fetchFilesOverview();
+		fetchSpaces();
 	});
 </script>
 
@@ -384,7 +395,7 @@
 
 <div class="files-view fx">
 	<section class="left fx fx--col">
-		<SpacesSelector {space} />
+		<SpacesSelector {current_space} {spaces} />
 		<EntriesOverviewNav {overview_entries} {space} />
 	</section>
 	<section class="right fx-grow fx fx--col">

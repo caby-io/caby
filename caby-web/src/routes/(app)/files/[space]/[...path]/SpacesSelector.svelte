@@ -1,38 +1,22 @@
 <script lang="ts">
-	import { getSpaces } from '$lib/api/api_spaces';
 	import type { Space } from '$lib/space';
-	import { client } from '$lib/stores/client.svelte';
 
-	let { space } = $props();
+	let {
+		current_space,
+		spaces
+	}: { current_space: Space | undefined; spaces: Space[] } = $props();
 
-	let spaces: Space[] = $state([]);
 	let popover: HTMLDivElement;
-
-	const updateSpaces = async () => {
-		let resp = await getSpaces(client);
-
-		if (resp.status != 'success') {
-			console.error('could not fetch spaces');
-			// todo
-			return;
-		}
-
-		spaces = resp.data!;
-	};
-
-	$effect(() => {
-		updateSpaces();
-	});
 </script>
 
 <button popovertarget="space-selector-menu" class="fx fx--cc button spaces-button">
-	{space}
+	{current_space?.display ?? current_space?.name ?? ''}
 </button>
 
 <div bind:this={popover} id="space-selector-menu" popover>
 	{#each spaces as space}
 		<a class="fx fx--cc button" href="/files/{space.name}" onclick={() => popover.hidePopover()}
-			>{space.name}</a
+			>{space.display}</a
 		>
 	{/each}
 </div>
