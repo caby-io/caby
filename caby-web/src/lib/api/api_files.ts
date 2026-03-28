@@ -53,13 +53,13 @@ export type MoveFilesResponse = {
 export const moveFiles = async (
 	client: ApiClient,
 	src_space: string,
-	entries: Array<Move>,
+	moves: Array<Move>,
 	force: boolean = false,
 	dst_space?: string
 ): Promise<ApiResponse<MoveFilesResponse>> => {
 	// todo: handle different destination
 	const req = ApiRequestBuilder.post(`files/move/${src_space}`)
-		.withJsonBody({ entries, force })
+		.withJsonBody({ entries: moves, force })
 		.intoRequest();
 	return await client.exec(req);
 };

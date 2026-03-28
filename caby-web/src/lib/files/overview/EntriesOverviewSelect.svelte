@@ -1,22 +1,32 @@
 <script lang="ts">
-	import type { Entry } from '../entry';
+	import type { OverviewEntry } from './overview_entry';
 	import OverviewEntrySelect from './OverviewEntrySelect.svelte';
 
 	let {
-		selected = $bindable(undefined),
 		overview_entries,
-		space
-	}: { selected?: Entry; overview_entries: any; space: string } = $props();
+		space,
+		onSelect
+	}: { overview_entries: any; space: string; onSelect?: (entry: OverviewEntry) => void } = $props();
 
 	let overview_dirs = $derived(overview_entries?.filter((e: any) => e.entry_type === 'directory'));
 
-	let expand = $state(false);
+	let root_entry: OverviewEntry = $state({
+		entry_type: 'directory',
+		icon: '🗄️',
+		name: space,
+		path: '',
+		children: [],
+		is_expanded: true,
+		is_selected: false
+	});
+
+	$effect(() => {
+		root_entry.children = overview_dirs ?? [];
+	});
 </script>
 
 <div class="entry-overview">
-	{#each overview_dirs as _, i}
-		<OverviewEntrySelect bind:entry={overview_dirs[i]} {space} />
-	{/each}
+	<OverviewEntrySelect entry={root_entry} {space} {onSelect} />
 </div>
 
 <style lang="scss">

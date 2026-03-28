@@ -2,12 +2,12 @@
 	import { page } from '$app/state';
 	import { join } from '$lib/fs';
 
-	let { current_space }: { current_space: string } = $props();
+	let { space }: { space: string } = $props();
 
 	const dirs = $derived(page.params.path!.split('/'));
 
 	const getPath = (index: number) => {
-		return `/${join('files', current_space, dirs.slice(0, index + 1).join('/'))}`;
+		return `/${join('files', space, dirs.slice(0, index + 1).join('/'))}`;
 	};
 </script>
 
@@ -16,7 +16,7 @@
 		<iconify-icon icon="lucide:corner-left-up"></iconify-icon>
 	</a> -->
 	<div class="breadcrumb fx fx--ac">
-		<a class="fx fx--ac" href="/files/{current_space}">
+		<a class="fx fx--ac" href="/files/{space}">
 			<iconify-icon icon="ci:house-02"></iconify-icon>
 		</a>
 	</div>

@@ -3,7 +3,11 @@
 	import type { OverviewEntry } from './overview_entry';
 	import Self from './OverviewEntrySelect.svelte';
 
-	let { entry = $bindable(), space }: { entry: OverviewEntry; space: string } = $props();
+	let {
+		entry = $bindable(),
+		space,
+		onSelect
+	}: { entry: OverviewEntry; space: string; onSelect?: (entry: OverviewEntry) => void } = $props();
 </script>
 
 <section class="entry-branch">
@@ -11,19 +15,19 @@
 		class="entry fx"
 		class:expanded={entry.is_expanded}
 		class:selected={entry.is_selected}
-		onclick={() => (entry.is_selected = true)}
+		onclick={() => onSelect?.(entry)}
 	>
 		<div class="control fx fx--cc" onclick={() => (entry.is_expanded = !entry.is_expanded)}>
 			<iconify-icon icon="lucide:chevron-right"></iconify-icon>
 		</div>
 		<div class="fx">
-			<div class="icon">📁</div>
+			<div class="icon">{entry.icon || '📁'}</div>
 			<div class="name fx-grow">{entry.name}</div>
 		</div>
 	</div>
 	<section class="children" class:expanded={entry.is_expanded}>
 		{#each entry.children as _, i}
-			<Self bind:entry={entry.children[i]} {space} />
+			<Self bind:entry={entry.children[i]} {space} {onSelect} />
 		{/each}
 	</section>
 </section>

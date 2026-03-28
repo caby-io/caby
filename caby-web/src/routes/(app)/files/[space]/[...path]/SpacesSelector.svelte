@@ -3,7 +3,7 @@
 	import type { Space } from '$lib/space';
 	import { client } from '$lib/stores/client.svelte';
 
-	let { current_space } = $props();
+	let { space } = $props();
 
 	let spaces: Space[] = $state([]);
 	let popover: HTMLDivElement;
@@ -26,7 +26,7 @@
 </script>
 
 <button popovertarget="space-selector-menu" class="fx fx--cc button spaces-button">
-	{current_space}
+	{space}
 </button>
 
 <div bind:this={popover} id="space-selector-menu" popover>

@@ -384,14 +384,14 @@
 
 <div class="files-view fx">
 	<section class="left fx fx--col">
-		<SpacesSelector current_space={space} />
+		<SpacesSelector {space} />
 		<EntriesOverviewNav {overview_entries} {space} />
 	</section>
 	<section class="right fx-grow fx fx--col">
 		<EntriesBar
 			{selected_entries}
 			{add_content_dialog}
-			current_space={space}
+			{space}
 			{handleDeleteSelected}
 			{handleDeselect}
 		/>
@@ -453,6 +453,7 @@
 <MoveDialog
 	bind:dialog={move_entries_dialog}
 	{space}
+	{path}
 	{onListChange}
 	entries={target_move_entries}
 />
