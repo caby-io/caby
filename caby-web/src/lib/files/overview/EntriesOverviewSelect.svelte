@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Entry } from '../entry';
-	import OverviewEntry from './OverviewEntry.svelte';
+	import OverviewEntrySelect from './OverviewEntrySelect.svelte';
 
 	let {
 		selected = $bindable(undefined),
@@ -15,7 +15,7 @@
 
 <div class="entry-overview">
 	{#each overview_dirs as _, i}
-		<OverviewEntry bind:entry={overview_dirs[i]} {space} />
+		<OverviewEntrySelect bind:entry={overview_dirs[i]} {space} />
 	{/each}
 </div>
 

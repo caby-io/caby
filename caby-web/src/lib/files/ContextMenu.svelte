@@ -10,6 +10,7 @@
 		entry?: Entry;
 
 		handleAddContent: any;
+		handleMoveEntries: any;
 		handleDeleteEntries: any; // todo
 		handleRenameEntry: any;
 	};
@@ -22,6 +23,7 @@
 		space,
 		entry = $bindable(),
 		handleAddContent,
+		handleMoveEntries,
 		handleDeleteEntries,
 		handleRenameEntry
 	}: ContextMenuProps = $props();
@@ -74,7 +76,7 @@
 				<div class="icon fx fx--cc">
 					<iconify-icon icon="lucide:folder-input"></iconify-icon>
 				</div>
-				<div class="title fx-grow">Move To..</div>
+				<div class="title fx-grow" onclick={() => handleMoveEntries([entry])}>Move To..</div>
 				<div class="tip fx fx--ac"></div>
 			</div>
 			<a href={getDownloadURL(client, space, [entry])} class="context-item fx" download>

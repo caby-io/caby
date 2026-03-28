@@ -25,16 +25,17 @@
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
-	import { filesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
+	import { getFilesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
 	import type { SelectedEntry } from '$lib/files/select';
 	import DeleteDialog from './DeleteDialog.svelte';
 	import EntriesBar from './EntriesBar.svelte';
 	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
 	import ContextMenu, { type ContextMenuProps } from '$lib/files/ContextMenu.svelte';
-	import EntriesOverview from '$lib/files/overview/EntriesOverview.svelte';
 	import SpacesSelector from './SpacesSelector.svelte';
 	import { client } from '$lib/stores/client.svelte';
 	import RenameDialog from './RenameDialog.svelte';
+	import MoveDialog from './MoveDialog.svelte';
+	import EntriesOverviewNav from '$lib/files/overview/EntriesOverviewNav.svelte';
 
 	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
@@ -52,8 +53,8 @@
 	let overview_entries: any = $state();
 
 	// todo: improve
-	const getFilesOverview = async () => {
-		const resp = await filesOverview(client, space, '', true);
+	const fetchFilesOverview = async () => {
+		const resp = await getFilesOverview(client, space, '', true);
 		overview_entries = resp.data!.entries;
 	};
 
@@ -315,6 +316,17 @@
 	};
 
 	// svelte-ignore non_reactive_update
+	let move_entries_dialog: HTMLDialogElement;
+	let target_move_entries: Set<Entry> = $state(new Set());
+
+	const handleMoveEntries = (entry: Entry) => {
+		// todo: include the right-clicked entry?
+		target_move_entries = selected_entries;
+		target_move_entries.add(entry);
+		move_entries_dialog!.showModal();
+	};
+
+	// svelte-ignore non_reactive_update
 	let delete_entries_dialog: HTMLDialogElement;
 	let delete_entries: Entry[] = $state([]);
 
@@ -364,7 +376,7 @@
 		// temp
 		uploadManager.upload_groups_completed;
 		getFilesList(path);
-		getFilesOverview();
+		fetchFilesOverview();
 	});
 </script>
 
@@ -373,7 +385,7 @@
 <div class="files-view fx">
 	<section class="left fx fx--col">
 		<SpacesSelector current_space={space} />
-		<EntriesOverview {overview_entries} {space} />
+		<EntriesOverviewNav {overview_entries} {space} />
 	</section>
 	<section class="right fx-grow fx fx--col">
 		<EntriesBar
@@ -438,6 +450,12 @@
 </div>
 
 <AddContentDialog bind:dialog={add_content_dialog} {space} {onListChange} />
+<MoveDialog
+	bind:dialog={move_entries_dialog}
+	{space}
+	{onListChange}
+	entries={target_move_entries}
+/>
 <DeleteDialog bind:dialog={delete_entries_dialog} {space} {onListChange} entries={delete_entries} />
 <RenameDialog bind:dialog={rename_entry_dialog} {space} {target_rename_entry} {onListChange} />
 <ContextMenu
@@ -445,6 +463,7 @@
 	position={contextMenuProps.position}
 	{space}
 	bind:entry={contextMenuProps.entry}
+	{handleMoveEntries}
 	{handleAddContent}
 	{handleDeleteEntries}
 	{handleRenameEntry}

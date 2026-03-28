@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { join } from '$lib/fs';
 	import type { OverviewEntry } from './overview_entry';
-	import Self from './OverviewEntry.svelte';
+	import Self from './OverviewEntryNav.svelte';
 
 	let { entry = $bindable(), space }: { entry: OverviewEntry; space: string } = $props();
 </script>
@@ -25,7 +25,7 @@
 
 <style lang="scss">
 	.entry {
-		margin: 0 1rem;
+		// margin: 0 1rem;
 		padding: 0.5rem;
 		cursor: pointer;
 

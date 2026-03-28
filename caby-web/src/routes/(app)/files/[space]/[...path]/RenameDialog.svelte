@@ -47,7 +47,7 @@
 			return;
 		}
 
-		onListChange();
+		await onListChange();
 		dialog.close();
 		name = '';
 	};

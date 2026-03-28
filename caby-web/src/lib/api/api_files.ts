@@ -31,13 +31,15 @@ export type FilesOverviewResp = {
 	entries: Array<OverviewEntry>;
 };
 
-export const filesOverview = async (
+export const getFilesOverview = async (
 	client: ApiClient,
 	space: string,
 	path: string,
-	dirs_only: boolean = false,
+	dirs_only: boolean = false
 ): Promise<ApiResponse<FilesOverviewResp>> => {
-	const req = ApiRequestBuilder.get(`files/overview/${space}/${path}${dirs_only ? `?dirs_only=${dirs_only}` : ''}`).intoRequest();
+	const req = ApiRequestBuilder.get(
+		`files/overview/${space}/${path}${dirs_only ? `?dirs_only=${dirs_only}` : ''}`
+	).intoRequest();
 	return await client.exec(req);
 };
 
@@ -77,16 +79,23 @@ export const getDownloadURL = (client: ApiClient, space: string, entries: Array<
 	);
 };
 
-export const putEntry = async (client: ApiClient, space: string, path: string, entry_type: PutEntryType, name: string, content?: any) => {
+export const putEntry = async (
+	client: ApiClient,
+	space: string,
+	path: string,
+	entry_type: PutEntryType,
+	name: string,
+	content?: any
+) => {
 	const req = ApiRequestBuilder.put(`files/${space}/${path}`)
 		.withJsonBody({
 			entry_type,
 			name,
-			...(content) && { content }
+			...(content && { content })
 		})
 		.intoRequest();
 	return await client.exec(req);
-}
+};
 
 export type UploadEntry = {
 	entry_type: string;
