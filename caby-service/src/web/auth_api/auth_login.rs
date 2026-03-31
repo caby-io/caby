@@ -4,7 +4,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{config::Config, ctx::Ctx, error::Result, jsend};
+use crate::{config::Config, error::Result, jsend};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -19,10 +19,13 @@ pub struct LoginResponse {
 
 pub async fn handle_login(
     State(cfg): State<Config>,
-    ctx: Result<Ctx>,
     extract::Json(req): extract::Json<LoginRequest>,
 ) -> Response {
     let resp = jsend::JSendBuilder::new();
+
+    let Some(user) = cfg.users.get(&req.login) else {
+        return resp.fail("bad login").into_response();
+    };
 
     resp.success(LoginResponse {
         login_token: "token".to_string(),

@@ -1,3 +1,5 @@
+use std::path::Path;
+
 use crate::config::{UserConfig, UserSpaceConfig};
 
 pub struct SpaceAccess {
@@ -20,10 +22,11 @@ pub struct ConfigFileUser {
     pub spaces: Vec<SpaceAccess>,
 }
 
-impl Into<UserConfig> for ConfigFileUser {
-    fn into(self) -> UserConfig {
+impl ConfigFileUser {
+    pub fn into_user_config(self, users_path: &Path) -> UserConfig {
         return UserConfig {
             name: self.name.clone(),
+            path: users_path.join(self.name),
             email: self.email.clone(),
             spaces: self.spaces.into_iter().map(|s| s.into()).collect(),
         };

@@ -72,7 +72,6 @@ impl ConfigFile {
         }
 
         let mut config_file = ConfigFile::default();
-
         let config_yaml = &docs[0];
 
         // parse spaces

@@ -64,7 +64,13 @@
 				}}
 			>
 				<label for="input-folder-name">Renaming '{previous_name}'</label>
-				<input id="input-folder-name" type="text" placeholder="Folder Name" bind:value={name} />
+				<input
+					id="input-folder-name"
+					type="text"
+					placeholder="Folder Name"
+					autocomplete="off"
+					bind:value={name}
+				/>
 			</form>
 			<div class="actions fx">
 				<button class="button" onclick={() => dialog.close()}>Cancel</button>

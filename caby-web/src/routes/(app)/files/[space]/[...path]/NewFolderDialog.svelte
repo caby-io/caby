@@ -27,7 +27,13 @@
 	{#snippet content()}
 		<section>
 			<form class="fx fx--col">
-				<input id="input-folder-name" type="text" placeholder="Folder Name" bind:value />
+				<input
+					id="input-folder-name"
+					type="text"
+					placeholder="Folder Name"
+					autocomplete="off"
+					bind:value
+				/>
 				<button class="button primary" onclick={() => tryCreateDir()}>Create</button>
 			</form>
 		</section>

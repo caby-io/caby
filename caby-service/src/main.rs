@@ -28,6 +28,7 @@ mod files;
 mod init;
 mod jsend;
 mod space;
+mod user;
 mod web;
 
 #[tokio::main]

@@ -11,13 +11,20 @@ mod files_api;
 mod headers;
 mod spaces_api;
 mod upload;
+mod users_api;
 
 pub fn api_router() -> Router<Config> {
     Router::new()
-        // .nest(
-        //     "/auth",
-        //     Router::new().route("/login", post(auth_api::handle_login)),
-        // )
+        .nest(
+            "/auth",
+            Router::new().route("/login", post(auth_api::handle_login)),
+        )
+        .nest(
+            "/users",
+            Router::new()
+                .route("/{user}/init", get(users_api::handle_get_user_init))
+                .route("/{user}/init", post(users_api::handle_start_user_init)),
+        )
         .nest(
             "/spaces",
             Router::new()

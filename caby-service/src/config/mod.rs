@@ -44,8 +44,16 @@ pub struct UserSpaceConfig {
 #[derive(Clone, Deserialize)]
 pub struct UserConfig {
     pub name: String,
+    pub path: PathBuf,
     pub email: Option<String>,
     pub spaces: Vec<UserSpaceConfig>,
+}
+
+impl UserConfig {
+    // pub async fn check_password(self, cfg: &Config) -> bool {
+    //     let f =
+    //     self.path.join("user.yaml")
+    // }
 }
 
 #[derive(Clone, Deserialize)]
@@ -87,8 +95,15 @@ impl Config {
                 .collect(),
         ))?;
 
+        let Some(users_path) = builder.users_path.clone() else {
+            return Err(anyhow!("no valid users path from environment variables"));
+        };
         builder.try_set_users(Some(
-            config_file.users.into_iter().map(|u| u.into()).collect(),
+            config_file
+                .users
+                .into_iter()
+                .map(|u| u.into_user_config(&users_path))
+                .collect(),
         ));
 
         // Load overrides from env
