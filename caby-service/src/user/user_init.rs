@@ -5,11 +5,19 @@ use std::{
 
 use anyhow::anyhow;
 use chrono::{DateTime, FixedOffset};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::fs;
 use yaml_rust2::{yaml, Yaml, YamlEmitter, YamlLoader};
 
 use crate::Result;
+
+#[derive(Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum UserInitState {
+    Ready,
+    InProgress,
+    Completed,
+}
 
 #[derive(Clone, Deserialize)]
 pub enum InitMethod {

@@ -11,21 +11,12 @@ use tracing::{error, info};
 use crate::{
     config::Config,
     jsend,
-    user::user_init::{InitFileCode, InitMethod, UserInitFile},
-    web::auth_api::auth_login::LoginRequest,
+    user::user_init::{InitMethod, UserInitFile, UserInitState},
 };
 
 #[derive(Deserialize)]
 pub struct UserInitParams {
     pub user: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UserInitState {
-    Ready,
-    InProgress,
-    Completed,
 }
 
 #[derive(Serialize)]
@@ -36,55 +27,12 @@ pub struct UserInitResponse {
 // Returns the User's init state
 pub async fn handle_get_user_init(
     State(cfg): State<Config>,
+    init_state: UserInitState,
     path_params: Path<UserInitParams>,
 ) -> Response {
-    let resp = jsend::JSendBuilder::new();
-
-    if !cfg.users.contains_key(&path_params.user) {
-        return resp.fail("bad request").into_response();
-    }
-
-    // check if user is already initialized
-    let user_dir_exists = match try_exists(&cfg.users_path.join(&path_params.user)).await {
-        Ok(e) => e,
-        Err(err) => {
-            error!("could not lookup user dir: {}", err);
-            return resp.internal_error().into_response();
-        }
-    };
-
-    if (!user_dir_exists) {
-        return resp
-            .success(UserInitResponse {
-                init_state: UserInitState::Ready,
-            })
-            .into_response();
-    }
-
-    // For now the lack of the init file will indicate an initialized user, this may change in the future
-    // todo: we should actually look for the password file or profile being complete
-    let init_file_exists =
-        match try_exists(&cfg.users_path.join(&path_params.user).join("init.yaml")).await {
-            Ok(e) => e,
-            Err(err) => {
-                error!("could not lookup user init file: {}", err);
-                return resp.internal_error().into_response();
-            }
-        };
-
-    if (!init_file_exists) {
-        return resp
-            .success(UserInitResponse {
-                init_state: UserInitState::Completed,
-            })
-            .into_response();
-    }
-
-    return resp
-        .success(UserInitResponse {
-            init_state: UserInitState::InProgress,
-        })
-        .into_response();
+    jsend::JSendBuilder::new()
+        .success(UserInitResponse { init_state })
+        .into_response()
 }
 
 #[derive(Deserialize)]
@@ -99,37 +47,13 @@ pub struct StartUserInitRequest {
 
 pub async fn handle_start_user_init(
     State(cfg): State<Config>,
+    init_state: UserInitState,
     path_params: Path<UserInitParams>,
     Json(req): Json<StartUserInitRequest>,
 ) -> Response {
     let resp = jsend::JSendBuilder::new();
 
-    if !cfg.users.contains_key(&path_params.user) {
-        return resp.fail("bad request").into_response();
-    }
-
-    let user_dir_exists = match try_exists(&cfg.users_path.join(&path_params.user)).await {
-        Ok(e) => e,
-        Err(err) => {
-            error!("could not lookup user dir: {}", err);
-            return resp.internal_error().into_response();
-        }
-    };
-
-    if (user_dir_exists) {
-        return resp.fail("bad request").into_response();
-    }
-
-    let init_file_exists =
-        match try_exists(&cfg.users_path.join(&path_params.user).join("init.yaml")).await {
-            Ok(e) => e,
-            Err(err) => {
-                error!("could not lookup user init file: {}", err);
-                return resp.internal_error().into_response();
-            }
-        };
-
-    if (init_file_exists) {
+    if !matches!(init_state, UserInitState::Ready) {
         return resp.fail("bad request").into_response();
     }
 
