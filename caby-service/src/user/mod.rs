@@ -27,15 +27,33 @@ pub struct User {
 }
 
 impl User {
-    // If the user's directory exists, it's activated
+    // If the user's directory exists and has a `password` file then the user is activated
     pub async fn is_activated(&self) -> Result<bool> {
         let user_dir_exists = match try_exists(&self.path).await {
             Ok(e) => e,
             Err(err) => {
-                return Err(anyhow!("could not find user dir: {}", err));
+                return Err(anyhow!("could not lookup user dir: {}", err));
             }
         };
 
-        return Ok(user_dir_exists);
+        if (!user_dir_exists) {
+            return Ok(false);
+        }
+
+        let password_exists = match try_exists(&self.path.join("password")).await {
+            Ok(e) => e,
+            Err(err) => {
+                return Err(anyhow!(
+                    "could not lookup activation_attempts file in user dir: {}",
+                    err
+                ));
+            }
+        };
+
+        if (!password_exists) {
+            return Ok(false);
+        }
+
+        return Ok(true);
     }
 }

@@ -21,7 +21,7 @@ pub fn api_router() -> Router<Config> {
         )
         .nest(
             "/users",
-            Router::new().route("/{user}/init", post(users_api::handle_activate_user)),
+            Router::new().route("/{user}/activate", post(users_api::handle_activate_user)),
         )
         .nest(
             "/spaces",
