@@ -1,19 +1,10 @@
 use axum::{
-    extract::{FromRef, FromRequestParts, Path, RawPathParams},
+    extract::{FromRef, FromRequestParts, Path},
     http::request::Parts,
-    response::{IntoResponse, Response},
-    Extension, RequestPartsExt,
+    response::{IntoResponse, Response}, RequestPartsExt,
 };
-use serde::Serialize;
-use tokio::fs::try_exists;
-use tracing::error;
 
-use crate::{
-    config::Config,
-    jsend::JSendBuilder,
-    user::{user_activation::IsUserActivated, User},
-    web::users_api::UserPathParams,
-};
+use crate::{config::Config, jsend::JSendBuilder, user::User, web::users_api::UserPathParams};
 
 impl<S> FromRequestParts<S> for User
 where

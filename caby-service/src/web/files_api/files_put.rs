@@ -1,9 +1,7 @@
 use crate::{
     config::Config,
-    ctx::Ctx,
     error::Result,
-    files::joined_path,
-    jsend::{self, JSendBuilder},
+    jsend::JSendBuilder,
     space::Space,
     web::files_api::files_list::FilesPathParams,
 };
@@ -17,7 +15,7 @@ use path_clean::PathClean;
 use serde::Deserialize;
 use std::path::PathBuf;
 use tokio::fs;
-use tracing::{debug, error};
+use tracing::error;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "lowercase")]

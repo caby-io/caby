@@ -1,8 +1,5 @@
-use axum::{
-    http::StatusCode,
-    response::{IntoResponse, Response},
-};
-use std::{io, sync::Arc};
+use axum::response::{IntoResponse, Response};
+use std::sync::Arc;
 use tracing::error;
 
 use crate::jsend::JSendBuilder;

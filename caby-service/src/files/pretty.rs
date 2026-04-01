@@ -1,5 +1,5 @@
 #![feature(duration_constructors)]
-use std::time::{Duration, SystemTime};
+use std::time::SystemTime;
 
 const DURATION_MINUTE: u64 = 60;
 const DURATION_HOUR: u64 = 3600;

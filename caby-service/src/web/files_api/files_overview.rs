@@ -3,18 +3,12 @@ use std::path::PathBuf;
 use axum::{
     extract::{Path, Query, State},
     response::{IntoResponse, Response},
-    Json,
 };
 use serde::{Deserialize, Serialize};
 
 use crate::{
     config::Config,
-    error::Result,
-    files::{
-        build_entries, joined_path,
-        overview::{build_overview, OverviewEntry},
-        Entry, EntryType,
-    },
+    files::overview::{build_overview, OverviewEntry},
     jsend,
     space::Space,
     web::files_api::files_list::FilesPathParams,

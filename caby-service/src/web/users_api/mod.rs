@@ -1,21 +1,12 @@
-use std::str::FromStr;
 
 use axum::{
     extract::{Json, Path, State},
     response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
-use tokio::fs::try_exists;
-use tracing::{error, info};
+use tracing::error;
 
-use crate::{
-    config::Config,
-    jsend,
-    user::{
-        user_activation::{InitMethod, IsUserActivated, UserInitFile},
-        User,
-    },
-};
+use crate::{config::Config, jsend, user::User};
 
 #[derive(Deserialize)]
 pub struct UserPathParams {

@@ -33,7 +33,7 @@ impl Space {
             SpaceDir::UPLOADS => self.uploads(),
         };
         let joined_path = parent_path.join(cleaned_path).clean();
-        if (!joined_path.starts_with(parent_path)) {
+        if !joined_path.starts_with(parent_path) {
             return Err(anyhow!("final path out of bounds of parent path"));
         };
 

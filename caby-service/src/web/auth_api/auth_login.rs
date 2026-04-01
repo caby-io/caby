@@ -4,7 +4,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-use crate::{config::Config, error::Result, jsend};
+use crate::{config::Config, jsend};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {

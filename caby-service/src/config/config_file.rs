@@ -1,20 +1,15 @@
 use crate::{
     config::{SpaceConfig, UserConfig, UserSpaceConfig},
-    user::user_activation,
-    Error, Result,
+    Result,
 };
 use anyhow::anyhow;
 use std::{
     env::var,
     path::{Path, PathBuf},
-    sync::Arc,
 };
-use tokio::{
-    fs::{self, File},
-    io::AsyncReadExt,
-};
+use tokio::fs;
 use tracing::warn;
-use yaml_rust2::{Yaml, YamlLoader};
+use yaml_rust2::YamlLoader;
 
 const CONFIG_FILE_NAME: &'static str = "config.yaml";
 
@@ -75,7 +70,7 @@ pub fn get_config_path() -> Result<PathBuf> {
 
 impl ConfigFile {
     pub async fn new_from_path(path: PathBuf) -> Result<ConfigFile> {
-        let mut content = fs::read_to_string(&path).await.map_err(|err| {
+        let content = fs::read_to_string(&path).await.map_err(|err| {
             return anyhow!("could not read config file at {:?}", path).context(err);
         })?;
         let docs = YamlLoader::load_from_str(&content).map_err(|err| {

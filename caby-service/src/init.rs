@@ -10,7 +10,7 @@ async fn init_dir(name: &str, path: &Path) -> Result<()> {
     let exists = try_exists(path)
         .await
         .map_err(|e| anyhow!("could not validate {} path exists at {:?}", name, path).context(e))?;
-    if (exists) {
+    if exists {
         return Ok(());
     }
 

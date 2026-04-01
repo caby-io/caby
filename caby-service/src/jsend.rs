@@ -1,4 +1,3 @@
-use std::default;
 
 use axum::{
     http::StatusCode,
@@ -56,7 +55,7 @@ impl<U> JSendBuilder<U> {
         self
     }
 
-    pub fn success<T: Serialize>(mut self, data: T) -> JSendBuilder<Success<T>> {
+    pub fn success<T: Serialize>(self, data: T) -> JSendBuilder<Success<T>> {
         let mut status_code = StatusCode::OK;
         if self.status_code != StatusCode::NOT_IMPLEMENTED {
             status_code = self.status_code;
@@ -67,7 +66,7 @@ impl<U> JSendBuilder<U> {
         }
     }
 
-    pub fn fail<T: Serialize>(mut self, data: T) -> JSendBuilder<Fail<T>> {
+    pub fn fail<T: Serialize>(self, data: T) -> JSendBuilder<Fail<T>> {
         let mut status_code = StatusCode::BAD_REQUEST;
         if self.status_code != StatusCode::NOT_IMPLEMENTED {
             status_code = self.status_code;
@@ -78,7 +77,7 @@ impl<U> JSendBuilder<U> {
         }
     }
 
-    pub fn error(mut self, message: impl Into<String>) -> JSendBuilder<Error> {
+    pub fn error(self, message: impl Into<String>) -> JSendBuilder<Error> {
         let mut status_code = StatusCode::INTERNAL_SERVER_ERROR;
         if self.status_code != StatusCode::NOT_IMPLEMENTED {
             status_code = self.status_code;
@@ -89,7 +88,7 @@ impl<U> JSendBuilder<U> {
         }
     }
 
-    pub fn internal_error(mut self) -> JSendBuilder<Error> {
+    pub fn internal_error(self) -> JSendBuilder<Error> {
         JSendBuilder {
             status_code: StatusCode::INTERNAL_SERVER_ERROR,
             jsend_type: Error(GENERIC_INTERNAL_SERVER_ERROR.to_string()),

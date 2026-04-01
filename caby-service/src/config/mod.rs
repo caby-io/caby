@@ -7,13 +7,12 @@ use crate::{
     user::{SpaceAccess, User},
     Result,
 };
-use anyhow::{anyhow, Context, Error};
+use anyhow::anyhow;
 use serde::Deserialize;
 use std::{
     collections::HashMap,
     env::var,
-    fmt::{self, Display, Formatter},
-    path::{Path, PathBuf},
+    path::PathBuf,
 };
 
 mod config_file;

@@ -1,6 +1,4 @@
 use std::{
-    default,
-    io::{self, ErrorKind},
     os::unix::fs::MetadataExt,
     path::{Path, PathBuf},
     time::SystemTime,
@@ -9,9 +7,8 @@ use std::{
 use anyhow::anyhow;
 use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
-use serde_json::error;
-use tokio::fs::{self, metadata, read_dir, read_link, DirEntry, ReadDir};
-use tracing::{debug, error, warn};
+use tokio::fs::{self, read_dir, read_link, DirEntry};
+use tracing::error;
 
 use crate::{error::Result, space::Space};
 

@@ -4,13 +4,11 @@ pub use self::error::{Error, Result};
 
 use axum::{
     extract::{Path, Request},
-    http::{header, HeaderName, Method},
     Router, ServiceExt,
 };
 use config::Config;
 use init::init;
-use std::path::PathBuf;
-use tokio::{fs, net::TcpListener};
+use tokio::net::TcpListener;
 use tower::Layer;
 use tower_http::{
     cors::{Any, CorsLayer},

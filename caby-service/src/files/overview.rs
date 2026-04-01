@@ -1,18 +1,14 @@
-use std::{
-    io::{self, ErrorKind},
-    path::Path,
-};
+use std::path::Path;
 
 use anyhow::anyhow;
 use futures_util::TryFutureExt;
-use serde::{de, Serialize};
+use serde::Serialize;
 use tokio::fs::{read_dir, DirEntry};
 use tracing::error;
 
 use crate::{
-    files::{pretty, EntryType},
-    space::Space,
-    Error, Result,
+    files::EntryType,
+    space::Space, Result,
 };
 
 #[derive(Serialize)]
@@ -32,7 +28,7 @@ impl OverviewEntry {
         let created_at = metadata.created().ok();
         let modified_at = metadata.modified().ok();
 
-        let mut entry = Self {
+        let entry = Self {
             entry_type: match metadata.is_dir() {
                 true => EntryType::Directory,
                 false => EntryType::File,

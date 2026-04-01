@@ -1,7 +1,7 @@
-use std::{os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
+use std::{os::unix::fs::MetadataExt, path::PathBuf};
 
 use axum::{
-    http::{HeaderMap, StatusCode},
+    http::StatusCode,
     response::{IntoResponse, Response},
 };
 use base64::prelude::*;
@@ -13,7 +13,7 @@ use tokio::{
 };
 use xxhash_rust::xxh64::Xxh64;
 
-use crate::{error, jsend::JSendBuilder, Error};
+use crate::{error, jsend::JSendBuilder};
 
 // todo: move some of these fn's out of the web dir
 

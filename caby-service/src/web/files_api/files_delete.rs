@@ -1,11 +1,10 @@
 use crate::{
     config::Config,
-    files::joined_path,
     jsend,
     space::{Space, SpaceDir},
 };
 use axum::{
-    extract::{Json, Path, State},
+    extract::{Json, State},
     response::{IntoResponse, Response},
 };
 use path_clean::PathClean;

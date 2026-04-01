@@ -3,9 +3,7 @@ use std::path::PathBuf;
 use anyhow::anyhow;
 use tokio::fs::try_exists;
 
-use crate::{config::Config, Result};
-
-pub mod user_activation;
+use crate::Result;
 
 pub enum UserType {
     Human,

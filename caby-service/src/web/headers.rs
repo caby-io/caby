@@ -1,8 +1,7 @@
 use axum::{
-    http::{header::ToStrError, HeaderMap, StatusCode},
+    http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
 };
-use tracing::warn;
 
 use crate::jsend::JSendBuilder;
 

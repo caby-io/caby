@@ -1,7 +1,6 @@
 use crate::{
     config::Config,
-    ctx::Ctx,
-    error::{RequestError, Result},
+    error::RequestError,
     jsend::JSendBuilder,
     space::Space,
     web::{headers::get_required_header, upload::*},
@@ -20,15 +19,13 @@ use std::{
     io::{self},
     os::unix::fs::MetadataExt,
     path::PathBuf,
-    sync::Arc,
 };
 use tokio::{
-    fs::{self, remove_file, File, OpenOptions},
-    io::{AsyncReadExt, BufReader},
+    fs::{self, remove_file, OpenOptions},
+    io::AsyncReadExt,
 };
 use tokio_util::io::StreamReader;
 use tracing::error;
-use xxhash_rust::xxh64::Xxh64;
 
 #[derive(Deserialize, Debug)]
 pub struct RegisterUploadRequest {

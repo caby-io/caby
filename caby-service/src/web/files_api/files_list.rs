@@ -1,7 +1,5 @@
 use crate::{
     config::Config,
-    ctx::Ctx,
-    error::Result,
     files::{build_entries, Entry},
     jsend::JSendBuilder,
     space::Space,

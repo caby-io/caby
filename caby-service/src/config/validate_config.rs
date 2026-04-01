@@ -1,6 +1,5 @@
 use crate::error::Result;
 use anyhow::anyhow;
-use std::path::PathBuf;
 
 // Meta filenames must:
 // 1. Must be UTF-8 (already done if we have a &str)

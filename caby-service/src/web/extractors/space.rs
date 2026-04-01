@@ -1,5 +1,4 @@
-use axum::extract::{Path, RawPathParams};
-use std::{any, sync::Arc};
+use axum::extract::Path;
 
 use crate::{
     config::Config,
@@ -7,14 +6,10 @@ use crate::{
     space::Space,
     web::files_api::files_list::{FilesPathParams, FILE_NOT_FOUND},
 };
-use anyhow::anyhow;
 use axum::{
     extract::{FromRef, FromRequestParts},
-    http::request::Parts,
-    response::IntoResponse,
-    Extension, RequestPartsExt,
+    http::request::Parts, RequestPartsExt,
 };
-use serde::Serialize;
 
 impl<S> FromRequestParts<S> for Space
 where
