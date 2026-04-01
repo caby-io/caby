@@ -1,8 +1,6 @@
 use crate::{
-    config::{
-        config_file::config_file_user::{ConfigFileUser, SpaceAccess},
-        SpaceConfig,
-    },
+    config::{SpaceConfig, UserConfig, UserSpaceConfig},
+    user::user_activation,
     Error, Result,
 };
 use anyhow::anyhow;
@@ -18,8 +16,6 @@ use tokio::{
 use tracing::warn;
 use yaml_rust2::{Yaml, YamlLoader};
 
-mod config_file_user;
-
 const CONFIG_FILE_NAME: &'static str = "config.yaml";
 
 pub struct ConfigFileSpace {
@@ -34,6 +30,25 @@ impl ConfigFileSpace {
             name: self.name.clone(),
             display: self.display.unwrap_or(self.name.clone()).clone(),
             path: self.path.unwrap_or(spaces_path.join(self.name)),
+        };
+    }
+}
+
+pub struct ConfigFileUser {
+    pub name: String,
+    pub email: Option<String>,
+    pub activation_token: Option<String>,
+    pub spaces: Vec<UserSpaceConfig>,
+}
+
+impl ConfigFileUser {
+    pub fn into_user_config(self, users_path: &Path) -> UserConfig {
+        return UserConfig {
+            name: self.name.clone(),
+            path: users_path.join(self.name),
+            email: self.email,
+            activation_token: self.activation_token,
+            spaces: self.spaces,
         };
     }
 }
@@ -110,7 +125,20 @@ impl ConfigFile {
                 .as_str()
                 .ok_or(anyhow!("a user is missing a string name"))?;
 
-            let email = user["email"].as_str();
+            let email = user["email"].as_str().map(|e| e.to_string());
+
+            let activation_token = match user["activation_token"].as_str() {
+                Some(t) => {
+                    if t.len() != 64 {
+                        return Err(anyhow!(
+                            ".users.{}.activation_token must be exactly 64 characters",
+                            &name
+                        ));
+                    }
+                    Some(t.to_string())
+                }
+                None => None,
+            };
 
             let mut spaces = vec![];
 
@@ -145,7 +173,7 @@ impl ConfigFile {
                     )
                 }
 
-                spaces.push(SpaceAccess {
+                spaces.push(UserSpaceConfig {
                     name: space_name.to_string(),
                     permissions,
                 });
@@ -153,7 +181,8 @@ impl ConfigFile {
 
             config_file.users.push(ConfigFileUser {
                 name: name.to_string(),
-                email: email.map(|e| e.to_string()),
+                email,
+                activation_token,
                 spaces,
             })
         }

@@ -11,13 +11,8 @@ use yaml_rust2::{yaml, Yaml, YamlEmitter, YamlLoader};
 
 use crate::Result;
 
-#[derive(Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum UserInitState {
-    Ready,
-    InProgress,
-    Completed,
-}
+#[derive(Clone, Serialize)]
+pub struct IsUserActivated(pub bool);
 
 #[derive(Clone, Deserialize)]
 pub enum InitMethod {

@@ -80,6 +80,7 @@ spaces:
 users:
   - name: caby_guy
     email: caby_guy@caby.io
+    activation_token: OHQFhErYIM7xK8gMtf9emXt4LssVp5ibBs3MgJXTBQXbw8Cs4HUyWv1HdXjJyUL5
     spaces:
       - name: home
         permissions: "*"

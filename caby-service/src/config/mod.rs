@@ -4,6 +4,7 @@ use crate::{
         validate_config::is_valid_meta_filename,
     },
     space::Space,
+    user::{SpaceAccess, User},
     Result,
 };
 use anyhow::{anyhow, Context, Error};
@@ -15,7 +16,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-pub mod config_file;
+mod config_file;
 mod validate_config;
 
 #[derive(Clone, Deserialize)]
@@ -41,19 +42,34 @@ pub struct UserSpaceConfig {
     permissions: Vec<String>,
 }
 
+impl Into<SpaceAccess> for &UserSpaceConfig {
+    fn into(self) -> SpaceAccess {
+        SpaceAccess {
+            name: self.name.clone(),
+            permissions: self.permissions.clone(),
+        }
+    }
+}
+
 #[derive(Clone, Deserialize)]
 pub struct UserConfig {
     pub name: String,
     pub path: PathBuf,
     pub email: Option<String>,
+    pub activation_token: Option<String>,
     pub spaces: Vec<UserSpaceConfig>,
 }
 
-impl UserConfig {
-    // pub async fn check_password(self, cfg: &Config) -> bool {
-    //     let f =
-    //     self.path.join("user.yaml")
-    // }
+impl Into<User> for &UserConfig {
+    fn into(self) -> User {
+        User {
+            name: self.name.clone(),
+            path: self.path.clone(),
+            email: self.email.clone(),
+            activation_token: self.activation_token.clone(),
+            space_access: self.spaces.iter().map(|s| s.into()).collect(),
+        }
+    }
 }
 
 #[derive(Clone, Deserialize)]
