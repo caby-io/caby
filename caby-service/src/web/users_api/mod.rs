@@ -13,7 +13,12 @@ use serde::{Deserialize, Serialize};
 use tokio::fs::{self, try_exists};
 use tracing::{error, warn};
 
-use crate::{config::Config, jsend, user::User, Result};
+use crate::{
+    config::Config,
+    jsend,
+    user::{try_hash_password, User},
+    Result,
+};
 
 const MAX_ACTIVATION_ATTEMPTS: i64 = 5;
 
@@ -155,12 +160,10 @@ pub async fn handle_activate_user(
         return resp.internal_error().into_response();
     }
 
-    let salt = SaltString::generate(&mut OsRng);
-    let argon2 = Argon2::default();
-    let password_hash = match argon2.hash_password(password.as_bytes(), &salt) {
-        Ok(p) => p.to_string(),
+    let hashed_password = match try_hash_password(&password) {
+        Ok(p) => p,
         Err(err) => {
-            error!("could not hash password");
+            error!("{}", err);
             return resp.internal_error().into_response();
         }
     };
@@ -172,7 +175,7 @@ pub async fn handle_activate_user(
         }
     };
 
-    if let Err(err) = fs::write(&user.path.join("password"), &password_hash).await {
+    if let Err(err) = fs::write(&user.path.join("password"), &hashed_password).await {
         error!("could not write password file: {}", err);
         return resp.internal_error().into_response();
     }

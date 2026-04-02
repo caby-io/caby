@@ -1,7 +1,11 @@
 use std::path::PathBuf;
 
 use anyhow::anyhow;
-use tokio::fs::try_exists;
+use argon2::{
+    password_hash::{rand_core::OsRng, SaltString},
+    Argon2, PasswordHasher, PasswordVerifier,
+};
+use tokio::fs::{self, try_exists};
 
 use crate::Result;
 
@@ -24,6 +28,15 @@ pub struct User {
     pub space_access: Vec<SpaceAccess>,
     // todo: profile
     // pub user_type: UserType,
+}
+
+pub fn try_hash_password(password: &str) -> Result<String> {
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    return argon2
+        .hash_password(password.as_bytes(), &salt)
+        .map_err(|err| anyhow!("could not hash password: {}", err))
+        .map(|p| p.to_string());
 }
 
 impl User {
@@ -55,5 +68,18 @@ impl User {
         }
 
         return Ok(true);
+    }
+
+    pub async fn is_password(&self, password: &str) -> Result<bool> {
+        let hash = fs::read_to_string(self.path.join("password"))
+            .await
+            .map_err(|err| anyhow!("could not read password file: {}", err))?;
+
+        let parsed_hash = argon2::PasswordHash::new(&hash)
+            .map_err(|err| anyhow!("could not parse password hash: {}", err))?;
+
+        Ok(Argon2::default()
+            .verify_password(password.as_bytes(), &parsed_hash)
+            .is_ok())
     }
 }
