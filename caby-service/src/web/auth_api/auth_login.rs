@@ -14,7 +14,8 @@ pub struct LoginRequest {
 }
 
 #[derive(Serialize)]
-pub struct LoginResponse {
+pub struct LoginResponse<'a> {
+    user: &'a str,
     login_token: Token,
 }
 
@@ -45,7 +46,7 @@ pub async fn handle_login(
     let is_password = match user.is_password(&req.password).await {
         Ok(p) => p,
         Err(err) => {
-            error!("could not check user password: {}", err);
+            error!("could not check user password: {:#}", err);
             return resp.internal_error().into_response();
         }
     };
@@ -59,11 +60,14 @@ pub async fn handle_login(
     let token = match user.create_session().await {
         Ok(t) => t,
         Err(err) => {
-            error!("could not create user login session/token: {}", err);
+            error!("could not create user login session/token: {:#}", err);
             return resp.internal_error().into_response();
         }
     };
 
-    resp.success(LoginResponse { login_token: token })
-        .into_response()
+    resp.success(LoginResponse {
+        user: &user.name,
+        login_token: token,
+    })
+    .into_response()
 }

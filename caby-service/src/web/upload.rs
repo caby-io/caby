@@ -95,9 +95,9 @@ impl TryInto<UploadTokenPayload> for UploadToken {
     }
 }
 
-pub fn u64_to_b64(n: u64) -> String {
-    BASE64_STANDARD.encode(&n.to_ne_bytes())
-}
+// pub fn u64_to_b64(n: u64) -> String {
+//     BASE64_STANDARD.encode(&n.to_ne_bytes())
+// }
 
 pub async fn get_file_digest_size(file_path: PathBuf) -> error::Result<(String, u64)> {
     let file = match File::open(file_path).await {

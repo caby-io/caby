@@ -56,7 +56,7 @@ pub async fn try_check_activation_attempts(user: &User) -> Result<i64> {
     let activation_attempts_path = &user.path.join("activation_attempts");
     let activation_attempts_exists = try_exists(activation_attempts_path)
         .await
-        .map_err(|err| anyhow!("could not lookup activation_attempts file").context(err))?;
+        .map_err(|err| anyhow!(err).context("could not lookup activation_attempts file"))?;
 
     if (!activation_attempts_exists) {
         return Ok(0);
@@ -64,7 +64,7 @@ pub async fn try_check_activation_attempts(user: &User) -> Result<i64> {
 
     let content = fs::read_to_string(activation_attempts_path)
         .await
-        .map_err(|err| anyhow!("could not read from activation_attempts file").context(err))?;
+        .map_err(|err| anyhow!(err).context("could not read from activation_attempts file"))?;
 
     return Ok(content
         .parse()
@@ -73,7 +73,7 @@ pub async fn try_check_activation_attempts(user: &User) -> Result<i64> {
 
 pub async fn try_set_activation_attempts(user: &User, attempts: i64) -> Result<()> {
     if let Err(err) = fs::write(user.path.join("activation_attempts"), attempts.to_string()).await {
-        return Err(anyhow!("could not write to activation_attempts file").context(err));
+        return Err(anyhow!(err).context("could not write to activation_attempts file"));
     }
 
     return Ok(());
@@ -107,7 +107,7 @@ pub async fn handle_activate_user(
     let activation_attempts = match try_check_activation_attempts(&user).await {
         Ok(a) => a,
         Err(err) => {
-            error!("could not check activation attempts: {}", err);
+            error!("could not check activation attempts: {:#}", err);
             return resp.internal_error().into_response();
         }
     };
@@ -120,7 +120,7 @@ pub async fn handle_activate_user(
     let Some(ref user_activation_token) = user.activation_token else {
         warn!("bad token for user: {}", user.name);
         if let Err(err) = try_set_activation_attempts(&user, activation_attempts + 1).await {
-            error!("could not update activation_attempts file: {}", err);
+            error!("could not update activation_attempts file: {:#}", err);
             return resp.internal_error().into_response();
         }
         return resp.fail("bad request").into_response();
@@ -129,7 +129,7 @@ pub async fn handle_activate_user(
     if matches!(req.action, ActivateUserAction::ValidateToken) {
         if &req.token != user_activation_token {
             if let Err(err) = try_set_activation_attempts(&user, activation_attempts + 1).await {
-                error!("could not update activation_attempts file: {}", err);
+                error!("could not update activation_attempts file: {:#}", err);
                 return resp.internal_error().into_response();
             }
             // todo: return response w/ success?
@@ -149,34 +149,34 @@ pub async fn handle_activate_user(
 
     if &req.token != user_activation_token {
         if let Err(err) = try_set_activation_attempts(&user, activation_attempts + 1).await {
-            error!("could not update activation_attempts file: {}", err);
+            error!("could not update activation_attempts file: {:#}", err);
             return resp.internal_error().into_response();
         }
         return resp.fail("bad request").into_response();
     }
 
     if let Err(err) = fs::create_dir_all(&user.path).await {
-        error!("could not create user dir: {}", err);
+        error!("could not create user dir: {:#}", err);
         return resp.internal_error().into_response();
     }
 
     let hashed_password = match try_hash_password(&password) {
         Ok(p) => p,
         Err(err) => {
-            error!("{}", err);
+            error!("{:#}", err);
             return resp.internal_error().into_response();
         }
     };
 
     if let Err(err) = fs::remove_file(&user.path.join("activation_attempts")).await {
         if err.kind() != ErrorKind::NotFound {
-            error!("could not remove activation_attempts file: {}", err);
+            error!("could not remove activation_attempts file: {:#}", err);
             return resp.internal_error().into_response();
         }
     };
 
     if let Err(err) = fs::write(&user.path.join("password"), &hashed_password).await {
-        error!("could not write password file: {}", err);
+        error!("could not write password file: {:#}", err);
         return resp.internal_error().into_response();
     }
 

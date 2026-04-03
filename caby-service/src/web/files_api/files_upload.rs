@@ -365,7 +365,7 @@ pub async fn handle_complete_upload(
     }
 
     if let Err(err) = fs::remove_dir_all(upload_path).await {
-        error!("couldn't clear upload directory: {}", err);
+        error!("couldn't clear upload directory: {:#}", err);
         return resp.internal_error().into_response();
     }
 

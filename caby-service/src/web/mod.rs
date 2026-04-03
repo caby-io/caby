@@ -1,9 +1,13 @@
 use axum::{
+    middleware,
     routing::{get, patch, post, put},
     Router,
 };
 
-use crate::config::Config;
+use crate::{
+    auth::{self, auth_middleware},
+    config::Config,
+};
 
 mod auth_api;
 mod extractors;
@@ -13,11 +17,21 @@ mod spaces_api;
 mod upload;
 mod users_api;
 
-pub fn api_router() -> Router<Config> {
+pub fn api_router(cfg: &Config) -> Router<Config> {
     Router::new()
         .nest(
             "/auth",
-            Router::new().route("/login", post(auth_api::handle_login)),
+            Router::new()
+                .route("/login", post(auth_api::handle_login))
+                .nest(
+                    "/test",
+                    Router::new()
+                        .route("/", get(auth_api::handle_test_auth))
+                        .route_layer(middleware::from_fn_with_state(
+                            cfg.clone(),
+                            auth_middleware::auth,
+                        )),
+                ),
         )
         .nest(
             "/users",

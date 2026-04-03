@@ -61,7 +61,7 @@ pub async fn handle_put_files(
                     .into_response()
             }
             Err(err) => {
-                error!("could not create dir at {:?}: {}", path, err);
+                error!("could not create dir at {:?}: {:#}", path, err);
                 return resp.fail("could not create directory").into_response();
             }
         },

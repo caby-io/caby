@@ -88,7 +88,7 @@ impl Entry {
             path: value
                 .path()
                 .strip_prefix(live_path)
-                .map_err(|err| anyhow!("could not strip prefix").context(err))?
+                .map_err(|err| anyhow!(err).context("could not strip prefix"))?
                 .to_str()
                 .ok_or(anyhow!("could not convert entry name to string"))?
                 .to_owned(),
@@ -178,7 +178,7 @@ pub async fn build_entries(space: &Space, path: &Path) -> Result<Vec<Entry>> {
             Ok(e) => result.push(e),
             Err(err) => {
                 // todo: send errored entries with the list
-                error!("couldn't process file: {:?} {}", filename, err);
+                error!("couldn't process file: {:?} {:#}", filename, err);
             }
         }
     }

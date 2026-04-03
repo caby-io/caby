@@ -40,7 +40,7 @@ impl OverviewEntry {
             path: value
                 .path()
                 .strip_prefix(live_path)
-                .map_err(|err| anyhow!("could not strip prefix").context(err))?
+                .map_err(|err| anyhow!(err).context("could not strip prefix"))?
                 .to_str()
                 .ok_or(anyhow!("could not convert root path to string"))?
                 .to_owned(),
@@ -68,7 +68,7 @@ pub async fn build_overview(
         let mut entry = match OverviewEntry::try_from(&live_path, dir_entry).await {
             Ok(e) => e,
             Err(err) => {
-                error!("couldn't process file: {:?} {}", filename, err);
+                error!("couldn't process file: {:?} {:#}", filename, err);
                 return Err(err);
             }
         };

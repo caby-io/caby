@@ -71,10 +71,10 @@ pub fn get_config_path() -> Result<PathBuf> {
 impl ConfigFile {
     pub async fn new_from_path(path: PathBuf) -> Result<ConfigFile> {
         let content = fs::read_to_string(&path).await.map_err(|err| {
-            return anyhow!("could not read config file at {:?}", path).context(err);
+            return anyhow!(err).context(format!("could not read config file at {:?}", path));
         })?;
         let docs = YamlLoader::load_from_str(&content).map_err(|err| {
-            return anyhow!("could not parse config file as yaml").context(err);
+            return anyhow!(err).context("could not parse config file as yaml");
         })?;
 
         if docs.len() < 1 {

@@ -14,11 +14,13 @@ pub enum UserType {
     Agent,
 }
 
+#[derive(Clone)]
 pub struct SpaceAccess {
     pub name: String,
     pub permissions: Vec<String>,
 }
 
+#[derive(Clone)]
 pub struct User {
     // config values
     pub name: String,
@@ -98,7 +100,7 @@ impl User {
             ),
         )
         .await
-        .map_err(|err| anyhow!("could not write session file").context(err))?;
+        .map_err(|err| anyhow!(err).context("could not write session file"))?;
 
         Ok(token)
     }

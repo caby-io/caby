@@ -60,7 +60,7 @@ async fn main() {
         .allow_origin(Any);
 
     let app = Router::new()
-        .nest("/v0", web::api_router())
+        .nest("/v0", web::api_router(&cfg))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(
