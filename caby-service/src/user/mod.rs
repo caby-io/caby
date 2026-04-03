@@ -5,9 +5,9 @@ use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHasher, PasswordVerifier,
 };
-use tokio::fs::{self, try_exists};
+use tokio::fs::{self, try_exists, write};
 
-use crate::Result;
+use crate::{auth::Token, Result};
 
 pub enum UserType {
     Human,
@@ -81,5 +81,25 @@ impl User {
         Ok(Argon2::default()
             .verify_password(password.as_bytes(), &parsed_hash)
             .is_ok())
+    }
+
+    // todo: this should accept more args in the future for things like level of access and lifetime
+    pub async fn create_session(&self) -> Result<Token> {
+        let token = Token::new()?;
+
+        // write the session file
+        write(
+            self.path.join(format!("session_{}", token.value.clone())),
+            format!(
+                "{}\n{}\n{}",
+                token.value.clone(),
+                token.created_at,
+                token.expires_at
+            ),
+        )
+        .await
+        .map_err(|err| anyhow!("could not write session file").context(err))?;
+
+        Ok(token)
     }
 }

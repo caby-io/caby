@@ -5,7 +5,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use tracing::{error, warn};
 
-use crate::{config::Config, jsend, user::User};
+use crate::{auth::Token, config::Config, jsend, user::User};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -15,7 +15,7 @@ pub struct LoginRequest {
 
 #[derive(Serialize)]
 pub struct LoginResponse {
-    login_token: String,
+    login_token: Token,
 }
 
 pub async fn handle_login(
@@ -55,8 +55,15 @@ pub async fn handle_login(
         return resp.fail("bad login").into_response();
     }
 
-    resp.success(LoginResponse {
-        login_token: "token".to_string(),
-    })
-    .into_response()
+    // temp
+    let token = match user.create_session().await {
+        Ok(t) => t,
+        Err(err) => {
+            error!("could not create user login session/token: {}", err);
+            return resp.internal_error().into_response();
+        }
+    };
+
+    resp.success(LoginResponse { login_token: token })
+        .into_response()
 }
