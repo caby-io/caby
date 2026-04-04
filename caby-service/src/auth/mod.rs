@@ -5,7 +5,6 @@ use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use chrono::{DateTime, Duration, Utc};
 use rand::RngExt;
 use serde::Serialize;
-use tracing::debug;
 
 use crate::Result;
 
@@ -22,14 +21,12 @@ impl FromStr for Token {
     type Err = crate::Error;
 
     fn from_str(content: &str) -> Result<Self> {
-        debug!("{}", content);
         let mut lines = content.lines();
 
         let value = lines
             .next()
             .ok_or_else(|| anyhow!("could not read token value line from session file"))?
             .to_string();
-        debug!("completed value");
         let created_at = DateTime::parse_from_rfc3339(
             lines
                 .next()
@@ -37,7 +34,6 @@ impl FromStr for Token {
         )
         .map_err(|err| anyhow!(err).context("could not parse created_at from session file"))?
         .with_timezone(&Utc);
-        debug!("completed created_at");
         let expires_at = DateTime::parse_from_rfc3339(
             lines
                 .next()
@@ -45,7 +41,6 @@ impl FromStr for Token {
         )
         .map_err(|err| anyhow!(err).context("could not parse expires_at from session file"))?
         .with_timezone(&Utc);
-        debug!("completed expires_as");
 
         return Ok(Self {
             value,
