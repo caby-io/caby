@@ -51,6 +51,10 @@ impl FromStr for Token {
 }
 
 impl Token {
+    pub fn is_expired(&self) -> bool {
+        Utc::now() > self.expires_at
+    }
+
     pub fn new() -> Result<Self> {
         let mut bytes = [0u8; 32];
         rand::rng().fill(&mut bytes);

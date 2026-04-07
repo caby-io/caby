@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
 	import 'iconify-icon';
 	import { getScheme, toggleScheme, clearStorage } from '$lib/color-scheme';
 
@@ -8,6 +9,7 @@
 	onMount(() => {
 		scheme = getScheme();
 	});
+	let { children }: { children: Snippet } = $props();
 	let scheme: string = $state('light');
 	const toggleSchemeLocal = () => {
 		toggleScheme();
@@ -41,7 +43,7 @@
 	</section>
 </div>
 
-<slot />
+{@render children()}
 
 <style lang="scss">
 	.top-nav {

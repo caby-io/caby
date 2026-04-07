@@ -92,7 +92,10 @@ pub async fn auth(
         }
     };
 
-    // todo: check token expiry
+    if token.is_expired() {
+        warn!("user authenticated with an expired token: {}", user.name);
+        return Err(StatusCode::UNAUTHORIZED);
+    }
 
     req.extensions_mut().insert(user);
     Ok(next.run(req).await)

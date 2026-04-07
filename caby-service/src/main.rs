@@ -1,5 +1,9 @@
 #![allow(unused)]
 
+use std::time::Duration;
+
+use crate::housekeeping::housekeeping;
+
 pub use self::error::{Error, Result};
 
 use axum::{
@@ -8,19 +12,21 @@ use axum::{
 };
 use config::Config;
 use init::init;
-use tokio::net::TcpListener;
+use tokio::{net::TcpListener, task, time};
 use tower::Layer;
 use tower_http::{
     cors::{Any, CorsLayer},
     normalize_path::NormalizePathLayer,
     trace::TraceLayer,
 };
+use tracing::info;
 
 mod auth;
 mod config;
 mod ctx;
 mod error;
 mod files;
+mod housekeeping;
 mod init;
 mod jsend;
 mod space;
@@ -41,13 +47,17 @@ async fn main() {
     let cfg = Config::new().await.expect("could not load config");
     init(&cfg).await.expect("init error");
 
-    // Initialize paths
-    // todo: log something when dir is created
-    // fs::create_dir_all(&cfg.live_path).await.unwrap();
-    // fs::create_dir_all(&cfg.meta_path).await.unwrap();
-    // TEMP uploads housekeeping
-    // fs::remove_dir_all(&cfg.uploads_path).await.unwrap();
-    // fs::create_dir_all(&cfg.uploads_path).await.unwrap();
+    // housekeeping
+    let handle = task::spawn({
+        let cfg = cfg.clone();
+        async move {
+            let mut interval = time::interval(Duration::from_secs(60 * 30));
+            loop {
+                interval.tick().await;
+                housekeeping(&cfg).await;
+            }
+        }
+    });
 
     // TEMP
     let cors_layer = CorsLayer::new()

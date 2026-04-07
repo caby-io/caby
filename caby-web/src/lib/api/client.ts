@@ -127,10 +127,25 @@ export type Auth = {
 export class ApiClient {
 	public api_base: string;
 	public auth: Auth = {};
+	public login_token: string | undefined;
 
 	constructor(api_base: string) {
 		this.api_base = api_base;
+		this.getLoginTokenFromCookie();
 	}
+
+	public setLoginToken = (value: string) => {
+		this.login_token = value;
+	};
+
+	public getLoginTokenFromCookie = async () => {
+		let login_token = await cookieStore.get('login_token');
+		if (login_token?.value) {
+			return;
+		}
+		console.debug('setting login token from cookie');
+		this.setLoginToken(login_token!.value!);
+	};
 
 	public exec = async <T>(req: ApiRequest): Promise<ApiResponse<T>> => {
 		try {
