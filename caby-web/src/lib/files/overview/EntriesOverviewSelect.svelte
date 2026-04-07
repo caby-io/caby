@@ -26,7 +26,7 @@
 </script>
 
 <div class="entry-overview">
-	<OverviewEntrySelect entry={root_entry} {space} {onSelect} />
+	<OverviewEntrySelect bind:entry={root_entry} {space} {onSelect} />
 </div>
 
 <style lang="scss">

@@ -108,13 +108,13 @@ export type ApiResponse<T> = {
 };
 
 export type Token = {
-	token: string;
+	value: string;
 	issued_at: Date;
 	expires_at: Date;
 };
 
 export type Auth = {
-	active_token?: Token;
+	login_token?: Token;
 	elevated_token?: Token;
 };
 
@@ -127,24 +127,27 @@ export type Auth = {
 export class ApiClient {
 	public api_base: string;
 	public auth: Auth = {};
-	public login_token: string | undefined;
 
 	constructor(api_base: string) {
 		this.api_base = api_base;
-		this.getLoginTokenFromCookie();
 	}
 
-	public setLoginToken = (value: string) => {
-		this.login_token = value;
+	public setLoginToken = (token: Token) => {
+		this.auth.login_token = token;
 	};
 
-	public getLoginTokenFromCookie = async () => {
-		let login_token = await cookieStore.get('login_token');
-		if (login_token?.value) {
-			return;
+	public isAuthenticated = async (): Promise<boolean> => {
+		if (!this.auth.login_token) {
+			console.log('failed here');
+			return false;
 		}
-		console.debug('setting login token from cookie');
-		this.setLoginToken(login_token!.value!);
+
+		if (new Date() > this.auth.login_token.expires_at) {
+			console.log('or here');
+			return false;
+		}
+
+		return true;
 	};
 
 	public exec = async <T>(req: ApiRequest): Promise<ApiResponse<T>> => {

@@ -13,7 +13,7 @@ pub mod auth_middleware;
 #[derive(Serialize)]
 pub struct Token {
     pub value: String,
-    pub created_at: DateTime<Utc>,
+    pub issued_at: DateTime<Utc>,
     pub expires_at: DateTime<Utc>,
 }
 
@@ -27,12 +27,12 @@ impl FromStr for Token {
             .next()
             .ok_or_else(|| anyhow!("could not read token value line from session file"))?
             .to_string();
-        let created_at = DateTime::parse_from_rfc3339(
+        let issued_at = DateTime::parse_from_rfc3339(
             lines
                 .next()
-                .ok_or_else(|| anyhow!("could not read created_at line from session file"))?,
+                .ok_or_else(|| anyhow!("could not read issued_at line from session file"))?,
         )
-        .map_err(|err| anyhow!(err).context("could not parse created_at from session file"))?
+        .map_err(|err| anyhow!(err).context("could not parse issued_at from session file"))?
         .with_timezone(&Utc);
         let expires_at = DateTime::parse_from_rfc3339(
             lines
@@ -44,7 +44,7 @@ impl FromStr for Token {
 
         return Ok(Self {
             value,
-            created_at,
+            issued_at,
             expires_at,
         });
     }
@@ -64,7 +64,7 @@ impl Token {
 
         Ok(Self {
             value: URL_SAFE_NO_PAD.encode(bytes),
-            created_at: now,
+            issued_at: now,
             expires_at,
         })
     }

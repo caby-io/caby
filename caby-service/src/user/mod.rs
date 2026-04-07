@@ -95,7 +95,7 @@ impl User {
             format!(
                 "{}\n{}\n{}",
                 token.value.clone(),
-                token.created_at.to_rfc3339(),
+                token.issued_at.to_rfc3339(),
                 token.expires_at.to_rfc3339()
             ),
         )

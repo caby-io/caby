@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { login as authLogin } from '$lib/api/api_auth';
 	import { client } from '$lib/stores/client.svelte';
+	import { goto } from '$app/navigation';
 
 	let loading: boolean = $state(false);
 	let login: string = $state('');
@@ -12,30 +13,36 @@
 		if (resp.status == 'error') {
 			console.error(`could not login: ${resp.data}`);
 			// todo
+			loading = false;
 			return;
 		}
 
 		if (resp.status == 'fail') {
 			console.error(`could not login: ${resp.data}`);
+			loading = false;
 			return;
 		}
 
 		const token = resp.data?.login_token;
 		if (!token) {
 			console.error('login response is missing token');
+			loading = false;
 			return;
 		}
 
 		// const cookie_store = new CookieStore();
-		const maxAge = Math.floor((new Date(token.expires_at).getTime() - Date.now()) / 1000);
 		await cookieStore.set({
 			name: 'login_token',
 			sameSite: 'strict',
-			// expires: "todo"
-			value: token.value
+			expires: new Date(token.expires_at!).getTime(),
+			value: encodeURIComponent(JSON.stringify(token))
 		});
-		console.log('login successful!');
-		loading = false;
+
+		console.log('finished setting cookie');
+
+		client.setLoginToken(token);
+
+		await goto('/files');
 	};
 </script>
 

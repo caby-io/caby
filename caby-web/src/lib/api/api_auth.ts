@@ -1,14 +1,8 @@
-import { ApiRequestBuilder, type ApiClient, type ApiResponse } from './client';
-
-export type LoginTokenResp = {
-	value: string;
-	created_at: string;
-	expires_at: string;
-};
+import { ApiRequestBuilder, type ApiClient, type ApiResponse, type Token } from './client';
 
 export type LoginResp = {
 	user: string;
-	login_token: LoginTokenResp;
+	login_token: Token;
 };
 
 export const login = async (
