@@ -57,10 +57,10 @@ export class ApiRequestBuilder {
 		return this;
 	};
 
-	public withHeaders = (path: string): ApiRequestBuilder => {
-		this.path = path;
-		return this;
-	};
+	// public withHeaders = (path: string): ApiRequestBuilder => {
+	// 	this.path = path;
+	// 	return this;
+	// };
 
 	public addHeaders = (headers: HeadersInit): ApiRequestBuilder => {
 		let joinedHeaders = new Headers(this.headers);
@@ -103,6 +103,7 @@ export enum ApiStatus {
 
 export type ApiResponse<T> = {
 	status: ApiStatus;
+	status_code: number;
 	message?: string;
 	data?: T;
 };
@@ -136,7 +137,7 @@ export class ApiClient {
 		this.auth.login_token = token;
 	};
 
-	public isAuthenticated = async (): Promise<boolean> => {
+	public isAuthenticated = (): boolean => {
 		if (!this.auth.login_token) {
 			console.log('failed here');
 			return false;
@@ -152,15 +153,30 @@ export class ApiClient {
 
 	public exec = async <T>(req: ApiRequest): Promise<ApiResponse<T>> => {
 		try {
+			// todo: investigate improving performance here
+			let headers = new Headers(req.headers);
+			if (this.isAuthenticated()) {
+				headers.append('Authorization', `Bearer ${this.auth.login_token?.value}`);
+			}
+
 			const response = await fetch(`${this.api_base}/${req.path}`, {
 				method: req.method,
-				headers: req.headers,
+				headers: headers,
 				body: req.body
 			});
-			return await response.json();
+
+			let resp: ApiResponse<T> = await response.json();
+			resp.status_code = response.status;
+
+			// todo: handle unauthenticated
+			return resp;
 		} catch (err) {
 			console.error(`unhandled api request error: ${err}`);
-			return { status: ApiStatus.StatusError, message: `unhandled request error: ${err}` };
+			return {
+				status: ApiStatus.StatusError,
+				status_code: 500,
+				message: `unhandled request error: ${err}`
+			};
 		}
 	};
 }

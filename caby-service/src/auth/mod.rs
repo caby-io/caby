@@ -6,7 +6,7 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngExt;
 use serde::Serialize;
 
-use crate::Result;
+use crate::{user::User, Result};
 
 pub mod auth_middleware;
 
@@ -68,4 +68,10 @@ impl Token {
             expires_at,
         })
     }
+}
+
+// todo: might need to expand this to accomodate agents and other things
+pub struct AuthorizedUser {
+    pub token: Token,
+    pub user: User,
 }

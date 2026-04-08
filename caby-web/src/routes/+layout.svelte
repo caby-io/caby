@@ -1,5 +1,5 @@
 <script lang="ts">
-	import type { Snippet } from 'svelte';
+	import { type Snippet } from 'svelte';
 	// global styles
 	import '../styles.css';
 	import { client } from '$lib/stores/client.svelte';
@@ -18,9 +18,7 @@
 		client.setLoginToken(token);
 	};
 
-	$effect(() => {
-		setLoginToken();
-	});
+	const tokenReady = setLoginToken();
 </script>
 
 <svelte:head>
@@ -35,4 +33,6 @@
 	</script>
 </svelte:head>
 
-{@render children()}
+{#await tokenReady then}
+	{@render children()}
+{/await}

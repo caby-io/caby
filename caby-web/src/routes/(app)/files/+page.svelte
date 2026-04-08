@@ -1,7 +1,8 @@
 <script lang="ts">
+	import { goto } from '$app/navigation';
 	import { getSpaces } from '$lib/api/api_spaces';
 	import { client } from '$lib/stores/client.svelte';
-	import { redirect } from '@sveltejs/kit';
+	import { onMount } from 'svelte';
 
 	const onLoad = async () => {
 		let resp = await getSpaces(client);
@@ -12,10 +13,10 @@
 			return;
 		}
 
-		window.location.href = `/files/${resp.data![0].name}`;
+		goto(`/files/${resp.data![0].name}`);
 	};
 
-	$effect(() => {
+	onMount(() => {
 		onLoad();
 	});
 </script>
