@@ -2,6 +2,7 @@
 	import { login as authLogin } from '$lib/api/api_auth';
 	import { client } from '$lib/stores/client.svelte';
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 
 	let loading: boolean = $state(false);
 	let login: string = $state('');
@@ -38,10 +39,12 @@
 			value: encodeURIComponent(JSON.stringify(token))
 		});
 
-		console.log('finished setting cookie');
-
 		client.setLoginToken(token);
 
+		const redirect = page.url.searchParams.get('redirect');
+		if (redirect) {
+			await goto(redirect);
+		}
 		await goto('/files');
 	};
 </script>

@@ -82,7 +82,7 @@
 	const getFilesList = async (path: string) => {
 		loading = true;
 		const resp = await listFiles(client, space, path);
-		handleReauth(goto, resp);
+		handleReauth(goto, resp, page.url);
 		if (resp.status != 'success') {
 			filesResponse = {
 				path: null,
