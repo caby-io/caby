@@ -1,4 +1,5 @@
 use crate::{
+    auth::AuthorizedUser,
     config::Config,
     jsend,
     space::{Space, SpaceDir},
@@ -16,6 +17,7 @@ use tokio_util::io::ReaderStream;
 pub async fn handle_download_files(
     State(cfg): State<Config>,
     space: Space,
+    user: AuthorizedUser,
     path_params: Path<FilesPathParams>,
 ) -> Response {
     let rel_path = path_params

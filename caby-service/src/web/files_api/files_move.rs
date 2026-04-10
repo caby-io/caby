@@ -1,4 +1,5 @@
 use crate::{
+    auth::AuthorizedUser,
     config::Config,
     jsend::JSendBuilder,
     space::{Space, SpaceDir},
@@ -44,6 +45,7 @@ impl MoveError {
 pub async fn handle_move_files(
     State(cfg): State<Config>,
     space: Space,
+    user: AuthorizedUser,
     Json(req): Json<MoveEntriesRequest>,
 ) -> Response {
     let mut moved = vec![];

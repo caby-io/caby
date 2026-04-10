@@ -1,4 +1,5 @@
 use crate::{
+    auth::AuthorizedUser,
     config::Config,
     jsend,
     space::{Space, SpaceDir},
@@ -28,6 +29,7 @@ struct DeleteEntriesResponse {
 pub async fn handle_delete_files(
     State(cfg): State<Config>,
     space: Space,
+    user: AuthorizedUser,
     Json(req): Json<DeleteEntriesRequest>,
 ) -> Response {
     let mut deleted = vec![];

@@ -1,4 +1,5 @@
 use crate::{
+    auth::AuthorizedUser,
     config::Config,
     error::Result,
     jsend::JSendBuilder,
@@ -36,6 +37,7 @@ pub struct PutEntryRequest {
 pub async fn handle_put_files(
     State(cfg): State<Config>,
     space: Space,
+    user: AuthorizedUser,
     path_params: Path<FilesPathParams>,
     Json(payload): Json<PutEntryRequest>,
 ) -> Response {

@@ -1,4 +1,5 @@
 use crate::{
+    auth::AuthorizedUser,
     config::Config,
     error::RequestError,
     jsend::JSendBuilder,
@@ -45,6 +46,7 @@ struct RegisterUploadResponse {
 pub async fn handle_register_upload(
     cfg: State<Config>,
     space: Space,
+    user: AuthorizedUser,
     Json(req): Json<RegisterUploadRequest>,
 ) -> Response {
     // Validate?
@@ -90,6 +92,7 @@ pub struct UploadChunkParams {
 pub async fn handle_upload_chunk(
     cfg: State<Config>,
     space: Space,
+    user: AuthorizedUser,
     headers: HeaderMap,
     path_params: Path<UploadChunkParams>,
     body: Body,
@@ -227,6 +230,7 @@ pub struct UpdateUploadParams {
 pub async fn handle_update_upload(
     cfg: State<Config>,
     space: Space,
+    user: AuthorizedUser,
     headers: HeaderMap,
     path_params: Path<UpdateUploadParams>,
     Json(body): Json<UpdateFileRequest>,
@@ -317,6 +321,7 @@ pub struct CompleteUploadParams {
 pub async fn handle_complete_upload(
     cfg: State<Config>,
     space: Space,
+    user: AuthorizedUser,
     headers: HeaderMap,
     path_params: Path<CompleteUploadParams>,
 ) -> Response {
