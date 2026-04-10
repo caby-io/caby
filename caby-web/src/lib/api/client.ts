@@ -1,3 +1,5 @@
+import { goto } from '$app/navigation';
+
 export enum Method {
 	GET = 'GET',
 	POST = 'POST',
@@ -168,7 +170,12 @@ export class ApiClient {
 			let resp: ApiResponse<T> = await response.json();
 			resp.status_code = response.status;
 
-			// todo: handle unauthenticated
+			if (resp.status_code === 401) {
+				const current = window.location.pathname + window.location.search;
+				goto(`/login?redirect=${encodeURIComponent(current)}`);
+				return resp;
+			}
+
 			return resp;
 		} catch (err) {
 			console.error(`unhandled api request error: ${err}`);

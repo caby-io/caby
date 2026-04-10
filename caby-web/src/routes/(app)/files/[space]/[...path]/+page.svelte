@@ -38,8 +38,6 @@
 	import RenameDialog from './RenameDialog.svelte';
 	import MoveDialog from './MoveDialog.svelte';
 	import EntriesOverviewNav from '$lib/files/overview/EntriesOverviewNav.svelte';
-	import { goto } from '$app/navigation';
-	import { handleReauth } from '$lib/api/auth';
 
 	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
@@ -75,14 +73,12 @@
 	let entries: Entry[] = $derived(filesResponse.entries);
 	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
 	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
-	// let file_entries = $derived.by(() => entries.filter((e) => e.entry_type === 'file'));
 
 	let loading = $state(false);
 
 	const getFilesList = async (path: string) => {
 		loading = true;
 		const resp = await listFiles(client, space, path);
-		handleReauth(goto, resp, page.url);
 		if (resp.status != 'success') {
 			filesResponse = {
 				path: null,

@@ -44,6 +44,7 @@
 		const redirect = page.url.searchParams.get('redirect');
 		if (redirect) {
 			await goto(redirect);
+			return;
 		}
 		await goto('/files');
 	};
