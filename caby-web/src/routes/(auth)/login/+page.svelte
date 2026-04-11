@@ -8,30 +8,35 @@
 	let login: string = $state('');
 	let password: string = $state('');
 
+	type LoginErrors = {
+		login?: string;
+		password?: string;
+	};
+
+	let errors: LoginErrors = $state({
+		login: undefined,
+		password: undefined
+	});
+
 	const tryLogin = async () => {
 		loading = true;
+		errors = { login: undefined, password: undefined };
 		let resp = await authLogin(client, login, password);
-		if (resp.status == 'error') {
-			console.error(`could not login: ${resp.data}`);
-			// todo
+		if (resp.status === 'error') {
+			console.error(`could not login: ${resp.message}`);
 			loading = false;
 			return;
 		}
 
-		if (resp.status == 'fail') {
-			console.error(`could not login: ${resp.data}`);
+		if (resp.status === 'fail') {
+			errors.login = resp.data;
+			errors.password = resp.data;
 			loading = false;
 			return;
 		}
 
-		const token = resp.data?.login_token;
-		if (!token) {
-			console.error('login response is missing token');
-			loading = false;
-			return;
-		}
+		const token = resp.data.login_token;
 
-		// const cookie_store = new CookieStore();
 		await cookieStore.set({
 			name: 'login_token',
 			sameSite: 'strict',
@@ -56,9 +61,17 @@
 	</header>
 	<form class="fx fx--col">
 		<label for="login">Username/Email</label>
-		<input id="login" class="fx-grow" type="text" bind:value={login} />
+		<input id="login" class="fx-grow" class:error={errors.login} type="text" bind:value={login} />
+		<span class="error-message">{errors.login}</span>
 		<label for="password">Password</label>
-		<input id="password" class="fx-grow" type="password" bind:value={password} />
+		<input
+			id="password"
+			class="fx-grow"
+			class:error={errors.password}
+			type="password"
+			bind:value={password}
+		/>
+		<span class="error-message">{errors.password}</span>
 		<div class="actions fx">
 			<button class="button primary fx-grow" disabled={loading} onclick={() => tryLogin()}
 				>Login</button
@@ -95,6 +108,15 @@
 			.actions {
 				margin-top: 1.5rem;
 				text-align: center;
+			}
+
+			.error-message {
+				font-size: 0.7rem;
+				color: var(--clr-error);
+
+				&::first-letter {
+					text-transform: uppercase; /* Capitalizes only the first letter */
+				}
 			}
 		}
 	}

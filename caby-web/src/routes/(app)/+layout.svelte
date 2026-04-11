@@ -2,19 +2,20 @@
 	import type { Snippet } from 'svelte';
 	import 'iconify-icon';
 	import { getScheme, toggleScheme, clearStorage } from '$lib/color-scheme';
-
-	// TEMP
-	// todo: store and sync this globally
+	import UserPopover from './UserPopover.svelte';
 	import { onMount } from 'svelte';
-	onMount(() => {
-		scheme = getScheme();
-	});
+
 	let { children }: { children: Snippet } = $props();
+
 	let scheme: string = $state('light');
 	const toggleSchemeLocal = () => {
 		toggleScheme();
 		scheme = getScheme();
 	};
+
+	onMount(() => {
+		scheme = getScheme();
+	});
 </script>
 
 <div class="top-nav fx fx--ac">
@@ -37,11 +38,13 @@
 				<iconify-icon icon="lucide:sun-medium"></iconify-icon>
 			{/if}
 		</div>
-		<div class="user fx fx--cc">
+		<button id="nav-user" popovertarget="nav-user-popover" class="user fx fx--cc">
 			<iconify-icon icon="lucide:circle-user-round"></iconify-icon>
-		</div>
+		</button>
 	</section>
 </div>
+
+<UserPopover />
 
 {@render children()}
 
@@ -70,7 +73,9 @@
 			gap: 0.5rem;
 			font-size: 1.4rem;
 
-			> div {
+			// todo: remove div?
+			> div,
+			button {
 				// temp?
 				cursor: pointer;
 				height: 2rem;
@@ -90,6 +95,7 @@
 			}
 
 			> .user {
+				anchor-name: --nav-user;
 				font-size: 1.6rem;
 			}
 		}

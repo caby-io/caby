@@ -35,7 +35,7 @@ pub async fn handle_login(
                 }
                 return false;
             }) else {
-                return resp.fail("bad login").into_response();
+                return resp.fail("invalid login or password").into_response();
             };
             user_config
         }
@@ -53,7 +53,7 @@ pub async fn handle_login(
 
     if !is_password {
         warn!("wrong password for user: {}", user.name);
-        return resp.fail("bad login").into_response();
+        return resp.fail("invalid login or password").into_response();
     }
 
     // temp

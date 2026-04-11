@@ -85,6 +85,7 @@
 
 	--clr-success: rgb(19, 193, 19);
 	--clr-error: rgb(193, 19, 36);
+	--clr-error-background: rgba(193, 19, 36, 0.4);
 	--clr-warn: rgb(19, 193, 19);
 	--clr-info: oklch(0.5 0.28 268.68);
 }
@@ -158,6 +159,10 @@ input {
 	border: 1px solid var(--clr-border);
 	box-shadow: var(--box-shadow-0);
 	padding: 0.5rem;
+}
+
+input.error {
+	border-color: var(--clr-error);
 }
 
 .button {

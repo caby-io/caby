@@ -139,6 +139,10 @@ export class ApiClient {
 		this.auth.login_token = token;
 	};
 
+	public removeLoginToken = () => {
+		this.auth.login_token = undefined;
+	};
+
 	public isAuthenticated = (): boolean => {
 		if (!this.auth.login_token) {
 			console.log('failed here');
