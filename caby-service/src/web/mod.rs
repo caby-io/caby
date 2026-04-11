@@ -23,15 +23,7 @@ pub fn api_router(cfg: &Config) -> Router<Config> {
             "/auth",
             Router::new()
                 .route("/login", post(auth_api::handle_login))
-                .nest(
-                    "/test",
-                    Router::new()
-                        .route("/", get(auth_api::handle_test_auth))
-                        .route_layer(middleware::from_fn_with_state(
-                            cfg.clone(),
-                            auth_middleware::auth,
-                        )),
-                ),
+                .route("/logout", post(auth_api::handle_logout)), // .route("/test", get(auth_api::handle_test_auth)),
         )
         .nest(
             "/users",

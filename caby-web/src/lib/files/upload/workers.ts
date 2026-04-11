@@ -1,3 +1,4 @@
+import type { Token } from '$lib/api/client';
 import type { UploadRegistration } from './upload_group';
 
 export enum MessageType {

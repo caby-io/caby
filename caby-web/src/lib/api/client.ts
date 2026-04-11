@@ -1,5 +1,3 @@
-import { goto } from '$app/navigation';
-
 export enum Method {
 	GET = 'GET',
 	POST = 'POST',
@@ -12,6 +10,7 @@ export type ApiRequest = {
 	path: string;
 	method: Method;
 	headers: HeadersInit;
+	do_redirect: boolean;
 	body?: any;
 };
 
@@ -19,6 +18,7 @@ export class ApiRequestBuilder {
 	private path?: string;
 	private method?: Method;
 	private headers?: HeadersInit;
+	private do_redirect: boolean = true;
 	private body?: any;
 
 	constructor(method: Method, path: string) {
@@ -76,6 +76,11 @@ export class ApiRequestBuilder {
 		return this;
 	};
 
+	public noRedirect = (): ApiRequestBuilder => {
+		this.do_redirect = false;
+		return this;
+	};
+
 	public withBody = (body: any): ApiRequestBuilder => {
 		this.body = body;
 		return this;
@@ -92,6 +97,7 @@ export class ApiRequestBuilder {
 			path: this.path!,
 			method: this.method!,
 			headers: this.headers!,
+			do_redirect: this.do_redirect,
 			body: this.body || null
 		};
 	};
@@ -174,8 +180,9 @@ export class ApiClient {
 			let resp: ApiResponse<T> = await response.json();
 			resp.status_code = response.status;
 
-			if (resp.status_code === 401) {
+			if (resp.status_code === 401 && req.do_redirect) {
 				const current = window.location.pathname + window.location.search;
+				const { goto } = await import('$app/navigation');
 				goto(`/login?redirect=${encodeURIComponent(current)}`);
 				return resp;
 			}

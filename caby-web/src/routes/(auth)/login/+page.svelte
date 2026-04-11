@@ -21,6 +21,19 @@
 	const tryLogin = async () => {
 		loading = true;
 		errors = { login: undefined, password: undefined };
+
+		// check if login/pass are filled before sending req
+		if (login.trim().length < 1) {
+			errors.login = 'login required';
+		}
+		if (password.length < 1) {
+			errors.password = 'password required';
+		}
+		if (errors.login || errors.password) {
+			loading = false;
+			return;
+		}
+
 		let resp = await authLogin(client, login, password);
 		if (resp.status === 'error') {
 			console.error(`could not login: ${resp.message}`);

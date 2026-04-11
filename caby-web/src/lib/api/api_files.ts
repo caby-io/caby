@@ -112,6 +112,7 @@ export enum ConflictStrategy {
 }
 
 // todo: response type
+// todo: for now we've disabled redirects on all upload operations but consider only doing this for
 export const registerUpload = async (
 	client: ApiClient,
 	space: string,
@@ -120,6 +121,7 @@ export const registerUpload = async (
 	conflict_strategy: ConflictStrategy = ConflictStrategy.OVERRIDE
 ) => {
 	const req = ApiRequestBuilder.post(`files/upload/${space}`)
+		.noRedirect()
 		.withJsonBody({
 			base_path: path,
 			entries,
@@ -143,6 +145,7 @@ export const putChunk = async (
 			[CABY_UPLOAD_TOKEN]: upload_file.registration!.token,
 			[CABY_CHUNK_INDEX]: chunk_index.toString()
 		})
+		.noRedirect()
 		.withBody(chunk)
 		.intoRequest();
 	return await client.exec(req);
@@ -156,6 +159,7 @@ export const finalizeUpload = async (client: ApiClient, upload_file: UploadFile)
 		.addHeaders({
 			[CABY_UPLOAD_TOKEN]: upload_file.registration!.token
 		})
+		.noRedirect()
 		.withJsonBody({
 			size: upload_file.file.size,
 			xxh_digest: `${upload_file.xxh_digest}`,
@@ -169,6 +173,7 @@ export const commitUpload = async (client: ApiClient, upload_group: UploadGroup)
 	const space = upload_group.space;
 	const id = upload_group.registration!.id;
 	const req = ApiRequestBuilder.post(`files/upload/${space}/${id}`)
+		.noRedirect()
 		.addHeaders({ [CABY_UPLOAD_TOKEN]: upload_group.registration!.token })
 		.intoRequest();
 	return await client.exec(req);
