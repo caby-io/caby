@@ -146,9 +146,8 @@ const startUploadFileWorkerBackground = async (
 	const upload_worker = new UploadWorker();
 	let start_upload_message: Message<StartUploadPayload> = {
 		event: MessageType.StartUpload,
-		payload: upload_file.intoStartUploadPayload()
+		payload: upload_file.intoStartUploadPayload(client.auth.login_token!)
 	};
-	upload_worker.postMessage(start_upload_message);
 	upload_worker.onmessage = function (e: MessageEvent<Message<any>>) {
 		switch (e.data?.event) {
 			case MessageType.UploadProgress:
@@ -169,6 +168,7 @@ const startUploadFileWorkerBackground = async (
 				self.postMessage('unhandled err');
 		}
 	};
+	upload_worker.postMessage(start_upload_message);
 };
 // UploadManager runs upload requests thru the upload pipeline:
 // 1. Register the upload request with the API

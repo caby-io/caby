@@ -92,7 +92,7 @@ pub struct UploadChunkParams {
 pub async fn handle_upload_chunk(
     cfg: State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    authorized_user: AuthorizedUser,
     headers: HeaderMap,
     path_params: Path<UploadChunkParams>,
     body: Body,

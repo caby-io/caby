@@ -8,6 +8,7 @@
 // }
 
 import { putChunk } from '$lib/api/api_files';
+import type { ApiClient } from '$lib/api/client';
 import { client } from '$lib/stores/client.svelte';
 import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '../upload';
 import {
@@ -22,8 +23,9 @@ import {
 self.onmessage = function (e: MessageEvent<Message<any>>) {
 	switch (e.data?.event) {
 		case MessageType.StartUpload:
-			const payload = e.data!.payload as StartUploadPayload;
-			start_upload(payload);
+			const { login_token, ...upload_payload } = e.data!.payload as StartUploadPayload;
+			client.setLoginToken(login_token!);
+			start_upload(client!, upload_payload);
 			break;
 		default:
 			// todo: wrap in err type
@@ -31,9 +33,7 @@ self.onmessage = function (e: MessageEvent<Message<any>>) {
 	}
 };
 
-let progress = 0;
-
-const start_upload = (payload: StartUploadPayload) => {
+const start_upload = (client: ApiClient, payload: StartUploadPayload) => {
 	// const id = payload.registration!.id;
 	// todo: better name?
 	// const name = payload.file.name;
@@ -62,21 +62,10 @@ const start_upload = (payload: StartUploadPayload) => {
 				payload: {}
 			};
 			self.postMessage(completedEvent);
-			// upload_file.upload_task_status = TaskStatus.COMPLETE;
-			// upload_file.upload_progress.progress = upload_file.upload_progress.total;
-			// on_done(upload_file);
-			// console.debug('[caby/upload-manager] finished uploading chunks');
 			return;
 		}
 		const resp = await putChunk(client, payload, index, event.target!.result);
 		// todo: handle response and error
-
-		// todo: store this in worker scope to make it clear that we have no access to the original upload_file obj
-		// update file progress
-		// const last_progress = progress;
-		// const start = index * chunk_size;
-		// const total_loaded = start + byte_length;
-		// progress = total_loaded;
 
 		// update total progress
 		const progressEvent: Message<UploadProgressPayload> = {

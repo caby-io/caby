@@ -13,6 +13,7 @@ export type Message<T> = {
 };
 
 export type StartUploadPayload = {
+	login_token?: Token;
 	space: string;
 	base_path: string;
 	file: File;
