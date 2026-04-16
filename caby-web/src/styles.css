@@ -161,6 +161,12 @@ input {
 	padding: 0.5rem;
 }
 
+input:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+	border-style: dashed;
+}
+
 input.error {
 	border-color: var(--clr-error);
 }

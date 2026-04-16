@@ -22,13 +22,17 @@ pub fn api_router(cfg: &Config) -> Router<Config> {
         .nest(
             "/auth",
             Router::new()
+                .route("/token/lookup", post(auth_api::handle_token_lookup))
+                .route(
+                    "/token/activate",
+                    post(auth_api::handle_user_token_activation),
+                )
                 .route("/login", post(auth_api::handle_login))
                 .route("/logout", post(auth_api::handle_logout)), // .route("/test", get(auth_api::handle_test_auth)),
         )
-        .nest(
-            "/users",
-            Router::new().route("/{user}/activate", post(users_api::handle_activate_user)),
-        )
+        // .nest(
+        //     "/users",
+        // )
         .nest(
             "/spaces",
             Router::new()

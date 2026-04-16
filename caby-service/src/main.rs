@@ -31,6 +31,7 @@ mod init;
 mod jsend;
 mod space;
 mod user;
+mod validation;
 mod web;
 
 #[tokio::main]

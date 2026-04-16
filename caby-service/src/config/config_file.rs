@@ -1,5 +1,9 @@
 use crate::{
     config::{SpaceConfig, UserConfig, UserSpaceConfig},
+    validation::{
+        exec_stack, exec_stack_optional,
+        prefabs::{activation_token_validation, email_validation, username_validation},
+    },
     Result,
 };
 use anyhow::anyhow;
@@ -119,22 +123,35 @@ impl ConfigFile {
             let name = user["name"]
                 .as_str()
                 .ok_or(anyhow!("a user is missing a string name"))?;
-
-            let email = user["email"].as_str().map(|e| e.to_string());
-
-            let activation_token = match user["activation_token"].as_str() {
-                Some(t) => {
-                    if t.len() != 64 {
-                        return Err(anyhow!(
-                            ".users.{}.activation_token must be exactly 64 characters",
-                            &name
-                        ));
-                    }
-                    Some(t.to_string())
-                }
-                None => None,
+            if let Some(errs) = exec_stack(&username_validation(), name) {
+                return Err(
+                    anyhow!("{}", errs).context(format!("username '{}' failed validation", name))
+                );
             };
 
+            let email = user["email"].as_str();
+            if let Some(errs) = exec_stack_optional(&email_validation(), email) {
+                return Err(anyhow!("{}", errs).context(format!(
+                    ".users.{}.email: '{}' failed validation",
+                    name,
+                    email.unwrap()
+                )));
+            }
+            let email = email.map(|e| e.to_string());
+
+            let activation_token = user["activation_token"].as_str();
+            if let Some(errs) =
+                exec_stack_optional(&activation_token_validation(), activation_token)
+            {
+                return Err(anyhow!("{}", errs).context(format!(
+                    ".users.{}.activation_token: '{}' failed validation",
+                    name,
+                    activation_token.unwrap()
+                )));
+            }
+            let activation_token = activation_token.map(|e| e.to_string());
+
+            // User space access
             let mut spaces = vec![];
 
             for space in user["spaces"].as_vec().ok_or(anyhow!(

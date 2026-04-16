@@ -15,7 +15,7 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
         let mut dir = match fs::read_dir(&user.path).await {
             Ok(d) => d,
             Err(err) => {
-                // this is a debug because a uninitilized user will have no user dir
+                // this is a debug because an uninitilized user will have no user dir
                 debug!("could not read user directory for {}: {}", user.name, err);
                 continue;
             }
