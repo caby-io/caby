@@ -28,6 +28,9 @@
 		handleRenameEntry
 	}: ContextMenuProps = $props();
 
+	const isDir = $derived(entry?.entry_type === 'directory');
+	const typeName = $derived(isDir ? 'Folder' : 'File');
+
 	// todo: check that this isn't too expensive
 	const handleWindowClick = (e: MouseEvent) => {
 		if (dialog.contains(e.target as Node)) {
@@ -64,40 +67,52 @@
 	{onbeforetoggle}
 >
 	<section class="context-menu-container fx fx--col">
-		<button class="context-item fx" onclick={() => handleAddContent([entry])}>
-			<div class="icon fx fx--cc">
-				<iconify-icon icon="lucide:plus"></iconify-icon>
-			</div>
-			<div class="title fx-grow">Add Content</div>
-			<div class="tip fx fx--ac">ALT + N</div>
-		</button>
+		{#if !entry || isDir}
+			<button class="context-item fx" onclick={() => handleAddContent([entry])}>
+				<div class="icon fx fx--cc">
+					<iconify-icon icon="lucide:plus"></iconify-icon>
+				</div>
+				<div class="title fx-grow">Add Content</div>
+				<div class="tip fx fx--ac">ALT + N</div>
+			</button>
+		{/if}
 		{#if entry}
-			<div class="context-item fx">
+			<button class="context-item fx" onclick={() => handleMoveEntries(entry)}>
 				<div class="icon fx fx--cc">
 					<iconify-icon icon="lucide:folder-input"></iconify-icon>
 				</div>
-				<div class="title fx-grow" onclick={() => handleMoveEntries(entry)}>Move To..</div>
+				<div class="title fx-grow">Move To..</div>
 				<div class="tip fx fx--ac"></div>
-			</div>
-			<a href={getDownloadURL(client, space, [entry])} class="context-item fx" download>
-				<div class="icon fx fx--cc">
-					<iconify-icon icon="lucide:download"></iconify-icon>
-				</div>
-				<div class="title fx-grow">Download File</div>
-				<div class="tip fx fx--ac">D</div>
-			</a>
+			</button>
+			{#if isDir}
+				<button class="context-item fx" disabled>
+					<div class="icon fx fx--cc">
+						<iconify-icon icon="lucide:download"></iconify-icon>
+					</div>
+					<div class="title fx-grow">Download {typeName}</div>
+					<div class="tip fx fx--ac">D</div>
+				</button>
+			{:else}
+				<a href={getDownloadURL(client, space, [entry])} class="context-item fx" download>
+					<div class="icon fx fx--cc">
+						<iconify-icon icon="lucide:download"></iconify-icon>
+					</div>
+					<div class="title fx-grow">Download {typeName}</div>
+					<div class="tip fx fx--ac">D</div>
+				</a>
+			{/if}
 			<button class="context-item fx" onclick={() => handleRenameEntry(entry)}>
 				<div class="icon fx fx--cc">
 					<iconify-icon icon="lucide:pencil-line"></iconify-icon>
 				</div>
-				<div class="title fx-grow">Rename File</div>
+				<div class="title fx-grow">Rename {typeName}</div>
 				<div class="tip fx fx--ac">ALT + R</div>
 			</button>
 			<button class="context-item fx" onclick={() => handleDeleteEntries([entry])}>
 				<div class="icon fx fx--cc">
 					<iconify-icon icon="lucide:trash-2"></iconify-icon>
 				</div>
-				<div class="title fx-grow">Delete File</div>
+				<div class="title fx-grow">Delete {typeName}</div>
 				<div class="tip fx fx--ac">DEL</div>
 			</button>
 		{/if}
@@ -125,8 +140,13 @@
 				// 	border-bottom: none;
 				// }
 
-				&:hover {
+				&:hover:not(:disabled) {
 					background: var(--clr-background);
+				}
+
+				&:disabled {
+					opacity: 0.4;
+					cursor: not-allowed;
 				}
 
 				> .icon {

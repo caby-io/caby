@@ -11,7 +11,8 @@
 		onDragEnter,
 		onDragOver,
 		onDragLeave,
-		onDrop
+		onDrop,
+		onContextMenu
 	}: EntryProps<DirFields> = $props();
 
 	let is_selected = $derived(entry.is_selected);
@@ -20,9 +21,9 @@
 </script>
 
 <div
-	class="entry entry--directory"
 	role="none"
 	draggable="true"
+	class="entry entry--directory"
 	class:is_selected
 	class:is_targetted
 	class:is_processing
@@ -33,6 +34,7 @@
 	ondragover={(e) => onDragOver!(e, entry)}
 	ondragleave={(e) => onDragLeave!(e, entry)}
 	ondrop={(e) => onDrop!(e, entry)}
+	oncontextmenu={(e) => onContextMenu!(e, entry)}
 >
 	<section class="display fx fx--cc fx-grow">📁</section>
 	<section class="info">

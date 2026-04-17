@@ -142,6 +142,7 @@
 	};
 
 	// Self Drag Operations
+
 	let drag_over_ct: number = $state(0);
 
 	const onDragEnter = (e: DragEvent) => {
@@ -204,6 +205,7 @@
 	};
 
 	// Entry Drag Operations
+
 	let dragged_entries: Set<Entry> = $state(new Set());
 	let entry_drag_target: DragTarget = $state({ entry: undefined, count: 0 });
 
@@ -430,6 +432,7 @@
 							onDragOver={onEntryDragOver}
 							onDragLeave={onEntryDragLeave}
 							onDrop={onEntryDrop}
+							onContextMenu={handleContextMenu}
 						/>
 					{/each}
 				</div>
