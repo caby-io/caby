@@ -26,7 +26,7 @@ yaml-rust2 = "0.11.0"
 anyhow = "1.0.100"
 argon2 = "0.5.3"
 chrono = { version = "0.4.44", features = ["serde"] }
-rand = "0.10.0"
+rand = "0.10.1"
 email_address = "0.2.9"
 
 # Enable a small amount of optimization in the dev profile.
