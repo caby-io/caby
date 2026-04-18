@@ -8,8 +8,7 @@
 // }
 
 import { putChunk } from '$lib/api/api_files';
-import type { ApiClient } from '$lib/api/client';
-import { client } from '$lib/stores/client.svelte';
+import { ApiClient } from '$lib/api/client';
 import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '../upload';
 import {
 	MessageType,
@@ -23,9 +22,8 @@ import {
 self.onmessage = function (e: MessageEvent<Message<any>>) {
 	switch (e.data?.event) {
 		case MessageType.StartUpload:
-			const { login_token, ...upload_payload } = e.data!.payload as StartUploadPayload;
-			client.setLoginToken(login_token!);
-			start_upload(client!, upload_payload);
+			const payload = e.data!.payload as StartUploadPayload;
+			start_upload(new ApiClient(payload.client_config), payload);
 			break;
 		default:
 			// todo: wrap in err type

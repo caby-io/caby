@@ -1,4 +1,4 @@
-import type { Token } from '$lib/api/client';
+import type { ClientConfig } from '$lib/api/client';
 import type { UploadRegistration } from './upload_group';
 
 export enum MessageType {
@@ -13,7 +13,7 @@ export type Message<T> = {
 };
 
 export type StartUploadPayload = {
-	login_token?: Token;
+	client_config: ClientConfig;
 	space: string;
 	base_path: string;
 	file: File;

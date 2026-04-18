@@ -146,7 +146,7 @@ const startUploadFileWorkerBackground = async (
 	const upload_worker = new UploadWorker();
 	let start_upload_message: Message<StartUploadPayload> = {
 		event: MessageType.StartUpload,
-		payload: upload_file.intoStartUploadPayload(client.auth.login_token!)
+		payload: upload_file.intoStartUploadPayload(client.getConfig())
 	};
 	upload_worker.onmessage = function (e: MessageEvent<Message<any>>) {
 		switch (e.data?.event) {

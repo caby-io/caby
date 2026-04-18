@@ -132,13 +132,28 @@ export type Auth = {
 // 	message: 'unhandled request error'
 // };
 
+export type ClientConfig = {
+	api_base: string,
+	auth?: Auth;
+}
+
 // todo: rotate session
 export class ApiClient {
 	public api_base: string;
 	public auth: Auth = {};
 
-	constructor(api_base: string) {
-		this.api_base = api_base;
+	constructor(config: ClientConfig) {
+		this.api_base = config.api_base;
+		if (config.auth) {
+			this.auth = config.auth
+		}
+	}
+
+	public getConfig = (): ClientConfig => {
+		return {
+			api_base: this.api_base,
+			auth: this.auth,
+		}
 	}
 
 	public setLoginToken = (token: Token) => {
@@ -181,9 +196,9 @@ export class ApiClient {
 			resp.status_code = response.status;
 
 			if (resp.status_code === 401 && req.do_redirect) {
+				// todo: send goto via store
 				const current = window.location.pathname + window.location.search;
-				const { goto } = await import('$app/navigation');
-				goto(`/login?redirect=${encodeURIComponent(current)}`);
+				window.location.href = `/login?redirect=${encodeURIComponent(current)}`;
 				return resp;
 			}
 

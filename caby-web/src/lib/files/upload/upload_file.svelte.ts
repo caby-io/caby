@@ -1,7 +1,7 @@
 import { Progress } from './progress.svelte';
 import { EntryType } from './upload';
 import { type UploadEntry as RegisterUploadEntry } from '$lib/api/api_files';
-import type { Token } from '$lib/api/client';
+import type { ClientConfig } from '$lib/api/client';
 import type { UploadRegistration } from './upload_group';
 import type { StartUploadPayload } from './workers';
 
@@ -79,9 +79,9 @@ export class UploadFile {
 	};
 
 	// Used to convert svelte object into plain object so we can send it to the worker
-	public intoStartUploadPayload = (login_token: Token): StartUploadPayload => {
+	public intoStartUploadPayload = (client_config: ClientConfig): StartUploadPayload => {
 		return {
-			login_token,
+			client_config,
 			space: this.space,
 			base_path: this.base_path,
 			file: this.file,

@@ -2,6 +2,9 @@
 	"name": "caby-web",
 	"version": "0.0.1",
 	"private": true,
+	"files": [
+		"build"
+	],
 	"scripts": {
 		"preinstall": "npx only-allow pnpm",
 		"dev": "vite dev",
