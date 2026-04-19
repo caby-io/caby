@@ -1,0 +1,51 @@
+stages:
+  - release
+
+release-api:
+  stage: release
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: [""]
+  variables:
+    IMAGE: $CI_REGISTRY_IMAGE/caby-service
+    CACHE_IMAGE: $CI_REGISTRY_IMAGE/caby-service:cache
+  rules:
+    - changes:
+      - caby-service/**/*
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=caby-service \
+        --local dockerfile=caby-service/ci \
+        --export-cache type=registry,ref=$CACHE_IMAGE,mode=max \
+        --import-cache type=registry,ref=$CACHE_IMAGE \
+        --output type=image,\"name=$IMAGE:$CI_COMMIT_SHA,$IMAGE:latest\",push=true
+
+release-web:
+  stage: release
+  image:
+    name: moby/buildkit:rootless
+    entrypoint: [""]
+  variables:
+    IMAGE: $CI_REGISTRY_IMAGE/caby-web
+    CACHE_IMAGE: $CI_REGISTRY_IMAGE/caby-web:cache
+  rules:
+    - changes:
+      - caby-web/**/*
+  before_script:
+    - mkdir -p ~/.docker
+    - echo "{\"auths\":{\"$CI_REGISTRY\":{\"username\":\"$CI_REGISTRY_USER\",\"password\":\"$CI_REGISTRY_PASSWORD\"}}}" > ~/.docker/config.json
+  script:
+    - |
+      buildctl-daemonless.sh build \
+        --frontend dockerfile.v0 \
+        --local context=caby-web \
+        --local dockerfile=caby-web/ci \
+        --export-cache type=registry,ref=$CACHE_IMAGE,mode=max \
+        --import-cache type=registry,ref=$CACHE_IMAGE \
+        --output type=image,\"name=$IMAGE:$CI_COMMIT_SHA,$IMAGE:latest\",push=true
+

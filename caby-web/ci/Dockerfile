@@ -1,14 +1,11 @@
 # Build Stage
 FROM node:24-bookworm-slim AS build
 
-# ENV PNPM_HOME="/pnpm"
-# ENV PATH="$PNPM_HOME:$PATH"
-RUN npm install -g pnpm
 ENV CI=true
-# RUN corepack enable
-
-
 WORKDIR /app
+
+RUN npm install -g pnpm
+
 COPY . .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
