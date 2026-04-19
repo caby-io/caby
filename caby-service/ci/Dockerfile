@@ -17,7 +17,13 @@ RUN cargo build --release
 # Release Stage
 FROM gcr.io/distroless/cc-debian12
 
+# workaround for no mkdir in distroless
+WORKDIR /app/cabynet
 WORKDIR /app
+
+ENV CABY_HOME_PATH=/app/cabynet
+ENV CABY_DIRECTORY_META_FILENAME=.cabydir
+EXPOSE 8080
 
 COPY --from=build /app/target/release/caby-service .
 CMD ["./caby-service"]

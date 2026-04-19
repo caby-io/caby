@@ -1,8 +1,9 @@
 # Build Stage
 FROM node:24-bookworm-slim AS build
 
-ENV CI=true
 WORKDIR /app
+
+ENV CI=true
 
 RUN npm install -g pnpm
 
