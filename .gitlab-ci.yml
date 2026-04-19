@@ -1,5 +1,6 @@
 stages:
   - release
+  - publish
 
 .kaniko-release:
   stage: release
@@ -10,13 +11,35 @@ stages:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"$CI_REGISTRY\":{\"auth\":\"$(echo -n ${CI_REGISTRY_USER}:${CI_REGISTRY_PASSWORD} | base64)\"}}}" > /kaniko/.docker/config.json
   script:
+    - export BUILT_TAG="${CI_COMMIT_SHA:0:7}-$(date +%s)"
     - /kaniko/executor
       --context $CI_PROJECT_DIR/$SERVICE
       --dockerfile $CI_PROJECT_DIR/$SERVICE/ci/Dockerfile
-      --destination $IMAGE:${CI_COMMIT_SHA:0:7}-$(date +%s)
+      --destination $IMAGE:$BUILT_TAG
       --destination $IMAGE:latest
       --cache=true
       --cache-repo=$CACHE_IMAGE
+    - echo "BUILT_TAG=$BUILT_TAG" > build.env
+  artifacts:
+    reports:
+      dotenv: build.env
+
+.dockerhub-publish:
+  stage: publish
+  image:
+    name: quay.io/skopeo/stable:latest
+    entrypoint: [""]
+  when: manual
+  allow_failure: true
+  script:
+    - |
+      for tag in $BUILT_TAG latest; do
+        skopeo copy --all \
+          --src-creds "$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD" \
+          --dest-creds "$DOCKERHUB_USERNAME:$DOCKERHUB_TOKEN" \
+          docker://$SRC:$tag \
+          docker://$DEST:$tag
+      done
 
 release-api:
   extends: .kaniko-release
@@ -34,6 +57,26 @@ release-web:
     SERVICE: caby-web
     IMAGE: $CI_REGISTRY_IMAGE/caby-web
     CACHE_IMAGE: $CI_REGISTRY_IMAGE/caby-web/cache
+  rules:
+    - changes:
+      - caby-web/**/*
+
+publish-api:
+  extends: .dockerhub-publish
+  needs: [release-api]
+  variables:
+    SRC: $CI_REGISTRY_IMAGE/caby-service
+    DEST: docker.io/$DOCKERHUB_NAMESPACE/caby-service
+  rules:
+    - changes:
+      - caby-service/**/*
+
+publish-web:
+  extends: .dockerhub-publish
+  needs: [release-web]
+  variables:
+    SRC: $CI_REGISTRY_IMAGE/caby-web
+    DEST: docker.io/$DOCKERHUB_NAMESPACE/caby-web
   rules:
     - changes:
       - caby-web/**/*
