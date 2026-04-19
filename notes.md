@@ -65,3 +65,9 @@ users:
       - name: home
         permissions: "*"
 ```
+
+# Misc
+
+```
+rustup toolchain install nightly --allow-downgrade -c rustfmt
+```

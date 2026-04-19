@@ -33,6 +33,7 @@ stages:
   allow_failure: true
   script:
     - |
+      set -e
       for tag in $BUILT_TAG latest; do
         skopeo copy --all \
           --src-creds "$CI_REGISTRY_USER:$CI_REGISTRY_PASSWORD" \
@@ -40,6 +41,20 @@ stages:
           docker://$SRC:$tag \
           docker://$DEST:$tag
       done
+    - microdnf install -y jq
+    - |
+      set -e
+      test -f "$README_PATH"
+      TOKEN=$(curl -sSf -X POST \
+        -H "Content-Type: application/json" \
+        -d "{\"username\":\"$DOCKERHUB_USERNAME\",\"password\":\"$DOCKERHUB_TOKEN\"}" \
+        https://hub.docker.com/v2/users/login/ | jq -r .token)
+      BODY=$(jq -Rs '{full_description: .}' < "$README_PATH")
+      curl -sSf -X PATCH \
+        -H "Authorization: JWT $TOKEN" \
+        -H "Content-Type: application/json" \
+        -d "$BODY" \
+        "https://hub.docker.com/v2/repositories/${DEST#docker.io/}/" > /dev/null
 
 release-api:
   extends: .kaniko-release
@@ -67,6 +82,7 @@ publish-api:
   variables:
     SRC: $CI_REGISTRY_IMAGE/caby-service
     DEST: docker.io/$DOCKERHUB_NAMESPACE/caby-service
+    README_PATH: caby-service/README.md
   rules:
     - changes:
       - caby-service/**/*
@@ -77,6 +93,7 @@ publish-web:
   variables:
     SRC: $CI_REGISTRY_IMAGE/caby-web
     DEST: docker.io/$DOCKERHUB_NAMESPACE/caby-web
+    README_PATH: caby-web/README.md
   rules:
     - changes:
       - caby-web/**/*
