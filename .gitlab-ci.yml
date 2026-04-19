@@ -8,6 +8,7 @@ release-api:
     entrypoint: [""]
   variables:
     BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    BUILDCTL_CONNECT_RETRIES_ON_STARTUP: "15"
     IMAGE: $CI_REGISTRY_IMAGE/caby-service
     CACHE_IMAGE: $CI_REGISTRY_IMAGE/caby-service:cache
   rules:
@@ -33,6 +34,7 @@ release-web:
     entrypoint: [""]
   variables:
     BUILDKITD_FLAGS: --oci-worker-no-process-sandbox
+    BUILDCTL_CONNECT_RETRIES_ON_STARTUP: "15"
     IMAGE: $CI_REGISTRY_IMAGE/caby-web
     CACHE_IMAGE: $CI_REGISTRY_IMAGE/caby-web:cache
   rules:
