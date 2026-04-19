@@ -1,4 +1,4 @@
-> ⚠️ Note: Caby is in a pre-release state and its components are still a work-in-progress. Please provide feedback we can resolve any issues.
+### ⚠️ Note: Caby is in a pre-release state and its components are still a work-in-progress. Please provide feedback we can resolve any issues.
 
 # caby-service
 
