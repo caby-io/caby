@@ -1,6 +1,6 @@
-### ⚠️ Note: Caby is in a pre-release state and its components are still a work-in-progress. Please provide feedback we can resolve any issues.
-
 # caby-service
+
+### ⚠️ Note: Caby is in a pre-release state and its components are still a work-in-progress. Please provide feedback we can resolve any issues.
 
 Backend API for Caby — self-hosted file management
 
@@ -32,6 +32,7 @@ users:
     spaces:
       - name: home
         permissions: "*" # WIP: doesn't do anything yet
+
 ```
 
 ## Environment Variables
