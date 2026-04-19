@@ -13,7 +13,7 @@ stages:
     - /kaniko/executor
       --context $CI_PROJECT_DIR/$SERVICE
       --dockerfile $CI_PROJECT_DIR/$SERVICE/ci/Dockerfile
-      --destination $IMAGE:$CI_COMMIT_SHA
+      --destination $IMAGE:${CI_COMMIT_SHA:0:7}-$(date +%s)
       --destination $IMAGE:latest
       --cache=true
       --cache-repo=$CACHE_IMAGE
