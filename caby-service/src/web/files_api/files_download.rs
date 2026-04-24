@@ -1,23 +1,78 @@
 use crate::{
     auth::AuthorizedUser,
     config::Config,
-    jsend,
+    download,
+    jsend::JSendBuilder,
     space::{Space, SpaceDir},
-    web::files_api::files_list::FilesPathParams,
+    web::{extractors::DownloadUser, files_api::files_list::FilesPathParams},
 };
+use anyhow::anyhow;
 use axum::{
     body::Body,
-    extract::{Path, State},
-    http::{header, StatusCode},
+    extract::{Json, Path, State},
+    http::header,
     response::{IntoResponse, Response},
 };
+use path_clean::PathClean;
+use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use tokio::fs;
 use tokio_util::io::ReaderStream;
+use tracing::warn;
+
+#[derive(Deserialize)]
+pub struct RegisterDownloadRequest {
+    pub files: Vec<String>,
+}
+
+#[derive(Serialize)]
+struct RegisterDownloadResponse {
+    pub token: download::Token,
+}
+
+pub async fn handle_register_download(
+    State(cfg): State<Config>,
+    space: Space,
+    user: AuthorizedUser,
+    Json(req): Json<RegisterDownloadRequest>,
+) -> Response {
+    let mut cleaned_files = Vec::with_capacity(req.files.len());
+    for file in &req.files {
+        let rel_path = PathBuf::from(file).clean();
+        if space.join(SpaceDir::LIVE, &rel_path).is_err() {
+            return JSendBuilder::new()
+                .fail(format!("invalid path: {}", file))
+                .into_response();
+        }
+        cleaned_files.push(rel_path.to_string_lossy().into_owned());
+    }
+
+    let token = match download::Token::new(&space.name, cleaned_files) {
+        Ok(t) => t,
+        Err(err) => {
+            warn!("could not generate download token: {:#}", err);
+            return JSendBuilder::new().internal_error().into_response();
+        }
+    };
+
+    let download_file = user.user.path.join(format!("download_{}", token.value));
+    if let Err(err) = fs::write(&download_file, token.to_file_string()).await {
+        warn!(
+            "could not write download file for user {}: {:#}",
+            user.user.name, err
+        );
+        return JSendBuilder::new().internal_error().into_response();
+    }
+
+    JSendBuilder::new()
+        .success(RegisterDownloadResponse { token })
+        .into_response()
+}
 
 pub async fn handle_download_files(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    user: DownloadUser,
     path_params: Path<FilesPathParams>,
 ) -> Response {
     let rel_path = path_params
@@ -26,23 +81,21 @@ pub async fn handle_download_files(
         .map_or(PathBuf::from(""), |p| PathBuf::from(p));
 
     let Ok(path) = space.join(SpaceDir::LIVE, &rel_path) else {
-        return jsend::JSendBuilder::new()
-            .fail("invalid path")
-            .into_response();
+        return JSendBuilder::new().fail("invalid path").into_response();
     };
 
     if !path.is_file() {
-        return (
-            StatusCode::BAD_REQUEST,
-            "only files are supported at the moment",
-        )
+        return JSendBuilder::new()
+            .fail("only files supported")
             .into_response();
     }
 
     let file = match tokio::fs::File::open(path.clone()).await {
         Ok(file) => file,
         Err(err) => {
-            return (StatusCode::NOT_FOUND, format!("File not found: {}", err)).into_response()
+            return JSendBuilder::new()
+                .fail(format!("file not found: {}", err))
+                .into_response();
         }
     };
 

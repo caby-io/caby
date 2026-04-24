@@ -8,7 +8,7 @@ pub mod files_upload;
 
 // Re-export for cleanliness
 pub use files_delete::handle_delete_files;
-pub use files_download::handle_download_files;
+pub use files_download::{handle_download_files, handle_register_download};
 pub use files_list::handle_list_files;
 pub use files_move::handle_move_files;
 pub use files_overview::handle_files_overview;

@@ -1,4 +1,5 @@
 import { PutEntryType } from '$lib/files/api';
+import type { DownloadToken } from '$lib/files/download';
 import type { Entry } from '$lib/files/entry';
 import type { OverviewEntry } from '$lib/files/overview/overview_entry';
 import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '$lib/files/upload/upload';
@@ -64,19 +65,44 @@ export const moveFiles = async (
 	return await client.exec(req);
 };
 
-export const getDownloadURL = (client: ApiClient, space: string, entries: Array<Entry>): string => {
+export type DownloadTokenResp = {
+	token: DownloadToken;
+};
+
+export const getDownloadToken = async (
+	client: ApiClient,
+	space: string,
+	entries: Array<Entry>
+): Promise<ApiResponse<DownloadTokenResp>> => {
+	const req = ApiRequestBuilder.post(`files/download/${space}`)
+		.withJsonBody({
+			files: entries.map((e) => e.path)
+		})
+		.intoRequest();
+
+	return await client.exec(req);
+};
+
+export const getDownloadURL = async (client: ApiClient, space: string, entries: Array<Entry>): Promise<string | undefined> => {
 	if (entries.length > 1) {
 		// todo
 		console.error('multi-download not implemented');
 		return '';
 	}
 
-	return join(
+	let resp = await getDownloadToken(client, space, entries);
+	if (resp.status != 'success' || !resp.data) {
+		console.error(`could not get download token: ${resp.message}`);
+		return;
+	}
+
+	const url = join(
 		client.api_base,
 		'files/download',
 		encodeURIComponent(space),
 		encodeURIComponent(entries[0].path)
 	);
+	return `${url}?token=${encodeURIComponent(resp.data.token.value)}`;
 };
 
 export const putEntry = async (

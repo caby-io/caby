@@ -55,6 +55,21 @@
 	// 	e.preventDefault();
 	// 	dialog.hidePopover();
 	// };
+
+	const handleDownload = async () => {
+		if (!entry) return;
+		const url = await getDownloadURL(client, space, [entry]);
+		if (!url) {
+			console.error('could not get download url');
+			return;
+		}
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = '';
+		document.body.appendChild(a);
+		a.click();
+		a.remove();
+	};
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -93,13 +108,13 @@
 					<div class="tip fx fx--ac">D</div>
 				</button>
 			{:else}
-				<a href={getDownloadURL(client, space, [entry])} class="context-item fx" download>
+				<button class="context-item fx" onclick={handleDownload}>
 					<div class="icon fx fx--cc">
 						<iconify-icon icon="lucide:download"></iconify-icon>
 					</div>
 					<div class="title fx-grow">Download {typeName}</div>
 					<div class="tip fx fx--ac">D</div>
-				</a>
+				</button>
 			{/if}
 			<button class="context-item fx" onclick={() => handleRenameEntry(entry)}>
 				<div class="icon fx fx--cc">

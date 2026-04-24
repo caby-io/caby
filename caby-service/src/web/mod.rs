@@ -54,6 +54,10 @@ pub fn api_router(cfg: &Config) -> Router<Config> {
                     get(files_api::handle_files_overview),
                 )
                 .route(
+                    "/download/{space}",
+                    post(files_api::handle_register_download),
+                )
+                .route(
                     "/download/{space}/{*file_path}",
                     get(files_api::handle_download_files),
                 )

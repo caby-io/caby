@@ -24,6 +24,7 @@ use tracing::info;
 mod auth;
 mod config;
 mod ctx;
+mod download;
 mod error;
 mod files;
 mod housekeeping;
