@@ -1,6 +1,6 @@
 # caby-service
 
-### ⚠️ Note: Caby is in a pre-release state and its components are still a work-in-progress. Please provide feedback we can resolve any issues.
+### ⚠️ Note: Caby is in a pre-release state and its components are still a work-in-progress. Please provide feedback so we can resolve any issues.
 
 Backend API for Caby — self-hosted file management
 
@@ -24,23 +24,22 @@ spaces:
 # Caby's users
 users:
   - name: caby-guy
-    email: suhaib@caby.io # optional
-    # a 64 character string that will be used
+    email: caby-guy@caby.io # optional
+    # a 64-character string that will be used
     # to activate the user's account
-    activation_token: OHQFhErYIM7xK8gMtf9emXt4LssVp5ibBs3MgJXTBQXbw8Cs4HUyWv1HdXjJyUL5
+    activation_token: <64-character string>
     # the user's access to spaces
     spaces:
       - name: home
         permissions: "*" # WIP: doesn't do anything yet
-
 ```
 
 ## Environment Variables
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `CABY_HOME_PATH` | `/app/cabynet` | Root storage path |
-| `CABY_DIRECTORY_META_FILENAME` | `.cabydir` | Directory metadata filename |
+| Variable                       | Default        | Description                 |
+| ------------------------------ | -------------- | --------------------------- |
+| `CABY_HOME_PATH`               | `/app/cabynet` | Root storage path           |
+| `CABY_DIRECTORY_META_FILENAME` | `.cabydir`     | Directory metadata filename |
 
 ## Run
 
