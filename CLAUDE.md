@@ -10,21 +10,33 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Development Commands
 
+### First-time setup
+```sh
+make bootstrap          # Full fire-and-forget setup (idempotent — safe to re-run)
+```
+`bootstrap` chains the granular sub-targets, each runnable on its own:
+- `make init-service` — copies `caby-service/.env.example` → `caby-service/.env` if missing
+- `make init-service-tools` — installs `cargo-watch` and the nightly Rust toolchain (rustfmt)
+- `make init-web` — runs `pnpm install` in `caby-web/`
+- `make init-config` — scaffolds a starter `$CABY_HOME_PATH/config.yaml` (defaults to `~/cabynet/config.yaml`) if missing
+
 ### Running Both Services (Recommended)
 ```sh
-make tmux        # Opens both services in a tmux split pane
-make run         # Runs backend only (cargo watch)
+make tmux           # Opens both services in a tmux split pane (default target)
+make run-service    # Runs backend only (cargo watch)
+make run-web        # Runs frontend only (vite dev) — pair with run-service in a separate terminal if you don't have tmux
 ```
 
 ### Backend (`caby-service/`)
 ```sh
-cargo watch -q -c -w src/ -x run   # Dev with auto-reload (used by make run)
+cargo watch -q -c -w src/ -x run   # Dev with auto-reload (used by make run-service)
 cargo build                         # Build
 cargo build --release               # Production build
 ```
-Requires nightly Rust toolchain for rustfmt: `rustup toolchain install nightly --allow-downgrade -c rustfmt`
+Nightly Rust toolchain (for rustfmt) is installed by `make init-service-tools`. Manual fallback: `rustup toolchain install nightly --allow-downgrade -c rustfmt`.
 
 ### Frontend (`caby-web/`)
+First-time install: `make init-web` (or `pnpm install` from `caby-web/`).
 ```sh
 pnpm run dev        # Dev server with HMR
 pnpm run build      # Production build
