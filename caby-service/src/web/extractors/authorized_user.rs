@@ -32,7 +32,7 @@ async fn find_session(
     if let Some(name) = user_name {
         let user = cfg
             .users
-            .get(name)
+            .get(&name.to_lowercase())
             .ok_or_else(|| anyhow!("user does not exist: {}", name))?;
 
         let session_content = fs::read_to_string(user.path.join(format!("session_{}", token)))

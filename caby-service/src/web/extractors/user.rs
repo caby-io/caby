@@ -1,7 +1,8 @@
 use axum::{
     extract::{FromRef, FromRequestParts, Path},
     http::request::Parts,
-    response::{IntoResponse, Response}, RequestPartsExt,
+    response::{IntoResponse, Response},
+    RequestPartsExt,
 };
 
 use crate::{config::Config, jsend::JSendBuilder, user::User, web::users_api::UserPathParams};
@@ -21,7 +22,7 @@ where
             return Err(JSendBuilder::new().fail("bad request").into_response());
         };
 
-        let Some(user_config) = cfg.users.get(&path_params.user) else {
+        let Some(user_config) = cfg.users.get(&path_params.user.to_lowercase()) else {
             // todo: log specific err
             return Err(JSendBuilder::new().fail("bad request").into_response());
         };

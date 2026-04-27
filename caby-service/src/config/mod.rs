@@ -9,11 +9,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use serde::Deserialize;
-use std::{
-    collections::HashMap,
-    env::var,
-    path::PathBuf,
-};
+use std::{collections::HashMap, env::var, path::PathBuf};
 
 mod config_file;
 mod validate_config;
@@ -202,7 +198,7 @@ impl ConfigBuilder {
             return Ok(self);
         };
         uv.iter().for_each(|u| {
-            self.users.insert(u.name.clone(), u.clone());
+            self.users.insert(u.name.to_lowercase(), u.clone());
         });
         return Ok(self);
     }

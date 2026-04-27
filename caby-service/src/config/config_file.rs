@@ -8,6 +8,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use std::{
+    collections::HashMap,
     env::var,
     path::{Path, PathBuf},
 };
@@ -73,6 +74,7 @@ pub fn get_config_path() -> Result<PathBuf> {
 }
 
 impl ConfigFile {
+    // todo: break up parsing from I/O for unit testing
     pub async fn new_from_path(path: PathBuf) -> Result<ConfigFile> {
         let content = fs::read_to_string(&path).await.map_err(|err| {
             return anyhow!(err).context(format!("could not read config file at {:?}", path));
@@ -89,6 +91,7 @@ impl ConfigFile {
         let config_yaml = &docs[0];
 
         // parse spaces
+        let mut spacenames: HashMap<String, ()> = HashMap::new();
         for space in config_yaml["spaces"]
             .as_vec()
             .ok_or(anyhow!(".spaces is not an array or is missing"))?
@@ -96,6 +99,11 @@ impl ConfigFile {
             let name = space["name"]
                 .as_str()
                 .ok_or(anyhow!("a space is missing a string name"))?;
+
+            // Check for space name
+            if let Some(_) = spacenames.insert(name.to_string(), ()) {
+                return Err(anyhow!(".spaces.name: {}", name).context("duplicate space name"));
+            }
 
             let display = space["display"].as_str().map(|d| d.to_string());
 
@@ -116,6 +124,7 @@ impl ConfigFile {
         }
 
         // parse users
+        let mut usernames: HashMap<String, ()> = HashMap::new();
         for user in config_yaml["users"]
             .as_vec()
             .ok_or(anyhow!(".users is not an array or is missing"))?
@@ -128,6 +137,11 @@ impl ConfigFile {
                     anyhow!("{}", errs).context(format!("username '{}' failed validation", name))
                 );
             };
+
+            // Check for unique username
+            if let Some(_) = usernames.insert(name.to_lowercase(), ()) {
+                return Err(anyhow!(".users.name: {}", name).context("duplicate user name"));
+            }
 
             let email = user["email"].as_str();
             if let Some(errs) = exec_stack_optional(&email_validation(), email) {
