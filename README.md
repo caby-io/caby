@@ -1,6 +1,5 @@
-<h1 align="center">Caby 🗄️</h1>
-
-<p align="center"><strong>⚠️ Note: Caby is in active development a pre-release state.</strong></p>
+# Caby -🗄️
+#### ⚠️ Note: Caby is in active development and in a pre-release state
 
 **Simple and reliable** self-hosted file management for your home network.
 
