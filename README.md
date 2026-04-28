@@ -1,9 +1,18 @@
-<h1 align="center">Caby</h1>
+<h1 align="center">Caby 🗄️</h1>
 
-<p align="center">Self-hosted file management for your home network.</p>
+<p align="center"><strong>⚠️ Note: Caby is in active development a pre-release state.</strong></p>
 
-### ⚠️ Note: Caby is in a pre-release state and its components are still a work-in-progress. Please provide feedback so we can resolve any issues.
+**Simple and reliable** self-hosted file management for your home network.
 
-## Documentation
+![Caby file browser](.github/assets/screenshot-main.png)
 
-See [caby.io/docs](https://caby.io/docs).
+## ✨ Features
+
+- Requires **no backing services**. Everything is managed by the backend runtime.
+- Files all the way down: Everything from configuration to metadata is stored in readable files.
+- Organize your files within **spaces** for compartmentalization and easy access control
+- Files are uploaded using **chunked uploads** for resumability, performance, and compatibility with certain ingress providers.
+
+## 📖 Documentation
+
+Caby's documentation and install instructions can be found at [caby.io/docs](https://caby.io/docs).
