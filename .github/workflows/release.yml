@@ -39,7 +39,7 @@ jobs:
           echo "sha=$SHA" >> $GITHUB_OUTPUT
           echo "short_sha=${SHA:0:7}" >> $GITHUB_OUTPUT
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           ref: ${{ steps.commit.outputs.sha }}
 
@@ -98,7 +98,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       - uses: softprops/action-gh-release@v3
