@@ -15,7 +15,6 @@
 
 	const tryCreateDir = async () => {
 		const resp = await putEntry(client, space, path, PutEntryType.DIRECTORY, value);
-		console.log(resp);
 
 		onListChange();
 		dialog.close();

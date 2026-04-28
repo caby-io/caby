@@ -96,6 +96,7 @@
 	const onListChange = async () => {
 		// todo: should we clear the delete and selected list?
 		await getFilesList(path);
+		await fetchFilesOverview();
 	};
 
 	// Select Operations
