@@ -6,10 +6,7 @@ use serde::Serialize;
 use tokio::fs::{read_dir, DirEntry};
 use tracing::error;
 
-use crate::{
-    files::EntryType,
-    space::Space, Result,
-};
+use crate::{files::EntryType, space::Space, Result};
 
 #[derive(Serialize)]
 pub struct OverviewEntry {

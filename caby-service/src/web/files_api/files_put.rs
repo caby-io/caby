@@ -1,9 +1,5 @@
 use crate::{
-    auth::AuthorizedUser,
-    config::Config,
-    error::Result,
-    jsend::JSendBuilder,
-    space::Space,
+    auth::AuthorizedUser, config::Config, error::Result, jsend::JSendBuilder, space::Space,
     web::files_api::files_list::FilesPathParams,
 };
 use axum::{

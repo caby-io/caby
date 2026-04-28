@@ -1,51 +1,55 @@
 $td-main-width: 40rem;
 
 .entry {
-    display: flex;
-    flex-direction: column;
-    background: var(--clr-background-1);
-    border-radius: 3px;
-    box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
-    border: 1px solid var(--clr-border);
-    transition: box-shadow .3s, background-color .1s, border-color .1s, opacity .1s;
+	display: flex;
+	flex-direction: column;
+	background: var(--clr-background-1);
+	border-radius: 3px;
+	box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
+	border: 1px solid var(--clr-border);
+	transition:
+		box-shadow 0.3s,
+		background-color 0.1s,
+		border-color 0.1s,
+		opacity 0.1s;
 
-    &:hover {
-        box-shadow: 0 4px 0.5rem -1px var(--clr-shadow);
-    }
+	&:hover {
+		box-shadow: 0 4px 0.5rem -1px var(--clr-shadow);
+	}
 
-    section.display {
-        margin: .5rem;
-        background: var(--clr-background-2);
-        border-radius: 3px;
-        font-size: 3rem;
-        box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
-        border: 1px solid var(--clr-border);
-        transition: background-color .1s;
-    }
+	section.display {
+		margin: 0.5rem;
+		background: var(--clr-background-2);
+		border-radius: 3px;
+		font-size: 3rem;
+		box-shadow: 0 2px 0.3rem -1px var(--clr-shadow);
+		border: 1px solid var(--clr-border);
+		transition: background-color 0.1s;
+	}
 
-    section.info {
-        margin: 0 .5rem .5rem .5rem;
-        color: var(--clr-text-1);
+	section.info {
+		margin: 0 0.5rem 0.5rem 0.5rem;
+		color: var(--clr-text-1);
 
-        > h1 {
-            color: var(--clr-text-0);
-            overflow-x: hidden;
-            text-overflow: ellipsis;
-            white-space: pre;
-            font-size: 1.1em;
-        }
-    }
+		> h1 {
+			color: var(--clr-text-0);
+			overflow-x: hidden;
+			text-overflow: ellipsis;
+			white-space: pre;
+			font-size: 1.1em;
+		}
+	}
 
-    &.is_selected {
-        background: var(--clr-secondary);
-        border-color: var(--clr-accent);
-    }
+	&.is_selected {
+		background: var(--clr-secondary);
+		border-color: var(--clr-accent);
+	}
 
-    &.is_targetted {
-        border-color: var(--clr-accent);
-    }
+	&.is_targetted {
+		border-color: var(--clr-accent);
+	}
 
-    &.is_processing {
-        opacity: 0.7;
-    }
+	&.is_processing {
+		opacity: 0.7;
+	}
 }

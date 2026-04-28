@@ -62,7 +62,6 @@
 		&.selected {
 			background: var(--clr-secondary);
 		}
-
 	}
 
 	.children {

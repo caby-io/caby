@@ -8,7 +8,8 @@ use crate::{
 };
 use axum::{
     extract::{FromRef, FromRequestParts},
-    http::request::Parts, RequestPartsExt,
+    http::request::Parts,
+    RequestPartsExt,
 };
 
 impl<S> FromRequestParts<S> for Space

@@ -133,9 +133,9 @@ export type Auth = {
 // };
 
 export type ClientConfig = {
-	api_base: string,
+	api_base: string;
 	auth?: Auth;
-}
+};
 
 // todo: rotate session
 export class ApiClient {
@@ -145,16 +145,16 @@ export class ApiClient {
 	constructor(config: ClientConfig) {
 		this.api_base = config.api_base;
 		if (config.auth) {
-			this.auth = config.auth
+			this.auth = config.auth;
 		}
 	}
 
 	public getConfig = (): ClientConfig => {
 		return {
 			api_base: this.api_base,
-			auth: this.auth,
-		}
-	}
+			auth: this.auth
+		};
+	};
 
 	public setLoginToken = (token: Token) => {
 		this.auth.login_token = token;

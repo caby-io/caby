@@ -83,7 +83,11 @@ export const getDownloadToken = async (
 	return await client.exec(req);
 };
 
-export const getDownloadURL = async (client: ApiClient, space: string, entries: Array<Entry>): Promise<string | undefined> => {
+export const getDownloadURL = async (
+	client: ApiClient,
+	space: string,
+	entries: Array<Entry>
+): Promise<string | undefined> => {
 	if (entries.length > 1) {
 		// todo
 		console.error('multi-download not implemented');
