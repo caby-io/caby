@@ -1,4 +1,7 @@
 # Caby -🗄️
+
+[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/Z2JkSs2Hzy)
+
 **⚠️ Note: Caby is in active development and in a pre-release state**
 
 **Simple and reliable** self-hosted file management for your home network.
