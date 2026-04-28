@@ -30,7 +30,7 @@ jobs:
               - '.github/workflows/ci.yml'
 
   service:
-    name: Caby Service
+    name: Caby Service CI
     needs: changes
     if: needs.changes.outputs.service == 'true'
     runs-on: ubuntu-latest
@@ -68,7 +68,7 @@ jobs:
         run: cargo build --release --locked
 
   web:
-    name: Caby Web
+    name: Caby Web CI
     needs: changes
     if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
