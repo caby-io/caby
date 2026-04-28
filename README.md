@@ -1,5 +1,5 @@
 # Caby -🗄️
-#### ⚠️ Note: Caby is in active development and in a pre-release state
+**⚠️ Note: Caby is in active development and in a pre-release state**
 
 **Simple and reliable** self-hosted file management for your home network.
 
