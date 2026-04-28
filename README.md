@@ -12,6 +12,7 @@
 - Files all the way down: Everything from configuration to metadata is stored in readable files.
 - Organize your files within **spaces** for compartmentalization and easy access control
 - Files are uploaded using **chunked uploads** for resumability, performance, and compatibility with certain ingress providers.
+- Supports ARM images for Raspberry Pi and other lightweight devices.
 
 ## 📖 Documentation
 
