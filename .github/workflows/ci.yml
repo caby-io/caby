@@ -40,15 +40,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install stable Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: clippy
-
       - name: Install nightly Rust toolchain (for rustfmt)
         uses: dtolnay/rust-toolchain@nightly
         with:
           components: rustfmt
+
+      - name: Install stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
 
       - name: Cache cargo
         uses: Swatinem/rust-cache@v2
@@ -95,7 +95,7 @@ jobs:
         run: pnpm run check
 
       - name: Lint
-        run: pnpm run lint
+        run: pnpm run lint:ci
 
       - name: Build
         run: pnpm run build
