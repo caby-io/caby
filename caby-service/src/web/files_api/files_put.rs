@@ -52,12 +52,10 @@ pub async fn handle_put_files(
 
     match payload.entry_type {
         PutEntryType::Directory => match create_dirs(&path, vec![payload.name]).await {
-            Ok(_) => {
-                resp
-                    .status_code(StatusCode::CREATED)
-                    .success("dir created")
-                    .into_response()
-            }
+            Ok(_) => resp
+                .status_code(StatusCode::CREATED)
+                .success("dir created")
+                .into_response(),
             Err(err) => {
                 error!("could not create dir at {:?}: {:#}", path, err);
                 resp.fail("could not create directory").into_response()

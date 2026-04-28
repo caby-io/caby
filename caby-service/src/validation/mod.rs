@@ -56,7 +56,10 @@ pub type Rule<T> = Box<dyn Fn(T) -> Option<ValidationError>>;
 pub fn max<'a>(value: usize) -> Rule<&'a str> {
     Box::new(move |s: &str| {
         if s.len() > value {
-            return Some(ValidationError(format!("must be less than {} characters", value)));
+            return Some(ValidationError(format!(
+                "must be less than {} characters",
+                value
+            )));
         }
         None
     })
@@ -65,7 +68,10 @@ pub fn max<'a>(value: usize) -> Rule<&'a str> {
 pub fn min<'a>(value: usize) -> Rule<&'a str> {
     Box::new(move |s: &str| {
         if s.len() < value {
-            return Some(ValidationError(format!("must be at least {} characters", value)));
+            return Some(ValidationError(format!(
+                "must be at least {} characters",
+                value
+            )));
         }
         None
     })
@@ -74,7 +80,10 @@ pub fn min<'a>(value: usize) -> Rule<&'a str> {
 pub fn len<'a>(value: usize) -> Rule<&'a str> {
     Box::new(move |s: &str| {
         if s.len() < value {
-            return Some(ValidationError(format!("must be exactly {} characters", value)));
+            return Some(ValidationError(format!(
+                "must be exactly {} characters",
+                value
+            )));
         }
         None
     })
@@ -92,9 +101,9 @@ pub fn no_whitespace<'a>() -> Rule<&'a str> {
 pub fn trimmed<'a>() -> Rule<&'a str> {
     Box::new(|s: &str| {
         if s.starts_with(char::is_whitespace) || s.ends_with(char::is_whitespace) {
-            return Some(
-                ValidationError("must not contain leading or trailing spaces".to_string()),
-            );
+            return Some(ValidationError(
+                "must not contain leading or trailing spaces".to_string(),
+            ));
         }
         None
     })

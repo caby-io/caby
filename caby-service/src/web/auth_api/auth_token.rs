@@ -66,11 +66,10 @@ pub async fn handle_token_lookup(
     }
 
     // respond with the username
-    resp
-        .success(LookupTokenResponse {
-            username: user.name,
-        })
-        .into_response()
+    resp.success(LookupTokenResponse {
+        username: user.name,
+    })
+    .into_response()
 }
 
 // todo: move to user package

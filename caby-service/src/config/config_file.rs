@@ -79,9 +79,8 @@ impl ConfigFile {
         let content = fs::read_to_string(&path).await.map_err(|err| {
             anyhow!(err).context(format!("could not read config file at {:?}", path))
         })?;
-        let docs = YamlLoader::load_from_str(&content).map_err(|err| {
-            anyhow!(err).context("could not parse config file as yaml")
-        })?;
+        let docs = YamlLoader::load_from_str(&content)
+            .map_err(|err| anyhow!(err).context("could not parse config file as yaml"))?;
 
         if docs.is_empty() {
             return Err(anyhow!("config file is empty"));
