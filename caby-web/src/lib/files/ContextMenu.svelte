@@ -1,4 +1,4 @@
-<script module>
+<script module lang="ts">
 	import { getDownloadURL } from '$lib/api/api_files';
 	import { client } from '$lib/stores/client.svelte';
 	import type { Entry } from './entry';
