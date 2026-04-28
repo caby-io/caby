@@ -69,7 +69,7 @@ pub async fn handle_register_upload(
             .filter(|e| matches!(e.entry_type, UploadEntryType::File))
             .map(|e| TokenFile {
                 name: e.name.clone(),
-                size: e.size.clone(),
+                size: e.size,
             })
             .collect(),
     };
@@ -187,14 +187,14 @@ pub async fn handle_upload_chunk(
     // todo: move to fn
     let mut limited_body_stream =
         StreamReader::new(body.into_data_stream().map_err(io::Error::other))
-            .take((upload_token_payload.chunk_size + 1).into());
+            .take((upload_token_payload.chunk_size + 1));
 
     // todo: handle error
     let bytes_written = tokio::io::copy(&mut limited_body_stream, &mut file)
         .await
         .expect("couldn't copy bytes");
 
-    if bytes_written > upload_token_payload.chunk_size.into() {
+    if bytes_written > upload_token_payload.chunk_size {
         // todo: handle error
         // note: this resets the process until we save individual chunks
         remove_file(full_path)
@@ -240,7 +240,7 @@ pub async fn handle_update_upload(
     let rel_path = path_params
         .file_path
         .clone()
-        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
+        .map_or(PathBuf::from(""), PathBuf::from);
 
     // parse the upload token
     let upload_token_str = match get_required_header(&headers, HEADER_UPLOAD_TOKEN) {

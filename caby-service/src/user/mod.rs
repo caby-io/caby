@@ -35,10 +35,10 @@ pub struct User {
 pub fn try_hash_password(password: &str) -> Result<String> {
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
-    return argon2
+    argon2
         .hash_password(password.as_bytes(), &salt)
         .map_err(|err| anyhow!("could not hash password: {}", err))
-        .map(|p| p.to_string());
+        .map(|p| p.to_string())
 }
 
 impl User {
@@ -69,7 +69,7 @@ impl User {
             return Ok(false);
         }
 
-        return Ok(true);
+        Ok(true)
     }
 
     pub async fn is_password(&self, password: &str) -> Result<bool> {

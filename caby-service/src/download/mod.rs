@@ -84,12 +84,12 @@ impl FromStr for Token {
         .map_err(|err| anyhow!(err).context("could not parse expires_at from download file"))?
         .with_timezone(&Utc);
 
-        return Ok(Self {
+        Ok(Self {
             value,
             space,
             file_paths,
             issued_at,
             expires_at,
-        });
+        })
     }
 }

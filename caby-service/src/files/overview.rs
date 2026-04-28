@@ -31,8 +31,8 @@ impl OverviewEntry {
                 false => EntryType::File,
             },
             name: value.file_name().into_string().map_err(|err| {
-                return anyhow!("couldn't convert entry name to string")
-                    .context(anyhow!("{:?}", err));
+                anyhow!("couldn't convert entry name to string")
+                    .context(anyhow!("{:?}", err))
             })?,
             path: value
                 .path()
@@ -45,7 +45,7 @@ impl OverviewEntry {
             children: vec![],
         };
 
-        return Ok(entry);
+        Ok(entry)
     }
 }
 
@@ -102,5 +102,5 @@ pub async fn build_overview(
         a_key.cmp(&b_key)
     });
 
-    return Ok(result);
+    Ok(result)
 }

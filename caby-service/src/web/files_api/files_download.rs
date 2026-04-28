@@ -78,7 +78,7 @@ pub async fn handle_download_files(
     let rel_path = path_params
         .file_path
         .clone()
-        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
+        .map_or(PathBuf::from(""), PathBuf::from);
 
     let Ok(path) = space.join(SpaceDir::LIVE, &rel_path) else {
         return JSendBuilder::new().fail("invalid path").into_response();
@@ -112,7 +112,7 @@ pub async fn handle_download_files(
     let body = Body::from_stream(stream);
 
     let headers = [
-        (header::CONTENT_TYPE, &format!("{}", content_type)),
+        (header::CONTENT_TYPE, &content_type.to_string()),
         (
             header::CONTENT_DISPOSITION,
             &format!("attachment; filename=\"{}\"", filename.to_str().unwrap()),

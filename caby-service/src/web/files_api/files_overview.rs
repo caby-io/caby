@@ -43,7 +43,7 @@ pub async fn handle_files_overview(
     let rel_path = path_params
         .file_path
         .clone()
-        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
+        .map_or(PathBuf::from(""), PathBuf::from);
 
     // let Ok(path) = space.join(&rel_path) else {
     //     return resp.fail("invalid path").into_response();

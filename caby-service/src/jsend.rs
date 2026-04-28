@@ -4,11 +4,11 @@ use axum::{
 };
 use serde::Serialize;
 
-const STATUS_SUCCESS: &'static str = "success";
-const STATUS_FAIL: &'static str = "fail";
-const STATUS_ERROR: &'static str = "error";
+const STATUS_SUCCESS: &str = "success";
+const STATUS_FAIL: &str = "fail";
+const STATUS_ERROR: &str = "error";
 
-const GENERIC_INTERNAL_SERVER_ERROR: &'static str = "internal server error";
+const GENERIC_INTERNAL_SERVER_ERROR: &str = "internal server error";
 
 #[derive(Serialize)]
 pub struct MessageJSend<T: Serialize> {

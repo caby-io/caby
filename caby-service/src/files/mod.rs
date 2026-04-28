@@ -153,7 +153,7 @@ impl Entry {
             return Ok(entry);
         }
 
-        return Err(anyhow!("unhandled entry type"));
+        Err(anyhow!("unhandled entry type"))
     }
 }
 
@@ -201,5 +201,5 @@ pub async fn build_entries(space: &Space, path: &Path) -> Result<Vec<Entry>> {
         a_key.cmp(&b_key)
     });
 
-    return Ok(result);
+    Ok(result)
 }

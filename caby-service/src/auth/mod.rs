@@ -42,11 +42,11 @@ impl FromStr for Token {
         .map_err(|err| anyhow!(err).context("could not parse expires_at from session file"))?
         .with_timezone(&Utc);
 
-        return Ok(Self {
+        Ok(Self {
             value,
             issued_at,
             expires_at,
-        });
+        })
     }
 }
 

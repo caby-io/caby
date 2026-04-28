@@ -13,7 +13,7 @@ pub enum HeaderError<'a> {
 
 impl<'a> IntoResponse for HeaderError<'a> {
     fn into_response(self) -> Response {
-        return match self {
+        match self {
             HeaderError::MissingHeaderError(key) => JSendBuilder::new()
                 .status_code(StatusCode::BAD_REQUEST)
                 .fail(format!("missing '{}' header", key))
@@ -22,7 +22,7 @@ impl<'a> IntoResponse for HeaderError<'a> {
                 .status_code(StatusCode::BAD_REQUEST)
                 .fail(format!("could not parse '{}' header as a string", key))
                 .into_response(),
-        };
+        }
     }
 }
 

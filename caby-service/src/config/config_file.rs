@@ -16,7 +16,7 @@ use tokio::fs;
 use tracing::warn;
 use yaml_rust2::YamlLoader;
 
-const CONFIG_FILE_NAME: &'static str = "config.yaml";
+const CONFIG_FILE_NAME: &str = "config.yaml";
 
 pub struct ConfigFileSpace {
     pub name: String,
@@ -26,11 +26,11 @@ pub struct ConfigFileSpace {
 
 impl ConfigFileSpace {
     pub fn into_space_config(self, spaces_path: &Path) -> SpaceConfig {
-        return SpaceConfig {
+        SpaceConfig {
             name: self.name.clone(),
             display: self.display.unwrap_or(self.name.clone()).clone(),
             path: self.path.unwrap_or(spaces_path.join(self.name)),
-        };
+        }
     }
 }
 
@@ -43,13 +43,13 @@ pub struct ConfigFileUser {
 
 impl ConfigFileUser {
     pub fn into_user_config(self, users_path: &Path) -> UserConfig {
-        return UserConfig {
+        UserConfig {
             name: self.name.clone(),
             path: users_path.join(self.name),
             email: self.email,
             activation_token: self.activation_token,
             spaces: self.spaces,
-        };
+        }
     }
 }
 
@@ -77,13 +77,13 @@ impl ConfigFile {
     // todo: break up parsing from I/O for unit testing
     pub async fn new_from_path(path: PathBuf) -> Result<ConfigFile> {
         let content = fs::read_to_string(&path).await.map_err(|err| {
-            return anyhow!(err).context(format!("could not read config file at {:?}", path));
+            anyhow!(err).context(format!("could not read config file at {:?}", path))
         })?;
         let docs = YamlLoader::load_from_str(&content).map_err(|err| {
-            return anyhow!(err).context("could not parse config file as yaml");
+            anyhow!(err).context("could not parse config file as yaml")
         })?;
 
-        if docs.len() < 1 {
+        if docs.is_empty() {
             return Err(anyhow!("config file is empty"));
         }
 
@@ -101,7 +101,7 @@ impl ConfigFile {
                 .ok_or(anyhow!("a space is missing a string name"))?;
 
             // Check for space name
-            if let Some(_) = spacenames.insert(name.to_string(), ()) {
+            if spacenames.insert(name.to_string(), ()).is_some() {
                 return Err(anyhow!(".spaces.name: {}", name).context("duplicate space name"));
             }
 
@@ -139,7 +139,7 @@ impl ConfigFile {
             };
 
             // Check for unique username
-            if let Some(_) = usernames.insert(name.to_lowercase(), ()) {
+            if usernames.insert(name.to_lowercase(), ()).is_some() {
                 return Err(anyhow!(".users.name: {}", name).context("duplicate user name"));
             }
 

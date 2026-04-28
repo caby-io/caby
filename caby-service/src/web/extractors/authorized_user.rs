@@ -70,7 +70,7 @@ async fn find_session(
     }
 
     // todo: return a specific error so we can match on it
-    return Err(anyhow!("token not found"));
+    Err(anyhow!("token not found"))
 }
 
 impl<S> FromRequestParts<S> for AuthorizedUser

@@ -16,7 +16,7 @@ impl fmt::Display for ValidationErrors {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         for (i, err) in self.0.iter().enumerate() {
             if i > 0 {
-                write!(f, "\n")?;
+                writeln!(f)?;
             }
             write!(f, "{}", err.0)?;
         }
@@ -37,11 +37,11 @@ pub type RuleStack<T> = Vec<RuleGroup<T>>;
 pub fn exec_stack<T: Copy>(stack: &RuleStack<T>, value: T) -> Option<ValidationErrors> {
     for group in stack {
         let res = exec_group(group, value);
-        if res.0.len() > 0 {
+        if !res.0.is_empty() {
             return Some(res);
         }
     }
-    return None;
+    None
 }
 
 pub fn exec_stack_optional<T: Copy>(
@@ -56,7 +56,7 @@ pub type Rule<T> = Box<dyn Fn(T) -> Option<ValidationError>>;
 pub fn max<'a>(value: usize) -> Rule<&'a str> {
     Box::new(move |s: &str| {
         if s.len() > value {
-            return Some(ValidationError(format!("must be less than {} characters", value)).into());
+            return Some(ValidationError(format!("must be less than {} characters", value)));
         }
         None
     })
@@ -65,7 +65,7 @@ pub fn max<'a>(value: usize) -> Rule<&'a str> {
 pub fn min<'a>(value: usize) -> Rule<&'a str> {
     Box::new(move |s: &str| {
         if s.len() < value {
-            return Some(ValidationError(format!("must be at least {} characters", value)).into());
+            return Some(ValidationError(format!("must be at least {} characters", value)));
         }
         None
     })
@@ -74,7 +74,7 @@ pub fn min<'a>(value: usize) -> Rule<&'a str> {
 pub fn len<'a>(value: usize) -> Rule<&'a str> {
     Box::new(move |s: &str| {
         if s.len() < value {
-            return Some(ValidationError(format!("must be exactly {} characters", value)).into());
+            return Some(ValidationError(format!("must be exactly {} characters", value)));
         }
         None
     })
@@ -83,7 +83,7 @@ pub fn len<'a>(value: usize) -> Rule<&'a str> {
 pub fn no_whitespace<'a>() -> Rule<&'a str> {
     Box::new(|s: &str| {
         if s.contains(char::is_whitespace) {
-            return Some(ValidationError("must not contain whitespace".to_string()).into());
+            return Some(ValidationError("must not contain whitespace".to_string()));
         }
         None
     })
@@ -93,7 +93,7 @@ pub fn trimmed<'a>() -> Rule<&'a str> {
     Box::new(|s: &str| {
         if s.starts_with(char::is_whitespace) || s.ends_with(char::is_whitespace) {
             return Some(
-                ValidationError("must not contain leading or trailing spaces".to_string()).into(),
+                ValidationError("must not contain leading or trailing spaces".to_string()),
             );
         }
         None
@@ -103,7 +103,7 @@ pub fn trimmed<'a>() -> Rule<&'a str> {
 pub fn no_slash<'a>() -> Rule<&'a str> {
     Box::new(|s: &str| {
         if s.contains('/') {
-            return Some(ValidationError("must not contain slashes".to_string()).into());
+            return Some(ValidationError("must not contain slashes".to_string()));
         }
         None
     })
@@ -112,7 +112,7 @@ pub fn no_slash<'a>() -> Rule<&'a str> {
 pub fn email<'a>() -> Rule<&'a str> {
     Box::new(|s: &str| {
         if !EmailAddress::is_valid(s) {
-            return Some(ValidationError("invalid email address".to_string()).into());
+            return Some(ValidationError("invalid email address".to_string()));
         }
         None
     })

@@ -41,7 +41,7 @@ pub async fn handle_put_files(
     let rel_path = path_params
         .file_path
         .clone()
-        .map_or(PathBuf::from(""), |p| PathBuf::from(p));
+        .map_or(PathBuf::from(""), PathBuf::from);
     // let Ok(path) = space.join(&rel_path) else {
     //     return resp.fail("invalid path").into_response();
     // };
@@ -53,17 +53,17 @@ pub async fn handle_put_files(
     match payload.entry_type {
         PutEntryType::Directory => match create_dirs(&path, vec![payload.name]).await {
             Ok(_) => {
-                return resp
+                resp
                     .status_code(StatusCode::CREATED)
                     .success("dir created")
                     .into_response()
             }
             Err(err) => {
                 error!("could not create dir at {:?}: {:#}", path, err);
-                return resp.fail("could not create directory").into_response();
+                resp.fail("could not create directory").into_response()
             }
         },
-        _ => return resp.fail("unhandled entry_type").into_response(),
+        _ => resp.fail("unhandled entry_type").into_response(),
     }
 }
 

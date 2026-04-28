@@ -16,7 +16,7 @@ pub fn date(time: &Option<SystemTime>) -> String {
     let duration = SystemTime::now().duration_since(*time).unwrap().as_secs();
 
     if duration < DURATION_MINUTE {
-        return format!("Just now");
+        return "Just now".to_string();
     }
 
     if duration < DURATION_HOUR {
@@ -35,7 +35,7 @@ pub fn date(time: &Option<SystemTime>) -> String {
         return format!("{:.0} months ago", duration / DURATION_MONTH);
     }
 
-    return format!("{:.0} years ago", duration / DURATION_YEAR);
+    format!("{:.0} years ago", duration / DURATION_YEAR)
 }
 
 // Credit: https://gist.github.com/maxmcd
@@ -45,11 +45,11 @@ pub fn bytes(bytes: u64) -> String {
     // };
 
     let mut bf = bytes as f64;
-    for suffix in vec!["", "K", "M", "G", "T", "P", "E", "Z"] {
+    for suffix in ["", "K", "M", "G", "T", "P", "E", "Z"] {
         if bf.abs() < 1024.0 {
-            return format!("{:.1} {}B", bf, suffix.to_string());
+            return format!("{:.1} {}B", bf, suffix);
         }
         bf /= 1024.0
     }
-    return return format!("{:.1} YB", bf);
+    format!("{:.1} YB", bf)
 }

@@ -14,7 +14,7 @@ pub fn is_valid_meta_filename(filename: &str) -> Result<()> {
         return Err(anyhow!("filename cannot contain slashes"));
     }
 
-    if filename.bytes().len() > 255 {
+    if filename.len() > 255 {
         return Err(anyhow!("filename must be less than 255 characters"));
     }
 

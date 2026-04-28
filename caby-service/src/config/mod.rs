@@ -21,12 +21,12 @@ pub struct SpaceConfig {
     pub path: PathBuf,
 }
 
-impl Into<Space> for SpaceConfig {
-    fn into(self) -> Space {
+impl From<SpaceConfig> for Space {
+    fn from(val: SpaceConfig) -> Self {
         Space {
-            name: self.name,
-            display: self.display,
-            path: self.path,
+            name: val.name,
+            display: val.display,
+            path: val.path,
         }
     }
 }
@@ -37,11 +37,11 @@ pub struct UserSpaceConfig {
     permissions: Vec<String>,
 }
 
-impl Into<SpaceAccess> for &UserSpaceConfig {
-    fn into(self) -> SpaceAccess {
+impl From<&UserSpaceConfig> for SpaceAccess {
+    fn from(val: &UserSpaceConfig) -> Self {
         SpaceAccess {
-            name: self.name.clone(),
-            permissions: self.permissions.clone(),
+            name: val.name.clone(),
+            permissions: val.permissions.clone(),
         }
     }
 }
@@ -55,14 +55,14 @@ pub struct UserConfig {
     pub spaces: Vec<UserSpaceConfig>,
 }
 
-impl Into<User> for &UserConfig {
-    fn into(self) -> User {
+impl From<&UserConfig> for User {
+    fn from(val: &UserConfig) -> Self {
         User {
-            name: self.name.clone(),
-            path: self.path.clone(),
-            email: self.email.clone(),
-            activation_token: self.activation_token.clone(),
-            space_access: self.spaces.iter().map(|s| s.into()).collect(),
+            name: val.name.clone(),
+            path: val.path.clone(),
+            email: val.email.clone(),
+            activation_token: val.activation_token.clone(),
+            space_access: val.spaces.iter().map(|s| s.into()).collect(),
         }
     }
 }
@@ -164,7 +164,7 @@ impl ConfigBuilder {
         self.home_path = Some(pb.clone());
         self.try_set_users_path(Some(pb.join("users")));
         self.try_set_spaces_path(Some(pb.join("spaces")));
-        return Ok(self);
+        Ok(self)
     }
 
     pub fn try_set_users_path(&mut self, path: Option<impl Into<PathBuf>>) -> Result<&mut Self> {
@@ -172,7 +172,7 @@ impl ConfigBuilder {
             return Ok(self);
         };
         self.users_path = Some(p.into());
-        return Ok(self);
+        Ok(self)
     }
 
     pub fn try_set_spaces_path(&mut self, path: Option<impl Into<PathBuf>>) -> Result<&mut Self> {
@@ -180,7 +180,7 @@ impl ConfigBuilder {
             return Ok(self);
         };
         self.spaces_path = Some(p.into());
-        return Ok(self);
+        Ok(self)
     }
 
     pub fn try_set_spaces(&mut self, spaces: Option<Vec<SpaceConfig>>) -> Result<&mut Self> {
@@ -190,7 +190,7 @@ impl ConfigBuilder {
         sv.iter().for_each(|s| {
             self.spaces.insert(s.name.clone(), s.clone());
         });
-        return Ok(self);
+        Ok(self)
     }
 
     pub fn try_set_users(&mut self, users: Option<Vec<UserConfig>>) -> Result<&mut Self> {
@@ -200,11 +200,11 @@ impl ConfigBuilder {
         uv.iter().for_each(|u| {
             self.users.insert(u.name.to_lowercase(), u.clone());
         });
-        return Ok(self);
+        Ok(self)
     }
 
     pub fn build(self) -> Result<Config> {
-        return Ok(Config {
+        Ok(Config {
             directory_meta_filename: self.directory_meta_filename.ok_or(anyhow!(
                 "missing directory meta filename (CABY_DIRECTORY_META_FILENAME)"
             ))?,
@@ -213,6 +213,6 @@ impl ConfigBuilder {
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
             spaces: self.spaces,
             users: self.users,
-        });
+        })
     }
 }

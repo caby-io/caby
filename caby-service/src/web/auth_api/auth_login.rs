@@ -29,11 +29,11 @@ pub async fn handle_login(
         Some(u) => u,
         None => {
             // todo: regex the login to see if it looks like an email before doing this expensive lookup
-            let Some(user_config) = cfg.users.iter().map(|(_, u)| u).find(|u| {
+            let Some(user_config) = cfg.users.values().find(|u| {
                 if let Some(email) = &u.email {
                     return email == &req.login;
                 }
-                return false;
+                false
             }) else {
                 return resp.fail("invalid login or password").into_response();
             };

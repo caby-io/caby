@@ -66,11 +66,11 @@ pub async fn handle_token_lookup(
     }
 
     // respond with the username
-    return resp
+    resp
         .success(LookupTokenResponse {
             username: user.name,
         })
-        .into_response();
+        .into_response()
 }
 
 // todo: move to user package
@@ -88,9 +88,9 @@ pub async fn try_check_activation_attempts(user: &User) -> Result<i64> {
         .await
         .map_err(|err| anyhow!(err).context("could not read from activation_attempts file"))?;
 
-    return Ok(content
+    content
         .parse()
-        .map_err(|err| anyhow!("could not parse activation_attempts as i64: {}", err))?);
+        .map_err(|err| anyhow!("could not parse activation_attempts as i64: {}", err))
 }
 
 pub async fn try_set_activation_attempts(user: &User, attempts: i64) -> Result<()> {
@@ -98,7 +98,7 @@ pub async fn try_set_activation_attempts(user: &User, attempts: i64) -> Result<(
         return Err(anyhow!(err).context("could not write to activation_attempts file"));
     }
 
-    return Ok(());
+    Ok(())
 }
 
 #[derive(Deserialize)]
@@ -204,5 +204,5 @@ pub async fn handle_user_token_activation(
         return resp.internal_error().into_response();
     }
 
-    return resp.success("account activated").into_response();
+    resp.success("account activated").into_response()
 }

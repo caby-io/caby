@@ -67,9 +67,9 @@ pub struct UploadTokenPayload {
     pub files: Vec<TokenFile>,
 }
 
-impl Into<UploadToken> for UploadTokenPayload {
-    fn into(self) -> UploadToken {
-        BASE64_STANDARD.encode(&bitcode::encode(&self))
+impl From<UploadTokenPayload> for UploadToken {
+    fn from(val: UploadTokenPayload) -> Self {
+        BASE64_STANDARD.encode(bitcode::encode(&val))
     }
 }
 
