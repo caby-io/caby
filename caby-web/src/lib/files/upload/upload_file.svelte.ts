@@ -1,6 +1,6 @@
 import { Progress } from './progress.svelte';
 import { EntryType } from './upload';
-import { type UploadEntry as RegisterUploadEntry } from '$lib/api/api_files';
+import type { UploadEntry as RegisterUploadEntry } from '$lib/api/api_files';
 import type { ClientConfig } from '$lib/api/client';
 import type { UploadRegistration } from './upload_group';
 import type { StartUploadPayload } from './workers';

@@ -1,7 +1,7 @@
 <script module>
 	import { getDownloadURL } from '$lib/api/api_files';
 	import { client } from '$lib/stores/client.svelte';
-	import { type Entry } from './entry';
+	import type { Entry } from './entry';
 
 	export type ContextMenuProps = {
 		dialog: HTMLElement;
