@@ -45,6 +45,7 @@ pub async fn handle_token_lookup(
         .values()
         .find(|u| u.activation_token.as_deref() == Some(&req.activation_token))
     else {
+        warn!("activation token does not exist: {}", req.activation_token);
         return resp.fail("bad request").into_response();
     };
 
@@ -62,6 +63,7 @@ pub async fn handle_token_lookup(
     };
 
     if is_activated {
+        warn!("user is already activated: {}", user.name);
         return resp.fail("bad request").into_response();
     }
 
