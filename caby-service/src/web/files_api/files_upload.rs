@@ -314,16 +314,16 @@ pub async fn handle_update_upload(
 }
 
 #[derive(Deserialize)]
-pub struct CompleteUploadParams {
+pub struct PublishUploadParams {
     pub id: String,
 }
 
-pub async fn handle_complete_upload(
+pub async fn handle_publish_upload(
     cfg: State<Config>,
     space: Space,
     user: AuthorizedUser,
     headers: HeaderMap,
-    path_params: Path<CompleteUploadParams>,
+    path_params: Path<PublishUploadParams>,
 ) -> Response {
     let resp = JSendBuilder::new();
 

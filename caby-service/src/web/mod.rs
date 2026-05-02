@@ -74,7 +74,7 @@ pub fn api_router(cfg: &Config) -> Router<Config> {
                 )
                 .route(
                     "/upload/{space}/{id}",
-                    post(files_api::handle_complete_upload),
+                    post(files_api::handle_publish_upload),
                 )
                 // .route("/upload/complete", post(files_api::handle_complete_upload))
                 .route("/delete/{space}", post(files_api::handle_delete_files))
