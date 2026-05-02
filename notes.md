@@ -66,6 +66,34 @@ users:
         permissions: "*"
 ```
 
+# Upload Management
+
+```mermaid
+graph TD;
+    A["user submits files for upload"];
+    B["create upload group"];
+    C["submit upload group to upload manager queue"];
+    D["(per-file) start uploading"];
+
+    E_1["hash file"];
+    E_2["submit hash to backend"];
+
+    F_1["(per-chunk) upload chunks"];
+
+    G["finalize file"];
+    H["finalize group"];
+
+    A-->B-->C-->D;
+    D-->E_1-->E_2-->G;
+    D-->F_1-->G-->H;
+```
+
+- Should we commit files or groups?
+- Tokens should definitely be per group in case we're uploading tons of small files
+
+- todo: create meta ghosts
+- todo: encode in upload token
+
 # Misc
 
 ```

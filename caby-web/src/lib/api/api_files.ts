@@ -4,7 +4,7 @@ import type { Entry } from '$lib/files/entry';
 import type { OverviewEntry } from '$lib/files/overview/overview_entry';
 import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '$lib/files/upload/upload';
 import type { UploadFile } from '$lib/files/upload/upload_file.svelte';
-import type { UploadGroup } from '$lib/files/upload/upload_group';
+import type { UploadGroup, UploadRegistration } from '$lib/files/upload/upload_group';
 import type { StartUploadPayload } from '$lib/files/upload/workers';
 import { join } from '$lib/fs';
 import { ApiClient, ApiRequestBuilder, type ApiResponse } from './client';
@@ -163,16 +163,17 @@ export const registerUpload = async (
 
 export const putChunk = async (
 	client: ApiClient,
+	registration: UploadRegistration,
 	upload_file: UploadFile | StartUploadPayload,
 	chunk_index: number,
 	chunk: any
 ) => {
 	const space = upload_file.space;
-	const id = upload_file.registration!.id;
+	const id = registration.id;
 	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
 	const req = ApiRequestBuilder.put(`files/upload/${space}/chunk/${id}/${encodeURIComponent(name)}`)
 		.addHeaders({
-			[CABY_UPLOAD_TOKEN]: upload_file.registration!.token,
+			[CABY_UPLOAD_TOKEN]: registration.token,
 			[CABY_CHUNK_INDEX]: chunk_index.toString()
 		})
 		.noRedirect()
@@ -181,13 +182,17 @@ export const putChunk = async (
 	return await client.exec(req);
 };
 
-export const finalizeUpload = async (client: ApiClient, upload_file: UploadFile) => {
+export const finalizeUpload = async (
+	client: ApiClient,
+	registration: UploadRegistration,
+	upload_file: UploadFile
+) => {
 	const space = upload_file.space;
-	const id = upload_file.registration!.id;
+	const id = registration.id;
 	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
 	const req = ApiRequestBuilder.patch(`files/upload/${space}/${id}/${encodeURIComponent(name)}`)
 		.addHeaders({
-			[CABY_UPLOAD_TOKEN]: upload_file.registration!.token
+			[CABY_UPLOAD_TOKEN]: registration.token
 		})
 		.noRedirect()
 		.withJsonBody({

@@ -19,6 +19,6 @@ export class UploadGroup {
 		this.space = space;
 		this.base_path = base_path;
 		this.registration = {} as UploadRegistration;
-		this.upload_files = files.map((f) => new UploadFile(space, base_path, this.registration, f));
+		this.upload_files = files.map((f) => new UploadFile(space, base_path, f));
 	}
 }
