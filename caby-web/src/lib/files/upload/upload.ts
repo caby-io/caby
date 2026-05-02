@@ -26,16 +26,6 @@ export type UploadFileRef = [UploadGroup, UploadFile];
 // 	DECONFLICT = 'deconflict'
 // }
 
-// export type RegisterUploadRequest = {
-// 	base_path: string;
-// 	entries: UploadEntry[];
-// 	conflict_strategy: ConflictStrategy;
-// };
-
-// export type Progress = {
-
-// };
-
 type ProgressEvent = {
 	time: number;
 	progress: number;

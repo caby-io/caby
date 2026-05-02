@@ -182,7 +182,7 @@ export const putChunk = async (
 	return await client.exec(req);
 };
 
-export const finalizeUpload = async (
+export const stageUpload = async (
 	client: ApiClient,
 	registration: UploadRegistration,
 	upload_file: UploadFile
@@ -204,7 +204,7 @@ export const finalizeUpload = async (
 	return await client.exec(req);
 };
 
-export const commitUpload = async (client: ApiClient, upload_group: UploadGroup) => {
+export const publishUpload = async (client: ApiClient, upload_group: UploadGroup) => {
 	const space = upload_group.space;
 	const id = upload_group.registration!.id;
 	const req = ApiRequestBuilder.post(`files/upload/${space}/${id}`)

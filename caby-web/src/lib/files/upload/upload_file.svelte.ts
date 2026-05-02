@@ -37,7 +37,7 @@ export class UploadFile {
 
 	public hash_task_status: TaskStatus = TaskStatus.PENDING;
 	public upload_task_status: TaskStatus = TaskStatus.PENDING;
-	public finalize_task_status: TaskStatus = TaskStatus.PENDING;
+	public stage_task_status: TaskStatus = TaskStatus.PENDING;
 
 	// public registration?: UploadRegistration;
 	public xxh_digest?: string;
@@ -60,11 +60,11 @@ export class UploadFile {
 	// 	return this.registration.id !== undefined && this.upload_task_status === TaskStatus.PENDING;
 	// };
 
-	public readyToFinalize = (): boolean => {
+	public readyToStage = (): boolean => {
 		return (
 			this.hash_task_status === TaskStatus.COMPLETE &&
 			this.upload_task_status === TaskStatus.COMPLETE &&
-			this.finalize_task_status === TaskStatus.PENDING
+			this.stage_task_status === TaskStatus.PENDING
 		);
 	};
 

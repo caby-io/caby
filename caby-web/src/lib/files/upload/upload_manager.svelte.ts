@@ -12,9 +12,9 @@ import {
 import { CombinedProgress, Progress } from './progress.svelte';
 import { client } from '$lib/stores/client.svelte';
 import {
-	commitUpload,
+	publishUpload,
 	ConflictStrategy,
-	finalizeUpload,
+	stageUpload,
 	putChunk,
 	registerUpload
 } from '$lib/api/api_files';
@@ -29,12 +29,6 @@ type UploadFileCb = (ref: UploadFileRef) => void;
 // todo: update the total
 // todo: we may want to eventually batch registrations
 const startRegisterFileWorker = async (on_done: UploadGroupCb, upload_group: UploadGroup) => {
-	// let register_request: RegisterUploadRequest = {
-	// 	base_path: upload_group.base_path,
-	// 	entries: [...upload_group.upload_files.map((f) => f.intoUploadEntry())],
-	// 	conflict_strategy: ConflictStrategy.OVERRIDE // todo: make this a param
-	// };
-
 	const resp = await registerUpload(
 		client,
 		upload_group.space,
@@ -77,8 +71,6 @@ const startUploadFileWorker = async (
 	combined_progress: CombinedProgress
 ) => {
 	const [upload_group, upload_file] = ref;
-	// todo: use this
-	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
 	const upload_id = combined_progress.registerUpload();
 
 	let index = 0;
@@ -241,18 +233,6 @@ export class UploadManager {
 		this.startRegistering();
 	};
 
-	// private removeFromRegisterQueue = (upload_group: UploadGroup) => {
-	// 	this.register_queue = this.register_queue.filter((g) => g === upload_group);
-	// };
-
-	// private removeFromHashQueue = (ref: UploadFileRef) => {
-	// 	this.hash_queue = this.hash_queue.filter((r) => r[1] === ref[1]);
-	// };
-
-	// private removeFromUploadQueue = (ref: UploadFileRef) => {
-	// 	this.upload_queue = this.upload_queue.filter((r) => r[1] === ref[1]);
-	// };
-
 	private startRegistering = () => {
 		const on_done_callback: UploadGroupCb = (g: UploadGroup) => {
 			this.register_worker_count--;
@@ -277,7 +257,7 @@ export class UploadManager {
 		const on_done_callback: UploadFileCb = (ref: UploadFileRef) => {
 			this.hash_worker_count--;
 			this.startHashing();
-			this.finalizeUpload(ref);
+			this.stageUpload(ref);
 		};
 
 		while (this.hash_worker_count < MAX_HASH_THREADS && this.hash_queue.length > 0) {
@@ -296,7 +276,7 @@ export class UploadManager {
 			// upload_file.upload_task_status = TaskStatus.COMPLETE;
 			this.upload_worker_count--;
 			this.startUploading();
-			this.finalizeUpload(ref);
+			this.stageUpload(ref);
 		};
 
 		while (this.upload_worker_count < MAX_UPLOAD_THREADS && this.upload_queue.length > 0) {
@@ -318,30 +298,30 @@ export class UploadManager {
 		// todo
 	};
 
-	private finalizeUpload = async (ref: UploadFileRef) => {
+	private stageUpload = async (ref: UploadFileRef) => {
 		const [upload_group, upload_file] = ref;
-		if (!upload_file.readyToFinalize()) {
+		if (!upload_file.readyToStage()) {
 			return;
 		}
-		upload_file.finalize_task_status = TaskStatus.STARTED;
+		upload_file.stage_task_status = TaskStatus.STARTED;
 
 		// todo: handle response and error
-		const resp = await finalizeUpload(client, upload_group.registration, upload_file);
+		const resp = await stageUpload(client, upload_group.registration, upload_file);
 
-		upload_file.finalize_task_status = TaskStatus.COMPLETE;
-		console.debug('[caby/upload-manager] finished finalizing file');
-		await this.tryCommitUploadGroup(upload_group);
+		upload_file.stage_task_status = TaskStatus.COMPLETE;
+		console.debug('[caby/upload-manager] finished staging file');
+		await this.tryPublishUploadGroup(upload_group);
 	};
 
-	private tryCommitUploadGroup = async (upload_group: UploadGroup) => {
+	private tryPublishUploadGroup = async (upload_group: UploadGroup) => {
 		// todo: consider what to do for non-complete 'done' states
-		// if even one file isn't ready then skip comitting
-		if (upload_group?.upload_files.find((f) => f.finalize_task_status !== TaskStatus.COMPLETE)) {
+		// if even one file isn't ready then skip publishing
+		if (upload_group?.upload_files.find((f) => f.stage_task_status !== TaskStatus.COMPLETE)) {
 			return;
 		}
 
 		// todo: handle errors
-		const resp = await commitUpload(client, upload_group!);
+		const resp = await publishUpload(client, upload_group!);
 
 		console.debug(`[caby/upload-manager] completed ${upload_group.registration.id}`);
 

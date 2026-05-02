@@ -80,8 +80,8 @@ graph TD;
 
     F_1["(per-chunk) upload chunks"];
 
-    G["finalize file"];
-    H["finalize group"];
+    G["stage file"];
+    H["publish group"];
 
     A-->B-->C-->D;
     D-->E_1-->E_2-->G;
