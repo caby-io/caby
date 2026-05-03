@@ -2,6 +2,7 @@ use crate::{
     auth::AuthorizedUser,
     config::Config,
     error::RequestError,
+    files::upload::merge_dir,
     jsend::JSendBuilder,
     space::Space,
     web::{headers::get_required_header, upload::*},
@@ -14,12 +15,13 @@ use axum::{
     Json,
 };
 use futures_util::TryStreamExt;
+use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
 use std::{
     hash::Hasher,
     io::{self},
     os::unix::fs::MetadataExt,
-    path::PathBuf,
+    path::{Component, PathBuf},
 };
 use tokio::{
     fs::{self, remove_file, OpenOptions},
@@ -42,6 +44,15 @@ struct RegisterUploadResponse {
     pub token: UploadToken,
 }
 
+// rejects absolute paths and any path that escapes its root via `..` after cleaning
+fn is_safe_relative_path(p: &str) -> bool {
+    let cleaned = PathBuf::from(p).clean();
+    if cleaned.is_absolute() {
+        return false;
+    }
+    !matches!(cleaned.components().next(), Some(Component::ParentDir))
+}
+
 // todo: return error on empty entries
 pub async fn handle_register_upload(
     cfg: State<Config>,
@@ -49,7 +60,21 @@ pub async fn handle_register_upload(
     user: AuthorizedUser,
     Json(req): Json<RegisterUploadRequest>,
 ) -> Response {
-    // Validate?
+    // basic validation
+    // todo: improve
+    if !is_safe_relative_path(&req.base_path) {
+        return JSendBuilder::new()
+            .fail(format!("invalid base_path: {}", req.base_path))
+            .into_response();
+    }
+    for entry in &req.entries {
+        if !is_safe_relative_path(&entry.name) {
+            return JSendBuilder::new()
+                .fail(format!("invalid entry name: {}", entry.name))
+                .into_response();
+        }
+    }
+
     // Generate an ID for this request
     let id = xid::new();
     // Create an upload dir for this upload
@@ -362,29 +387,10 @@ pub async fn handle_publish_upload(
     }
 
     // todo: check that all the files are complete
-    // todo: get the base path
+    let live_base = space.live().join(&upload_token_payload.base_path);
     let upload_path = space.uploads().join(&path_params.id);
-    let mut entries = match fs::read_dir(&upload_path).await {
-        Ok(e) => e,
-        // todo: improve this error
-        Err(err) => return resp.internal_error().into_response(),
-    };
-
-    // todo: improve err
-    while let Some(dir_entry) = entries.next_entry().await.expect("couldn't get next entry") {
-        // let filename = dir_entry.file_name();
-        let dest = space
-            .live()
-            .join(&upload_token_payload.base_path)
-            .join(dir_entry.file_name());
-
-        fs::rename(dir_entry.path(), dest)
-            .await
-            .expect("couldn't move file");
-    }
-
-    if let Err(err) = fs::remove_dir_all(upload_path).await {
-        error!("couldn't clear upload directory: {:#}", err);
+    if let Err(err) = merge_dir(&upload_path, &live_base).await {
+        error!("could not publish upload: {:#}", err);
         return resp.internal_error().into_response();
     }
 

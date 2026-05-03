@@ -14,6 +14,7 @@ use crate::{error::Result, space::Space};
 
 pub mod overview;
 pub mod pretty;
+pub mod upload;
 
 #[derive(Serialize, Deserialize, PartialEq, Default, Debug)]
 // #[strum(serialize_all = "snake_case")]

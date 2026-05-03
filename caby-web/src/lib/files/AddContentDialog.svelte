@@ -88,7 +88,7 @@
 					<iconify-icon icon="flat-color-icons:folder"></iconify-icon>
 					<span class="overlay"><iconify-icon icon="ph:upload-fill"></iconify-icon></span>
 				</div>
-				Upload Directories (coming soon)
+				Upload Directories
 			</button>
 			<button class="fx fx--ac border-0 box-shadow-0-card" disabled>
 				<div class="fx fx--cc youtube"><iconify-icon icon="logos:youtube-icon"></iconify-icon></div>
