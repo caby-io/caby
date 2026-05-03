@@ -164,8 +164,8 @@
 		// todo: display something using these
 		const items = [...e.dataTransfer.items];
 		items.forEach((item) => {
-			console.log(item.kind);
-			console.log(item.type);
+			console.debug(item.kind);
+			console.debug(item.type);
 		});
 	};
 
@@ -198,13 +198,14 @@
 		// todo: webkitGetAsEntry -> getAsEntry in the future, code defensively
 		const entries = [...e.dataTransfer!.items].flatMap((i) => i.webkitGetAsEntry() || []);
 
-		for (const entry of entries) {
-			const files = await fsEntryIntoFiles(entry);
-			if (files.length < 1) {
-				continue;
-			}
-			uploadManager.addUploads(new UploadGroup(space, path, ...files));
-		}
+		await Promise.all(
+			entries.map(async (entry) => {
+				const files = await fsEntryIntoFiles(entry);
+				if (files.length > 0) {
+					uploadManager.addUploads(new UploadGroup(space, path, ...files));
+				}
+			})
+		);
 	};
 
 	const onDragEnd = (e: DragEvent) => {
@@ -518,9 +519,10 @@
 		position: relative;
 		transition: opacity 0.2s;
 
-		&.loading {
-			opacity: 0.5;
-		}
+		// temporarily remove since we use it for everything including upload updates
+		// &.loading {
+		// 	opacity: 0.5;
+		// }
 
 		&.drag-over {
 			opacity: 0.5;
