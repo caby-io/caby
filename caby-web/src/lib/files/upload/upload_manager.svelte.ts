@@ -228,7 +228,6 @@ export class UploadManager {
 			this.register_queue.push(g);
 			g.upload_files.forEach((f) => {
 				this.hash_queue.push([g, f]);
-				this.upload_queue.push([g, f]);
 			});
 		});
 
@@ -238,6 +237,9 @@ export class UploadManager {
 	private startRegistering = () => {
 		const on_done_callback: UploadGroupCb = (g: UploadGroup) => {
 			this.register_worker_count--;
+			g.upload_files.forEach((f) => {
+				this.upload_queue.push([g, f]);
+			});
 			this.startRegistering();
 			this.startHashing();
 			this.startUploading();
