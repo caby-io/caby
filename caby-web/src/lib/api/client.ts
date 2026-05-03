@@ -166,7 +166,6 @@ export class ApiClient {
 
 	public isAuthenticated = (): boolean => {
 		if (!this.auth.login_token) {
-			console.log('failed here');
 			return false;
 		}
 
