@@ -62,7 +62,7 @@ const start_upload = (client: ApiClient, payload: StartUploadPayload) => {
 			self.postMessage(completedEvent);
 			return;
 		}
-		const resp = await putChunk(client, payload, index, event.target!.result);
+		const resp = await putChunk(client, payload.registration, payload, index, event.target!.result);
 		// todo: handle response and error
 
 		// update total progress

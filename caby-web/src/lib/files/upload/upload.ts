@@ -1,3 +1,6 @@
+import type { UploadFile } from './upload_file.svelte';
+import type { UploadGroup } from './upload_group';
+
 export const CABY_UPLOAD_TOKEN = 'Caby-Upload-Token';
 export const CABY_CHUNK_INDEX = 'Caby-Chunk-Index';
 
@@ -6,6 +9,8 @@ export enum EntryType {
 	FILE = 'file',
 	DIRECTORY = 'directory'
 }
+
+export type UploadFileRef = [UploadGroup, UploadFile];
 
 // export type UploadEntry = {
 // 	entry_type: string;
@@ -20,16 +25,6 @@ export enum EntryType {
 // 	PROMPT = 'prompt',
 // 	DECONFLICT = 'deconflict'
 // }
-
-// export type RegisterUploadRequest = {
-// 	base_path: string;
-// 	entries: UploadEntry[];
-// 	conflict_strategy: ConflictStrategy;
-// };
-
-// export type Progress = {
-
-// };
 
 type ProgressEvent = {
 	time: number;

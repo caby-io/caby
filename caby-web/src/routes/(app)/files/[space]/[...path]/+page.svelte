@@ -147,6 +147,7 @@
 	let drag_over_ct: number = $state(0);
 
 	const onDragEnter = (e: DragEvent) => {
+		// filter to files
 		if (!e.dataTransfer || e.dataTransfer.items.length < 1) {
 			return;
 		}
@@ -158,6 +159,7 @@
 			return;
 		}
 
+		// todo: display something using these
 		const items = [...e.dataTransfer.items];
 		items.forEach((item) => {
 			console.log(item.kind);

@@ -2,7 +2,7 @@ import { Progress } from './progress.svelte';
 import { EntryType } from './upload';
 import type { UploadEntry as RegisterUploadEntry } from '$lib/api/api_files';
 import type { ClientConfig } from '$lib/api/client';
-import type { UploadRegistration } from './upload_group';
+import type { UploadGroup, UploadRegistration } from './upload_group';
 import type { StartUploadPayload } from './workers';
 
 export enum TaskStatus {
@@ -33,39 +33,43 @@ export class UploadFile {
 	public space: string;
 	public base_path: string;
 	public file: File;
-	public registration: UploadRegistration;
+	// public registration: UploadRegistration;
 
 	public hash_task_status: TaskStatus = TaskStatus.PENDING;
 	public upload_task_status: TaskStatus = TaskStatus.PENDING;
-	public finalize_task_status: TaskStatus = TaskStatus.PENDING;
+	public stage_task_status: TaskStatus = TaskStatus.PENDING;
 
 	// public registration?: UploadRegistration;
 	public xxh_digest?: string;
 	public upload_progress: Progress;
 	public upload_id?: number;
 
-	constructor(space: string, base_path: string, registration: UploadRegistration, file: File) {
+	constructor(space: string, base_path: string, file: File) {
 		this.space = space;
 		this.base_path = base_path;
 		this.file = file;
-		this.registration = registration;
+		// this.registration = registration;
 		this.upload_progress = new Progress(file.size);
 	}
 
-	public readyToHash = (): boolean => {
-		return this.registration.id !== undefined && this.hash_task_status === TaskStatus.PENDING;
+	public getCleanedName = (): string => {
+		const name = this.file.webkitRelativePath || this.file.name;
+		return name.split('/').map(encodeURIComponent).join('/');
 	};
 
-	public readyToUpload = (): boolean => {
-		return this.registration.id !== undefined && this.upload_task_status === TaskStatus.PENDING;
-	};
+	// public readyToHash = (): boolean => {
+	// 	return this.registration.id !== undefined && this.hash_task_status === TaskStatus.PENDING;
+	// };
 
-	public readyToFinalize = (): boolean => {
+	// public readyToUpload = (): boolean => {
+	// 	return this.registration.id !== undefined && this.upload_task_status === TaskStatus.PENDING;
+	// };
+
+	public readyToStage = (): boolean => {
 		return (
-			this.registration.id !== undefined &&
 			this.hash_task_status === TaskStatus.COMPLETE &&
 			this.upload_task_status === TaskStatus.COMPLETE &&
-			this.finalize_task_status === TaskStatus.PENDING
+			this.stage_task_status === TaskStatus.PENDING
 		);
 	};
 
@@ -75,17 +79,6 @@ export class UploadFile {
 			name: this.file.webkitRelativePath || this.file.name,
 			size: this.file.size,
 			xxh_digest: this.xxh_digest!
-		};
-	};
-
-	// Used to convert svelte object into plain object so we can send it to the worker
-	public intoStartUploadPayload = (client_config: ClientConfig): StartUploadPayload => {
-		return {
-			client_config,
-			space: this.space,
-			base_path: this.base_path,
-			file: this.file,
-			registration: this.registration
 		};
 	};
 }

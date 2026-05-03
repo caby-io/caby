@@ -13,12 +13,12 @@ export class UploadGroup {
 	public registration: UploadRegistration;
 
 	public registration_task_status: TaskStatus = TaskStatus.PENDING;
-	// public commit_task_status: TaskStatus = TaskStatus.PENDING;
+	// public publish_task_status: TaskStatus = TaskStatus.PENDING;
 
 	constructor(space: string, base_path: string, ...files: File[]) {
 		this.space = space;
 		this.base_path = base_path;
 		this.registration = {} as UploadRegistration;
-		this.upload_files = files.map((f) => new UploadFile(space, base_path, this.registration, f));
+		this.upload_files = files.map((f) => new UploadFile(space, base_path, f));
 	}
 }
