@@ -105,7 +105,8 @@ const startUploadFileWorker = async (
 		const resp = await putChunk(
 			client,
 			upload_group.registration,
-			upload_file,
+			upload_file.space,
+			upload_file.name,
 			index,
 			event.target!.result
 		);
@@ -143,6 +144,7 @@ const getStartUploadPayload = (ref: UploadFileRef): StartUploadPayload => {
 		client_config: client.getConfig(),
 		space: upload_file.space,
 		base_path: upload_group.base_path,
+		name: upload_file.name,
 		file: upload_file.file,
 		registration: upload_group.registration
 	};
@@ -226,7 +228,6 @@ export class UploadManager {
 			this.register_queue.push(g);
 			g.upload_files.forEach((f) => {
 				this.hash_queue.push([g, f]);
-				this.upload_queue.push([g, f]);
 			});
 		});
 
@@ -236,6 +237,9 @@ export class UploadManager {
 	private startRegistering = () => {
 		const on_done_callback: UploadGroupCb = (g: UploadGroup) => {
 			this.register_worker_count--;
+			g.upload_files.forEach((f) => {
+				this.upload_queue.push([g, f]);
+			});
 			this.startRegistering();
 			this.startHashing();
 			this.startUploading();

@@ -229,9 +229,13 @@ pub async fn handle_upload_chunk(
             .take((upload_token_payload.chunk_size + 1));
 
     // todo: handle error
-    let bytes_written = tokio::io::copy(&mut limited_body_stream, &mut file)
-        .await
-        .expect("couldn't copy bytes");
+    let bytes_written = match tokio::io::copy(&mut limited_body_stream, &mut file).await {
+        Ok(b) => b,
+        Err(err) => {
+            error!("could not write chunk: {:#}", err);
+            return resp.error("could not write chunk").into_response();
+        }
+    };
 
     if bytes_written > upload_token_payload.chunk_size {
         // todo: handle error

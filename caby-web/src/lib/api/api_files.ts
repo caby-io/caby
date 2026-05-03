@@ -5,7 +5,6 @@ import type { OverviewEntry } from '$lib/files/overview/overview_entry';
 import { CABY_CHUNK_INDEX, CABY_UPLOAD_TOKEN } from '$lib/files/upload/upload';
 import type { UploadFile } from '$lib/files/upload/upload_file.svelte';
 import type { UploadGroup, UploadRegistration } from '$lib/files/upload/upload_group';
-import type { StartUploadPayload } from '$lib/files/upload/workers';
 import { join } from '$lib/fs';
 import { ApiClient, ApiRequestBuilder, type ApiResponse } from './client';
 
@@ -161,21 +160,20 @@ export const registerUpload = async (
 	return await client.exec(req);
 };
 
-const getCleanedName = (name: string): string => {
+const encodePath = (name: string): string => {
 	return name.split('/').map(encodeURIComponent).join('/');
 };
 
 export const putChunk = async (
 	client: ApiClient,
 	registration: UploadRegistration,
-	upload_file: UploadFile | StartUploadPayload,
+	space: string,
+	name: string,
 	chunk_index: number,
 	chunk: any
 ) => {
-	const space = upload_file.space;
 	const id = registration.id;
-	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
-	const req = ApiRequestBuilder.put(`files/upload/${space}/chunk/${id}/${getCleanedName(name)}`)
+	const req = ApiRequestBuilder.put(`files/upload/${space}/chunk/${id}/${encodePath(name)}`)
 		.addHeaders({
 			[CABY_UPLOAD_TOKEN]: registration.token,
 			[CABY_CHUNK_INDEX]: chunk_index.toString()
@@ -191,10 +189,10 @@ export const stageUpload = async (
 	registration: UploadRegistration,
 	upload_file: UploadFile
 ) => {
-	const space = upload_file.space;
 	const id = registration.id;
-	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
-	const req = ApiRequestBuilder.patch(`files/upload/${space}/${id}/${getCleanedName(name)}`)
+	const req = ApiRequestBuilder.patch(
+		`files/upload/${upload_file.space}/${id}/${encodePath(upload_file.name)}`
+	)
 		.addHeaders({
 			[CABY_UPLOAD_TOKEN]: registration.token
 		})
