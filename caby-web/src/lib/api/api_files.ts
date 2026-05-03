@@ -161,6 +161,10 @@ export const registerUpload = async (
 	return await client.exec(req);
 };
 
+const getCleanedName = (name: string): string => {
+	return name.split('/').map(encodeURIComponent).join('/');
+};
+
 export const putChunk = async (
 	client: ApiClient,
 	registration: UploadRegistration,
@@ -171,7 +175,7 @@ export const putChunk = async (
 	const space = upload_file.space;
 	const id = registration.id;
 	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
-	const req = ApiRequestBuilder.put(`files/upload/${space}/chunk/${id}/${encodeURIComponent(name)}`)
+	const req = ApiRequestBuilder.put(`files/upload/${space}/chunk/${id}/${getCleanedName(name)}`)
 		.addHeaders({
 			[CABY_UPLOAD_TOKEN]: registration.token,
 			[CABY_CHUNK_INDEX]: chunk_index.toString()
@@ -190,7 +194,7 @@ export const stageUpload = async (
 	const space = upload_file.space;
 	const id = registration.id;
 	const name = upload_file.file.webkitRelativePath || upload_file.file.name;
-	const req = ApiRequestBuilder.patch(`files/upload/${space}/${id}/${encodeURIComponent(name)}`)
+	const req = ApiRequestBuilder.patch(`files/upload/${space}/${id}/${getCleanedName(name)}`)
 		.addHeaders({
 			[CABY_UPLOAD_TOKEN]: registration.token
 		})

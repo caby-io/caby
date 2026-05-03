@@ -17,22 +17,33 @@
 	// };
 
 	const handleUploadFiles = async (files: FileList) => {
-		// for now we are always making an upload group for each file
 		for (const file of files) {
 			uploadManager.addUploads(new UploadGroup(space, path, file));
 		}
 	};
 
-	const openFileDialog = (dir: boolean = false) => {
+	const openFileDialog = () => {
 		const input = document.createElement('input');
 		input.setAttribute('type', 'file');
 		input.setAttribute('multiple', 'multiple');
-		if (dir) {
-			input.setAttribute('webkitdirectory', 'webkitdirectory');
-		}
-
 		input.onchange = (_) => {
 			handleUploadFiles(input.files!);
+			dialog.close();
+		};
+		input.click();
+	};
+
+	const handleUploadDirs = async (files: FileList) => {
+		uploadManager.addUploads(new UploadGroup(space, path, ...files));
+	};
+
+	const openDirDialog = () => {
+		const input = document.createElement('input');
+		input.setAttribute('type', 'file');
+		input.setAttribute('multiple', 'multiple');
+		input.setAttribute('webkitdirectory', 'webkitdirectory');
+		input.onchange = (_) => {
+			handleUploadDirs(input.files!);
 			dialog.close();
 		};
 		input.click();
@@ -58,7 +69,7 @@
 				</div>
 				New Folder
 			</button>
-			<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openFileDialog(false)}>
+			<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openFileDialog()}>
 				<div class="fx fx--cc">
 					<iconify-icon icon="streamline-flex-color:text-file-flat"></iconify-icon>
 					<span class="overlay"><iconify-icon icon="ph:upload-fill"></iconify-icon></span>
@@ -72,7 +83,7 @@
 				</div>
 				New File (coming soon)
 			</button>
-			<button class="fx fx--ac border-0 box-shadow-0-card" disabled>
+			<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openDirDialog()}>
 				<div class="fx fx--cc">
 					<iconify-icon icon="flat-color-icons:folder"></iconify-icon>
 					<span class="overlay"><iconify-icon icon="ph:upload-fill"></iconify-icon></span>

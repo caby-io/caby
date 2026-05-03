@@ -172,6 +172,20 @@ pub async fn handle_upload_chunk(
         .join(&path_params.id)
         .join(&path_params.file_path);
 
+    // ensure the parent dir exists
+    let parent_path = match full_path.parent() {
+        Some(p) => p,
+        None => {
+            return resp
+                .error("could not determine parent path")
+                .into_response()
+        }
+    };
+    if let Err(err) = fs::create_dir_all(parent_path).await {
+        error!("could not create parent path for upload: {:#}", err);
+        return resp.error("could not create parent path").into_response();
+    };
+
     let mut file = match OpenOptions::new()
         .write(true)
         .append(true)

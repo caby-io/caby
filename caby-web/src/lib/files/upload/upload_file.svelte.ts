@@ -52,6 +52,11 @@ export class UploadFile {
 		this.upload_progress = new Progress(file.size);
 	}
 
+	public getCleanedName = (): string => {
+		const name = this.file.webkitRelativePath || this.file.name;
+		return name.split('/').map(encodeURIComponent).join('/');
+	};
+
 	// public readyToHash = (): boolean => {
 	// 	return this.registration.id !== undefined && this.hash_task_status === TaskStatus.PENDING;
 	// };
