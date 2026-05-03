@@ -16,6 +16,7 @@ export type StartUploadPayload = {
 	client_config: ClientConfig;
 	space: string;
 	base_path: string;
+	name: string;
 	file: File;
 	registration: UploadRegistration;
 };

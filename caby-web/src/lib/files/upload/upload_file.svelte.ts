@@ -33,6 +33,7 @@ export class UploadFile {
 	public space: string;
 	public base_path: string;
 	public file: File;
+	public name: string;
 	// public registration: UploadRegistration;
 
 	public hash_task_status: TaskStatus = TaskStatus.PENDING;
@@ -48,14 +49,10 @@ export class UploadFile {
 		this.space = space;
 		this.base_path = base_path;
 		this.file = file;
+		this.name = file.webkitRelativePath || file.name;
 		// this.registration = registration;
 		this.upload_progress = new Progress(file.size);
 	}
-
-	public getCleanedName = (): string => {
-		const name = this.file.webkitRelativePath || this.file.name;
-		return name.split('/').map(encodeURIComponent).join('/');
-	};
 
 	// public readyToHash = (): boolean => {
 	// 	return this.registration.id !== undefined && this.hash_task_status === TaskStatus.PENDING;
@@ -76,7 +73,7 @@ export class UploadFile {
 	public intoUploadEntry = (): RegisterUploadEntry => {
 		return {
 			entry_type: EntryType.FILE,
-			name: this.file.webkitRelativePath || this.file.name,
+			name: this.name,
 			size: this.file.size,
 			xxh_digest: this.xxh_digest!
 		};

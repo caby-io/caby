@@ -38,6 +38,8 @@
 	import RenameDialog from './RenameDialog.svelte';
 	import MoveDialog from './MoveDialog.svelte';
 	import EntriesOverviewNav from '$lib/files/overview/EntriesOverviewNav.svelte';
+	import { fsEntryIntoFiles } from '$lib/files/upload/drop';
+	import { UploadGroup } from '$lib/files/upload/upload_group';
 
 	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
@@ -186,17 +188,23 @@
 		}
 	};
 
-	const onDrop = (e: DragEvent) => {
+	const onDrop = async (e: DragEvent) => {
 		if (drag_over_ct < 1) {
 			return;
 		}
 		e.preventDefault();
-		const items = [...e.dataTransfer!.items];
-		items.forEach((item) => {
-			console.log(items);
-		});
-
 		drag_over_ct = 0;
+
+		// todo: webkitGetAsEntry -> getAsEntry in the future, code defensively
+		const entries = [...e.dataTransfer!.items].flatMap((i) => i.webkitGetAsEntry() || []);
+
+		for (const entry of entries) {
+			const files = await fsEntryIntoFiles(entry);
+			if (files.length < 1) {
+				continue;
+			}
+			uploadManager.addUploads(new UploadGroup(space, path, ...files));
+		}
 	};
 
 	const onDragEnd = (e: DragEvent) => {

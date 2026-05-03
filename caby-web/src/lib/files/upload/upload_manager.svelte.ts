@@ -105,7 +105,8 @@ const startUploadFileWorker = async (
 		const resp = await putChunk(
 			client,
 			upload_group.registration,
-			upload_file,
+			upload_file.space,
+			upload_file.name,
 			index,
 			event.target!.result
 		);
@@ -143,6 +144,7 @@ const getStartUploadPayload = (ref: UploadFileRef): StartUploadPayload => {
 		client_config: client.getConfig(),
 		space: upload_file.space,
 		base_path: upload_group.base_path,
+		name: upload_file.name,
 		file: upload_file.file,
 		registration: upload_group.registration
 	};
