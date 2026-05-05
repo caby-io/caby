@@ -1,6 +1,8 @@
 <p align="center">
-  <strong>⚠️ Note: Caby is in active development and in a pre-release state ⚠️</strong>
+  ⚠️ Note: Caby is in active development and in a pre-release state ⚠️
 </p>
+
+<br />
 
 <p align="center">
   <picture>
