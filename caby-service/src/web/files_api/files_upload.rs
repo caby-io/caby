@@ -2,9 +2,13 @@ use crate::{
     auth::AuthorizedUser,
     config::Config,
     error::RequestError,
-    files::upload::merge_dir,
+    files::merge_dir,
     jsend::JSendBuilder,
     space::Space,
+    upload::{
+        decode_upload_token, generate_upload_token, get_file_digest_size, UploadToken,
+        UploadTokenPayload,
+    },
     web::{headers::get_required_header, upload::*},
 };
 use axum::{
@@ -88,22 +92,30 @@ pub async fn handle_register_upload(
         id: id.to_string(),
         base_path: req.base_path,
         chunk_size: MAX_CHUNK_SIZE,
-        files: req
-            .entries
-            .into_iter()
-            .filter(|e| matches!(e.entry_type, UploadEntryType::File))
-            .map(|e| TokenFile {
-                name: e.name.clone(),
-                size: e.size,
-            })
-            .collect(),
+        // files: req
+        //     .entries
+        //     .into_iter()
+        //     .filter(|e| matches!(e.entry_type, UploadEntryType::File))
+        //     .map(|e| TokenFile {
+        //         name: e.name.clone(),
+        //         size: e.size,
+        //     })
+        //     .collect(),
+    };
+
+    let token = match generate_upload_token(&cfg, token_payload) {
+        Ok(t) => t,
+        Err(err) => {
+            error!("could not generate upload token: {:#}", err);
+            return JSendBuilder::new().internal_error().into_response();
+        }
     };
 
     JSendBuilder::new()
         .success(RegisterUploadResponse {
             id: id.to_string(),
             chunk_size: MAX_CHUNK_SIZE,
-            token: token_payload.into(),
+            token,
         })
         .into_response()
 }
@@ -130,9 +142,12 @@ pub async fn handle_upload_chunk(
         Err(err) => return err.into_response(),
     };
 
-    let upload_token_payload: UploadTokenPayload = match upload_token_str.to_string().try_into() {
-        Ok(r) => r,
-        Err(e) => return e.into_response(),
+    let upload_token_payload = match decode_upload_token(&cfg, &upload_token_str) {
+        Ok(p) => p,
+        Err(err) => {
+            error!("could not decode upload token: {:#}", err);
+            return resp.internal_error().into_response();
+        }
     };
 
     // note: this should enable async chunk upload eventually
@@ -291,9 +306,12 @@ pub async fn handle_update_upload(
         Err(err) => return err.into_response(),
     };
 
-    let upload_token_payload: UploadTokenPayload = match upload_token_str.to_string().try_into() {
-        Ok(r) => r,
-        Err(err) => return err.into_response(),
+    let upload_token_payload = match decode_upload_token(&cfg, &upload_token_str) {
+        Ok(p) => p,
+        Err(err) => {
+            error!("could not decode upload token: {:#}", err);
+            return resp.internal_error().into_response();
+        }
     };
 
     // let id_path = PathBuf::from(path_params.id.clone());
@@ -376,9 +394,12 @@ pub async fn handle_publish_upload(
         Err(err) => return err.into_response(),
     };
 
-    let upload_token_payload: UploadTokenPayload = match upload_token_str.to_string().try_into() {
-        Ok(r) => r,
-        Err(e) => return e.into_response(),
+    let upload_token_payload = match decode_upload_token(&cfg, &upload_token_str) {
+        Ok(p) => p,
+        Err(err) => {
+            error!("could not decode upload token: {:#}", err);
+            return resp.internal_error().into_response();
+        }
     };
 
     // let id_path = PathBuf::from(path_params.id);

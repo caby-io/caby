@@ -8,6 +8,7 @@ use crate::{
     Result,
 };
 use anyhow::anyhow;
+use chacha20poly1305::{aead::OsRng, ChaCha20Poly1305, Key, KeyInit};
 use serde::Deserialize;
 use std::{collections::HashMap, env::var, path::PathBuf};
 
@@ -67,10 +68,12 @@ impl From<&UserConfig> for User {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone)]
 pub struct Config {
     // global settings
     pub directory_meta_filename: String,
+    // secrets
+    pub upload_token_key: Key,
 
     // application settings
     pub home_path: PathBuf,
@@ -208,6 +211,8 @@ impl ConfigBuilder {
             directory_meta_filename: self.directory_meta_filename.ok_or(anyhow!(
                 "missing directory meta filename (CABY_DIRECTORY_META_FILENAME)"
             ))?,
+            // todo: get from file
+            upload_token_key: ChaCha20Poly1305::generate_key(&mut OsRng),
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,

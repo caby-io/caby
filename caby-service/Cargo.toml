@@ -28,6 +28,7 @@ argon2 = "0.5.3"
 chrono = { version = "0.4.44", features = ["serde"] }
 rand = "0.10.1"
 email_address = "0.2.9"
+chacha20poly1305 = "0.10.1"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]
