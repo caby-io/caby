@@ -31,4 +31,4 @@
 
 ## 📖 Documentation
 
-Caby's documentation and install instructions can be found at [caby.io/docs](https://caby.io/docs).
+Caby's documentation and install instructions can be found at [caby.io/docs](https://caby.io/docs/overview).
