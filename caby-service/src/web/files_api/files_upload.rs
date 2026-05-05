@@ -229,7 +229,6 @@ pub async fn handle_upload_chunk(
         StreamReader::new(body.into_data_stream().map_err(io::Error::other))
             .take((upload_token_payload.chunk_size + 1));
 
-    // todo: handle error
     let bytes_written = match tokio::io::copy(&mut limited_body_stream, &mut file).await {
         Ok(b) => b,
         Err(err) => {
