@@ -8,7 +8,7 @@
 <p align="center">
   <em><ins>Simple and reliable</ins> self-hosted file management for your home network.</em>
 </p>
-<hr />
+<hr style="height: 1px; margin: inherit" />
 <p align="center">
   <a href="https://discord.gg/Z2JkSs2Hzy"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
