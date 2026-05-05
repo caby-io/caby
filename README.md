@@ -1,8 +1,8 @@
 <br />
 <p align="center">
   <picture>
-    <source srcset=".github/assets/caby-2-logo-white-rgb-900px-w-72ppi.png" media="(prefers-color-scheme: dark)">
-    <img src=".github/assets/caby-2-logo-black-rgb-900px-w-72ppi.png" alt="Caby Logo" width="300">
+    <source srcset=".github/assets/logo-white.png" media="(prefers-color-scheme: dark)">
+    <img src=".github/assets/logo-black.png" alt="Caby Logo" width="300">
   </picture>
 </p>
 <p align="center">
