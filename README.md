@@ -5,14 +5,15 @@
     <img src=".github/assets/caby-2-logo-black-rgb-900px-w-72ppi.png" alt="Caby Logo" width="300">
   </picture>
 </p>
+<p align="center">
+  **Simple and reliable** self-hosted file management for your home network.
+</p>
 <br />
 <p align="center">
   <a href="https://discord.gg/Z2JkSs2Hzy"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
 **⚠️ Note: Caby is in active development and in a pre-release state**
-
-**Simple and reliable** self-hosted file management for your home network.
 
 ![Caby file browser](.github/assets/screenshot-main.png)
 
