@@ -31,6 +31,7 @@ mod housekeeping;
 mod init;
 mod jsend;
 mod space;
+mod upload;
 mod user;
 mod validation;
 mod web;
