@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-// todo: move some of these fn's out of the web dir
+use crate::upload::manifest::{ManifestEntryType, UploadManifestEntry};
 
 pub static MAX_CHUNK_SIZE: u64 = 10_000_000;
 
@@ -18,6 +18,20 @@ pub struct UploadEntry {
     pub name: String,
     pub size: Option<u64>,
     pub xxh_digest: Option<String>,
+}
+
+impl From<UploadEntry> for UploadManifestEntry {
+    fn from(val: UploadEntry) -> Self {
+        Self {
+            entry_type: match val.entry_type {
+                UploadEntryType::Directory => ManifestEntryType::Directory,
+                UploadEntryType::File => ManifestEntryType::File,
+            },
+            name: val.name,
+            size: val.size,
+            xxh_digest: val.xxh_digest,
+        }
+    }
 }
 
 #[derive(Deserialize, Debug)]

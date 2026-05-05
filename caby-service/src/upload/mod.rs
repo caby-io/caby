@@ -15,11 +15,14 @@ use xxhash_rust::xxh64::Xxh64;
 
 use crate::{config::Config, Result};
 
+pub mod manifest;
+
 #[derive(Encode, Decode)]
 pub struct UploadTokenPayload {
     pub id: String,
     pub base_path: String,
     pub chunk_size: u64,
+    pub total_size: u64,
     // TODO: validate the file list without always loading it. Two modes:
     //   (a) short list — encode inline in the token
     //   (b) long list — encode just the total size, then validate per-file on
