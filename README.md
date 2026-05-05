@@ -1,4 +1,6 @@
+**⚠️ Note: Caby is in active development and in a pre-release state**
 <br />
+
 <p align="center">
   <picture>
     <source srcset=".github/assets/logo-white.png" media="(prefers-color-scheme: dark)">
@@ -13,8 +15,6 @@
 <p align="center">
   <a href="https://discord.gg/Z2JkSs2Hzy"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
-
-**⚠️ Note: Caby is in active development and in a pre-release state**
 
 ![Caby file browser](.github/assets/screenshot-main.png)
 
