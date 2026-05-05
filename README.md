@@ -5,10 +5,11 @@
     <img src=".github/assets/logo-black.png" alt="Caby Logo" width="300">
   </picture>
 </p>
+
 <p align="center">
   <em><ins>Simple and reliable</ins> self-hosted file management for your home network.</em>
 </p>
-<div style="width: 100%; height: 1px; background-color: red;"></div>
+
 <p align="center">
   <a href="https://discord.gg/Z2JkSs2Hzy"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
