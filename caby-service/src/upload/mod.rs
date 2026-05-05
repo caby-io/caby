@@ -7,6 +7,7 @@ use chacha20poly1305::{
     aead::{Aead, OsRng},
     AeadCore, ChaCha20Poly1305, KeyInit, Nonce,
 };
+use chrono::{DateTime, Duration, Utc};
 use tokio::{
     fs::File,
     io::{AsyncReadExt, BufReader},
@@ -17,9 +18,12 @@ use crate::{config::Config, Result};
 
 pub mod manifest;
 
+const UPLOAD_TOKEN_LIFETIME_HOURS: i64 = 24;
+
 #[derive(Encode, Decode)]
 pub struct UploadTokenPayload {
     pub id: String,
+    pub issued_at_unix: i64,
     pub base_path: String,
     pub chunk_size: u64,
     pub total_size: u64,
@@ -27,6 +31,17 @@ pub struct UploadTokenPayload {
     //   (a) short list — encode inline in the token
     //   (b) long list — encode just the total size, then validate per-file on
     //       completion (so the user can't burn all the space)
+}
+
+impl UploadTokenPayload {
+    pub fn issued_at(&self) -> DateTime<Utc> {
+        DateTime::from_timestamp(self.issued_at_unix, 0)
+            .expect("issued_at_unix out of valid DateTime range")
+    }
+
+    pub fn is_expired(&self) -> bool {
+        Utc::now() > self.issued_at() + Duration::hours(UPLOAD_TOKEN_LIFETIME_HOURS)
+    }
 }
 
 pub type UploadToken = String;

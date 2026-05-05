@@ -6,10 +6,9 @@ use tokio::fs;
 
 use crate::Result;
 
-const MANIFEST_FILENAME: &str = "manifest";
-
 #[derive(Encode, Decode)]
 pub struct UploadManifest {
+    pub token: String,
     pub entries: Vec<UploadManifestEntry>,
 }
 
@@ -28,7 +27,7 @@ pub enum ManifestEntryType {
 }
 
 pub async fn write(upload_dir: &Path, manifest: &UploadManifest) -> Result<()> {
-    let path = upload_dir.join(MANIFEST_FILENAME);
+    let path = upload_dir.join("manifest");
     let bytes = bitcode::encode(manifest);
     fs::write(path, &bytes)
         .await
@@ -36,7 +35,7 @@ pub async fn write(upload_dir: &Path, manifest: &UploadManifest) -> Result<()> {
 }
 
 pub async fn read(upload_dir: &Path) -> Result<UploadManifest> {
-    let path = upload_dir.join(MANIFEST_FILENAME);
+    let path = upload_dir.join("manifest");
     let bytes = fs::read(path)
         .await
         .map_err(|err| anyhow!(err).context("could not read upload manifest"))?;

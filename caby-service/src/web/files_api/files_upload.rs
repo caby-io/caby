@@ -19,6 +19,7 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use chrono::Utc;
 use futures_util::TryStreamExt;
 use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
@@ -90,23 +91,16 @@ pub async fn handle_register_upload(
         return JSendBuilder::new().internal_error().into_response();
     }
 
-    // create manifest
     let total_size: u64 = req
         .entries
         .iter()
         .filter(|e| matches!(e.entry_type, UploadEntryType::File))
         .map(|e| e.size.unwrap_or(0))
         .sum();
-    let manifest = UploadManifest {
-        entries: req.entries.into_iter().map(Into::into).collect(),
-    };
-    if let Err(err) = manifest::write(&upload_dir, &manifest).await {
-        error!("could not write upload manifest: {:#}", err);
-        return JSendBuilder::new().internal_error().into_response();
-    }
 
     let token_payload = UploadTokenPayload {
         id: id.to_string(),
+        issued_at_unix: Utc::now().timestamp(),
         base_path: req.base_path,
         chunk_size: MAX_CHUNK_SIZE,
         total_size,
@@ -119,6 +113,15 @@ pub async fn handle_register_upload(
             return JSendBuilder::new().internal_error().into_response();
         }
     };
+
+    let manifest = UploadManifest {
+        token: token.clone(),
+        entries: req.entries.into_iter().map(Into::into).collect(),
+    };
+    if let Err(err) = manifest::write(&upload_dir, &manifest).await {
+        error!("could not write upload manifest: {:#}", err);
+        return JSendBuilder::new().internal_error().into_response();
+    }
 
     JSendBuilder::new()
         .success(RegisterUploadResponse {
@@ -158,6 +161,13 @@ pub async fn handle_upload_chunk(
             return resp.internal_error().into_response();
         }
     };
+
+    if upload_token_payload.is_expired() {
+        return resp
+            .status_code(StatusCode::UNAUTHORIZED)
+            .fail("upload token expired")
+            .into_response();
+    }
 
     // note: this should enable async chunk upload eventually
     // determine the chunk index
@@ -307,6 +317,13 @@ pub async fn handle_update_upload(
         }
     };
 
+    if upload_token_payload.is_expired() {
+        return resp
+            .status_code(StatusCode::UNAUTHORIZED)
+            .fail("upload token expired")
+            .into_response();
+    }
+
     // let id_path = PathBuf::from(path_params.id.clone());
     // let file_path = PathBuf::from(path_params.file_path.unwrap().clone());
 
@@ -407,6 +424,13 @@ pub async fn handle_publish_upload(
             return resp.internal_error().into_response();
         }
     };
+
+    if upload_token_payload.is_expired() {
+        return resp
+            .status_code(StatusCode::UNAUTHORIZED)
+            .fail("upload token expired")
+            .into_response();
+    }
 
     // let id_path = PathBuf::from(path_params.id);
 
