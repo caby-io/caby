@@ -1,10 +1,17 @@
-use std::str::FromStr;
+use std::{
+    str::FromStr,
+    time::{Duration, SystemTime},
+};
 
 use tokio::fs;
 use tracing::{debug, info, warn};
 
 use crate::{
-    auth::Token as SessionToken, config::Config, download::Token as DownloadToken, Result,
+    auth::Token as SessionToken,
+    config::Config,
+    download::Token as DownloadToken,
+    upload::{decode_upload_token, manifest, UPLOAD_TOKEN_LIFETIME_HOURS},
+    Result,
 };
 
 enum UserFile {
@@ -32,7 +39,7 @@ impl UserFile {
 }
 
 pub async fn housekeeping(cfg: &Config) -> Result<()> {
-    info!("starting housekeeping...");
+    debug!("starting housekeeping...");
 
     let mut sessions_removed: u32 = 0;
     let mut download_tokens_removed: u32 = 0;
@@ -117,10 +124,100 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
         }
     }
 
-    info!(
-        "housekeeping complete. removed {} expired sessions, {} expired download tokens",
-        sessions_removed, download_tokens_removed
-    );
+    let mut uploads_removed: u32 = 0;
+
+    for (_, space_config) in cfg.spaces.iter() {
+        let uploads_dir = space_config.path.join("uploads");
+        let mut dir = match fs::read_dir(&uploads_dir).await {
+            Ok(d) => d,
+            Err(err) => {
+                debug!(
+                    "could not read uploads dir for space {}: {}",
+                    space_config.name, err
+                );
+                continue;
+            }
+        };
+
+        while let Ok(Some(entry)) = dir.next_entry().await {
+            let upload_path = entry.path();
+            let upload_name = entry.file_name().to_string_lossy().into_owned();
+
+            let metadata = match entry.metadata().await {
+                Ok(m) => m,
+                Err(err) => {
+                    errors.push(format!(
+                        "could not stat upload {}/{}: {:#}",
+                        space_config.name, upload_name, err
+                    ));
+                    continue;
+                }
+            };
+            if !metadata.is_dir() {
+                continue;
+            }
+
+            let token_expired = match manifest::read(&upload_path).await {
+                Ok(m) => decode_upload_token(cfg, &m.token).map(|p| p.is_expired()),
+                Err(err) => Err(err),
+            };
+
+            let expired = match token_expired {
+                Ok(e) => e,
+                Err(err) => {
+                    debug!(
+                        "falling back to dir created_at for upload {}/{}: {:#}",
+                        space_config.name, upload_name, err
+                    );
+                    match metadata.created() {
+                        Ok(created) => {
+                            let age = SystemTime::now()
+                                .duration_since(created)
+                                .unwrap_or(Duration::ZERO);
+                            age > Duration::from_secs(UPLOAD_TOKEN_LIFETIME_HOURS as u64 * 3600)
+                        }
+                        Err(err) => {
+                            errors.push(format!(
+                                "could not determine upload age for {}/{}: {:#}",
+                                space_config.name, upload_name, err
+                            ));
+                            continue;
+                        }
+                    }
+                }
+            };
+
+            if !expired {
+                continue;
+            }
+
+            if let Err(err) = fs::remove_dir_all(&upload_path).await {
+                errors.push(format!(
+                    "could not remove expired upload {}/{}: {:#}",
+                    space_config.name, upload_name, err
+                ));
+                continue;
+            }
+            uploads_removed += 1;
+        }
+    }
+
+    let mut parts: Vec<String> = Vec::new();
+    if sessions_removed > 0 {
+        parts.push(format!("{} expired sessions", sessions_removed));
+    }
+    if download_tokens_removed > 0 {
+        parts.push(format!(
+            "{} expired download tokens",
+            download_tokens_removed
+        ));
+    }
+    if uploads_removed > 0 {
+        parts.push(format!("{} expired uploads", uploads_removed));
+    }
+    if !parts.is_empty() {
+        info!("housekeeping removed:\n\t{}", parts.join("\n\t"));
+    }
 
     if !errors.is_empty() {
         warn!(
@@ -130,6 +227,5 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
         );
     }
 
-    // todo: cleanup expired uploads
     Ok(())
 }
