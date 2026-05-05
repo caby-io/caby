@@ -1,6 +1,15 @@
 # Caby -🗄️
 
-[![Discord](https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white)](https://discord.gg/Z2JkSs2Hzy)
+<p align="center">
+  <picture>
+    <source srcset=".github/assets/caby-2-logo-white-rgb-900px-w-72ppi.png" media="(prefers-color-scheme: dark)">
+    <img src=".github/assets/caby-2-logo-black-rgb-900px-w-72ppi.png" alt="Caby Logo">
+  </picture>
+</p>
+
+<p align="center">
+  <a href="https://discord.gg/Z2JkSs2Hzy"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
+</p>
 
 **⚠️ Note: Caby is in active development and in a pre-release state**
 
