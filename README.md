@@ -1,6 +1,7 @@
-<br />
 <p align="center">
-  <strong>⚠️ Note: Caby is in active development and in a pre-release state</strong>
+  <p>
+    <strong>⚠️ Note: Caby is in active development and in a pre-release state</strong>
+  </p>
   <br />
   <picture>
     <source srcset=".github/assets/logo-white.png" media="(prefers-color-scheme: dark)">
