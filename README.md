@@ -6,7 +6,7 @@
   </picture>
 </p>
 <p align="center">
-  **Simple and reliable** self-hosted file management for your home network.
+  <em><strong>Simple and reliable</strong> self-hosted file management for your home network.</em>
 </p>
 <br />
 <p align="center">
