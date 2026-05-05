@@ -1,7 +1,6 @@
 use crate::{
     auth::AuthorizedUser,
     config::Config,
-    error::RequestError,
     files::merge_dir,
     jsend::JSendBuilder,
     space::Space,
@@ -219,8 +218,10 @@ pub async fn handle_upload_chunk(
         .await
     {
         Ok(f) => f,
-        // todo: log the error
-        Err(e) => return resp.error("couldn't open file for writing").into_response(),
+        Err(err) => {
+            error!("could not open upload file for writing: {:#}", err);
+            return resp.error("couldn't open file for writing").into_response();
+        }
     };
 
     // todo: move to fn
@@ -238,11 +239,10 @@ pub async fn handle_upload_chunk(
     };
 
     if bytes_written > upload_token_payload.chunk_size {
-        // todo: handle error
         // note: this resets the process until we save individual chunks
-        remove_file(full_path)
-            .await
-            .expect("could not delete oversized file");
+        if let Err(err) = remove_file(&full_path).await {
+            error!("could not delete oversized file: {:#}", err);
+        }
 
         return resp
             .status_code(StatusCode::PAYLOAD_TOO_LARGE)
@@ -259,9 +259,9 @@ pub async fn handle_upload_chunk(
         }
     };
     if file_size > upload_token_payload.total_size {
-        remove_file(full_path)
-            .await
-            .expect("could not delete oversized file");
+        if let Err(err) = remove_file(&full_path).await {
+            error!("could not delete oversized file: {:#}", err);
+        }
         return resp
             .status_code(StatusCode::PAYLOAD_TOO_LARGE)
             .fail("file exceeds total upload size")
@@ -383,7 +383,6 @@ pub async fn handle_update_upload(
     };
 
     if disk_digest != body_digest {
-        println!("{}", disk_digest);
         return resp.fail("digest mismatch").into_response();
     }
     if disk_size != body_size {
