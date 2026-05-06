@@ -1,6 +1,8 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import 'iconify-icon';
+	import IconLucideMoon from '~icons/lucide/moon';
+	import IconLucideSunMedium from '~icons/lucide/sun-medium';
+	import IconLucideCircleUserRound from '~icons/lucide/circle-user-round';
 	import { getScheme, toggleScheme, clearStorage } from '$lib/color-scheme';
 	import UserPopover from './UserPopover.svelte';
 	import { onMount } from 'svelte';
@@ -35,13 +37,13 @@
 			onclick={toggleSchemeLocal}
 		>
 			{#if scheme === 'dark'}
-				<iconify-icon icon="lucide:moon"></iconify-icon>
+				<IconLucideMoon />
 			{:else}
-				<iconify-icon icon="lucide:sun-medium"></iconify-icon>
+				<IconLucideSunMedium />
 			{/if}
 		</div>
 		<button id="nav-user" popovertarget="nav-user-popover" class="user fx fx--cc">
-			<iconify-icon icon="lucide:circle-user-round"></iconify-icon>
+			<IconLucideCircleUserRound />
 		</button>
 	</section>
 </div>
@@ -79,7 +81,7 @@
 
 		.actions {
 			gap: 0.5rem;
-			font-size: 1.4rem;
+			font-size: 1.2rem;
 
 			// todo: remove div?
 			> div,
@@ -104,7 +106,6 @@
 
 			> .user {
 				anchor-name: --nav-user;
-				font-size: 1.6rem;
 			}
 		}
 	}

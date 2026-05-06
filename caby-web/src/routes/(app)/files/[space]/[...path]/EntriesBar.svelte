@@ -1,7 +1,10 @@
 <script lang="ts">
 	import type { Entry } from '$lib/files/entry';
 	import EntriesBreadcrumbs from './EntriesBreadcrumbs.svelte';
-	import 'iconify-icon';
+	import IconLucideFileX from '~icons/lucide/file-x';
+	import IconLucideTrash2 from '~icons/lucide/trash-2';
+	import IconCiInfo from '~icons/ci/info';
+	import IconLetsIconsAddDuotone from '~icons/lets-icons/add-duotone';
 
 	let {
 		selected_entries,
@@ -28,25 +31,25 @@
 				onclick={handleDeselect}
 				title="Deselect"
 			>
-				<iconify-icon icon="lucide:file-x"></iconify-icon>
+				<IconLucideFileX />
 			</button>
 			<button
 				class="action selected fx fx--cc border-0 box-shadow-0-card"
 				onclick={handleDeleteSelected}
 				title="Delete selected"
 			>
-				<iconify-icon icon="lucide:trash-2"></iconify-icon>
+				<IconLucideTrash2 />
 			</button>
 		{/if}
 		<button class="action fx fx--cc border-0 box-shadow-0-card">
-			<iconify-icon icon="ci:info"></iconify-icon>
+			<IconCiInfo />
 		</button>
 		<button
 			class="action add fx fx--cc border-0 box-shadow-0-card"
 			onclick={() => add_content_dialog.showModal()}
 			title="Add/Upload content"
 		>
-			<iconify-icon icon="lets-icons:add-duotone"></iconify-icon>
+			<IconLetsIconsAddDuotone />
 		</button>
 	</div>
 </header>
@@ -72,11 +75,12 @@
 
 		.action {
 			cursor: pointer;
+			box-sizing: border-box;
 			background: var(--clr-background-2);
 			border-radius: 4px;
-			height: 1rem;
-			width: 1rem;
-			padding: 0.5rem;
+			height: 2rem;
+			width: 2rem;
+			padding: 0.25rem;
 
 			&.selected {
 				color: var(--clr-background-1);
@@ -86,8 +90,8 @@
 			}
 
 			&.add {
-				font-size: 1.8rem;
 				color: var(--clr-accent);
+				padding: 0.1rem;
 				// background: linear-gradient(320deg, var(--clr-primary), var(--clr-accent));
 			}
 		}

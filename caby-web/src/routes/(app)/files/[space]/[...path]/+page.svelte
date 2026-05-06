@@ -18,7 +18,6 @@
 	import { page } from '$app/state';
 	import * as fs from '$lib/fs';
 
-	import 'iconify-icon';
 	import Directory from './Directory.svelte';
 	import File from './File.svelte';
 	import Loading from './Loading.svelte';

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { page } from '$app/state';
 	import { join } from '$lib/fs';
+	import IconCiHouse02 from '~icons/ci/house-02';
 
 	let { space }: { space: string } = $props();
 
@@ -17,7 +18,7 @@
 	</a> -->
 	<div class="breadcrumb fx fx--ac">
 		<a class="fx fx--ac" href="/files/{space}">
-			<iconify-icon icon="ci:house-02"></iconify-icon>
+			<IconCiHouse02 class="house-icon" />
 		</a>
 	</div>
 	{#each dirs as dir, i}
@@ -37,6 +38,10 @@
 			transition: opacity 0.2s;
 			opacity: 1;
 			border-radius: 3px;
+
+			:global(.house-icon) {
+				font-size: 0.9em;
+			}
 
 			&:hover {
 				color: inherit;

@@ -1,7 +1,9 @@
+<script lang="ts">
+	import IconLucideSquareCheckBig from '~icons/lucide/square-check-big';
+</script>
+
 <tr>
-	<td data-cell="select" class="check"
-		><iconify-icon icon="lucide:square-check-big"></iconify-icon></td
-	>
+	<td data-cell="select" class="check"><IconLucideSquareCheckBig /></td>
 	<td data-cell="main" class="main">
 		<div class="fx fx-cc">
 			<div class="icon fx fx-cc">📄</div>

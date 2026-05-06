@@ -2,6 +2,7 @@
 	import { join } from '$lib/fs';
 	import type { OverviewEntry } from './overview_entry';
 	import Self from './OverviewEntryNav.svelte';
+	import IconLucideChevronRight from '~icons/lucide/chevron-right';
 
 	let { entry = $bindable(), space }: { entry: OverviewEntry; space: string } = $props();
 </script>
@@ -9,7 +10,7 @@
 <section class="entry-branch">
 	<div class="entry fx" class:expanded={entry.is_expanded}>
 		<div class="control fx fx--cc" onclick={() => (entry.is_expanded = !entry.is_expanded)}>
-			<iconify-icon icon="lucide:chevron-right"></iconify-icon>
+			<IconLucideChevronRight />
 		</div>
 		<a class="fx" href={`/${join(`files`, space, entry.path)}`}>
 			<div class="icon">📁</div>
