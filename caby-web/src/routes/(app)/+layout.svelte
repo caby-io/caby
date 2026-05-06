@@ -22,12 +22,12 @@
 	<h1><span>CABY</span></h1>
 	<section class="search fx-grow">Search Bar</section>
 	<section class="actions fx fx--cc">
-		<div class="fx fx--cc">
+		<!-- <div class="fx fx--cc">
 			<iconify-icon icon="lucide:bell-ring"></iconify-icon>
 		</div>
 		<div class="fx fx--cc">
 			<iconify-icon icon="lucide:settings"></iconify-icon>
-		</div>
+		</div> -->
 		<div
 			class="color-scheme fx fx--cc {scheme === 'light' ? 'light' : 'dark'}"
 			onclick={toggleSchemeLocal}
