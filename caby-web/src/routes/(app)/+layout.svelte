@@ -20,7 +20,9 @@
 
 <div class="top-nav fx fx--ac">
 	<h1><span>CABY</span></h1>
-	<section class="search fx-grow">Search Bar</section>
+	<section class="search fx-grow">
+		<input type="search" placeholder="🔍︎ Search" disabled />
+	</section>
 	<section class="actions fx fx--cc">
 		<!-- <div class="fx fx--cc">
 			<iconify-icon icon="lucide:bell-ring"></iconify-icon>
@@ -66,6 +68,12 @@
 				background-clip: text;
 				-webkit-background-clip: text;
 				-webkit-text-fill-color: transparent;
+			}
+		}
+
+		.search {
+			> input {
+				width: clamp(15rem, 30vw, 30rem);
 			}
 		}
 
