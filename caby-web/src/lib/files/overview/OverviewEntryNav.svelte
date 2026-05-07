@@ -13,7 +13,7 @@
 			<IconLucideChevronRight />
 		</div>
 		<a class="fx" href={`/${join(`files`, space, entry.path)}`}>
-			<div class="icon">📁</div>
+			<div class="icon"><span>{entry.is_expanded ? '📂' : '📁'}</span></div>
 			<div class="name fx-grow">{entry.name}</div>
 		</a>
 	</div>
@@ -39,6 +39,11 @@
 			font-size: 1.2rem;
 			margin-right: 0.5rem;
 			transition: transform 0.2s;
+		}
+
+		.icon > span {
+			display: inline-block;
+			text-decoration: none;
 		}
 
 		.name {

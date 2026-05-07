@@ -22,7 +22,7 @@
 			<IconLucideChevronRight />
 		</div>
 		<div class="fx">
-			<div class="icon">{entry.icon || '📁'}</div>
+			<div class="icon">{entry.icon || (entry.is_expanded ? '📂' : '📁')}</div>
 			<div class="name fx-grow">{entry.name}</div>
 		</div>
 	</div>
