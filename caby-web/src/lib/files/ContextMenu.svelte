@@ -17,6 +17,12 @@
 </script>
 
 <script lang="ts">
+	import IconLucidePlus from '~icons/lucide/plus';
+	import IconLucideFolderInput from '~icons/lucide/folder-input';
+	import IconLucideDownload from '~icons/lucide/download';
+	import IconLucidePencilLine from '~icons/lucide/pencil-line';
+	import IconLucideTrash2 from '~icons/lucide/trash-2';
+
 	let {
 		dialog = $bindable(),
 		position,
@@ -85,7 +91,7 @@
 		{#if !entry || isDir}
 			<button class="context-item fx" onclick={() => handleAddContent([entry])}>
 				<div class="icon fx fx--cc">
-					<iconify-icon icon="lucide:plus"></iconify-icon>
+					<IconLucidePlus />
 				</div>
 				<div class="title fx-grow">Add Content</div>
 				<div class="tip fx fx--ac">ALT + N</div>
@@ -94,7 +100,7 @@
 		{#if entry}
 			<button class="context-item fx" onclick={() => handleMoveEntries(entry)}>
 				<div class="icon fx fx--cc">
-					<iconify-icon icon="lucide:folder-input"></iconify-icon>
+					<IconLucideFolderInput />
 				</div>
 				<div class="title fx-grow">Move To..</div>
 				<div class="tip fx fx--ac"></div>
@@ -102,7 +108,7 @@
 			{#if isDir}
 				<button class="context-item fx" disabled>
 					<div class="icon fx fx--cc">
-						<iconify-icon icon="lucide:download"></iconify-icon>
+						<IconLucideDownload />
 					</div>
 					<div class="title fx-grow">Download {typeName}</div>
 					<div class="tip fx fx--ac">D</div>
@@ -110,7 +116,7 @@
 			{:else}
 				<button class="context-item fx" onclick={handleDownload}>
 					<div class="icon fx fx--cc">
-						<iconify-icon icon="lucide:download"></iconify-icon>
+						<IconLucideDownload />
 					</div>
 					<div class="title fx-grow">Download {typeName}</div>
 					<div class="tip fx fx--ac">D</div>
@@ -118,14 +124,14 @@
 			{/if}
 			<button class="context-item fx" onclick={() => handleRenameEntry(entry)}>
 				<div class="icon fx fx--cc">
-					<iconify-icon icon="lucide:pencil-line"></iconify-icon>
+					<IconLucidePencilLine />
 				</div>
 				<div class="title fx-grow">Rename {typeName}</div>
 				<div class="tip fx fx--ac">ALT + R</div>
 			</button>
 			<button class="context-item fx" onclick={() => handleDeleteEntries([entry])}>
 				<div class="icon fx fx--cc">
-					<iconify-icon icon="lucide:trash-2"></iconify-icon>
+					<IconLucideTrash2 />
 				</div>
 				<div class="title fx-grow">Delete {typeName}</div>
 				<div class="tip fx fx--ac">DEL</div>
@@ -165,6 +171,7 @@
 				}
 
 				> .icon {
+					font-size: 0.9rem;
 					width: 1.5rem;
 				}
 

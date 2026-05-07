@@ -1,5 +1,5 @@
 <script lang="ts">
-	import 'iconify-icon';
+	import IconLucideLogOut from '~icons/lucide/log-out';
 	import { logout as apiLogout } from '$lib/api/api_auth';
 	import { client } from '$lib/stores/client.svelte';
 	import { goto } from '$app/navigation';
@@ -19,7 +19,7 @@
 
 <div id="nav-user-popover" popover>
 	<button disabled={loading} class="button fx fx--cc" onclick={() => logout()}>
-		<iconify-icon icon="lucide:log-out"></iconify-icon> Logout
+		<IconLucideLogOut /> Logout
 	</button>
 </div>
 

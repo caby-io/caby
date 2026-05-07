@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Space } from '$lib/space';
+	import IconLucideChevronLeft from '~icons/lucide/chevron-left';
 
 	let { current_space, spaces }: { current_space: Space | undefined; spaces: Space[] } = $props();
 
@@ -8,7 +9,7 @@
 
 <button popovertarget="space-selector-menu" class="fx button spaces-button">
 	<span class="fx-grow">{current_space?.display ?? current_space?.name ?? ''}</span>
-	<iconify-icon icon="lucide:chevron-left" class="caret"></iconify-icon>
+	<IconLucideChevronLeft class="caret" />
 </button>
 
 <div bind:this={popover} id="space-selector-menu" popover>
@@ -25,12 +26,12 @@
 		anchor-name: --spaces-button;
 		align-items: center;
 
-		.caret {
+		:global(.caret) {
 			transition: transform 0.2s;
 		}
 	}
 
-	.spaces-button:has(+ #space-selector-menu:popover-open) .caret {
+	.spaces-button:has(+ #space-selector-menu:popover-open) :global(.caret) {
 		transform: rotate(-90deg);
 	}
 

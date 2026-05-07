@@ -2,6 +2,7 @@
 	import { join } from '$lib/fs';
 	import type { OverviewEntry } from './overview_entry';
 	import Self from './OverviewEntrySelect.svelte';
+	import IconLucideChevronRight from '~icons/lucide/chevron-right';
 
 	let {
 		entry = $bindable(),
@@ -18,7 +19,7 @@
 		onclick={() => onSelect?.(entry)}
 	>
 		<div class="control fx fx--cc" onclick={() => (entry.is_expanded = !entry.is_expanded)}>
-			<iconify-icon icon="lucide:chevron-right"></iconify-icon>
+			<IconLucideChevronRight />
 		</div>
 		<div class="fx">
 			<div class="icon">{entry.icon || '📁'}</div>

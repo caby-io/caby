@@ -4,6 +4,11 @@
 	import NewFolderDialog from '../../routes/(app)/files/[space]/[...path]/NewFolderDialog.svelte';
 	import { UploadGroup } from './upload/upload_group';
 	import { uploadManager } from './upload/upload_manager.svelte';
+	import IconFlatColorIconsFolder from '~icons/flat-color-icons/folder';
+	import IconLucidePlus from '~icons/lucide/plus';
+	import IconStreamlineFlexColorTextFileFlat from '~icons/streamline-flex-color/text-file-flat';
+	import IconPhUploadFill from '~icons/ph/upload-fill';
+	import IconLogosYoutubeIcon from '~icons/logos/youtube-icon';
 
 	let {
 		dialog = $bindable(),
@@ -64,34 +69,34 @@
 		<div class="add-list">
 			<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openNewFolderDialog()}>
 				<div class="fx fx--cc">
-					<iconify-icon icon="flat-color-icons:folder"></iconify-icon>
-					<span class="overlay"><iconify-icon icon="lucide:plus"></iconify-icon></span>
+					<IconFlatColorIconsFolder class="action-icon" />
+					<span class="overlay"><IconLucidePlus class="overlay-icon" /></span>
 				</div>
 				New Folder
 			</button>
 			<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openFileDialog()}>
 				<div class="fx fx--cc">
-					<iconify-icon icon="streamline-flex-color:text-file-flat"></iconify-icon>
-					<span class="overlay"><iconify-icon icon="ph:upload-fill"></iconify-icon></span>
+					<IconStreamlineFlexColorTextFileFlat class="action-icon" />
+					<span class="overlay"><IconPhUploadFill class="overlay-icon" /></span>
 				</div>
 				Upload Files
 			</button>
 			<button class="fx fx--ac border-0 box-shadow-0-card" disabled>
 				<div class="fx fx--cc">
-					<iconify-icon icon="streamline-flex-color:text-file-flat"></iconify-icon>
-					<span class="overlay"><iconify-icon icon="lucide:plus"></iconify-icon></span>
+					<IconStreamlineFlexColorTextFileFlat class="action-icon" />
+					<span class="overlay"><IconLucidePlus class="overlay-icon" /></span>
 				</div>
 				New File (coming soon)
 			</button>
 			<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openDirDialog()}>
 				<div class="fx fx--cc">
-					<iconify-icon icon="flat-color-icons:folder"></iconify-icon>
-					<span class="overlay"><iconify-icon icon="ph:upload-fill"></iconify-icon></span>
+					<IconFlatColorIconsFolder class="action-icon" />
+					<span class="overlay"><IconPhUploadFill class="overlay-icon" /></span>
 				</div>
 				Upload Directories
 			</button>
 			<button class="fx fx--ac border-0 box-shadow-0-card" disabled>
-				<div class="fx fx--cc youtube"><iconify-icon icon="logos:youtube-icon"></iconify-icon></div>
+				<div class="fx fx--cc youtube"><IconLogosYoutubeIcon class="action-icon" /></div>
 				Fetch Youtube Audio<br /> (coming soon)
 			</button>
 		</div>
@@ -134,7 +139,8 @@
 				margin-right: 1rem;
 				width: 2rem;
 
-				iconify-icon {
+				:global(.action-icon),
+				:global(.overlay-icon) {
 					// filter: drop-shadow(2px 4px 6px var(--clr-shadow));
 					filter: drop-shadow(2px 2px 3px var(--clr-shadow));
 				}
@@ -149,7 +155,7 @@
 					position: absolute;
 					right: -0.6em;
 					bottom: -0.4em;
-					font-size: 0.6em;
+					font-size: 0.5em;
 				}
 			}
 		}

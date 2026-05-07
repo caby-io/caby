@@ -1,6 +1,9 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
-	import 'iconify-icon';
+	import cabyLogo from '$lib/caby-logo.svg?raw';
+	import IconLucideMoon from '~icons/lucide/moon';
+	import IconLucideSunMedium from '~icons/lucide/sun-medium';
+	import IconLucideCircleUserRound from '~icons/lucide/circle-user-round';
 	import { getScheme, toggleScheme, clearStorage } from '$lib/color-scheme';
 	import UserPopover from './UserPopover.svelte';
 	import { onMount } from 'svelte';
@@ -19,27 +22,31 @@
 </script>
 
 <div class="top-nav fx fx--ac">
-	<h1><span>CABY</span></h1>
-	<section class="search fx-grow">Search Bar</section>
+	<div class="logo fx fx--ac" aria-label="Caby">
+		{@html cabyLogo}
+	</div>
+	<section class="search fx-grow">
+		<input type="search" placeholder="🔍︎ Search" disabled />
+	</section>
 	<section class="actions fx fx--cc">
-		<div class="fx fx--cc">
+		<!-- <div class="fx fx--cc">
 			<iconify-icon icon="lucide:bell-ring"></iconify-icon>
 		</div>
 		<div class="fx fx--cc">
 			<iconify-icon icon="lucide:settings"></iconify-icon>
-		</div>
+		</div> -->
 		<div
 			class="color-scheme fx fx--cc {scheme === 'light' ? 'light' : 'dark'}"
 			onclick={toggleSchemeLocal}
 		>
 			{#if scheme === 'dark'}
-				<iconify-icon icon="lucide:moon"></iconify-icon>
+				<IconLucideMoon />
 			{:else}
-				<iconify-icon icon="lucide:sun-medium"></iconify-icon>
+				<IconLucideSunMedium />
 			{/if}
 		</div>
 		<button id="nav-user" popovertarget="nav-user-popover" class="user fx fx--cc">
-			<iconify-icon icon="lucide:circle-user-round"></iconify-icon>
+			<IconLucideCircleUserRound />
 		</button>
 	</section>
 </div>
@@ -56,6 +63,16 @@
 		background-color: var(--clr-background-1);
 		// color: var(--clr-primary);
 
+		> .logo {
+			width: var(--sidebar-width);
+			color: var(--clr-text-0);
+
+			:global(svg) {
+				width: 5rem;
+				height: auto;
+			}
+		}
+
 		> h1 {
 			font-size: 1.5em;
 			padding: 0;
@@ -69,9 +86,15 @@
 			}
 		}
 
+		.search {
+			> input {
+				width: clamp(15rem, 30vw, 30rem);
+			}
+		}
+
 		.actions {
 			gap: 0.5rem;
-			font-size: 1.4rem;
+			font-size: 1.2rem;
 
 			// todo: remove div?
 			> div,
@@ -96,7 +119,6 @@
 
 			> .user {
 				anchor-name: --nav-user;
-				font-size: 1.6rem;
 			}
 		}
 	}

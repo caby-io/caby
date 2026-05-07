@@ -1,5 +1,5 @@
 <script lang="ts">
-	import 'iconify-icon';
+	import IconLucideChevronUp from '~icons/lucide/chevron-up';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import { prettyBytes, secondsToHms } from '$lib/fs';
 	import Dialog from '$lib/Dialog.svelte';
@@ -31,7 +31,7 @@
 		<h1>Upload Progress</h1>
 		<h2>{progress_percent}%</h2>
 		<span class="fx fx--cc border-0 box-shadow-0-card" on:click={() => dialog.show()}>
-			<iconify-icon icon="lucide:chevron-up"></iconify-icon>
+			<IconLucideChevronUp />
 		</span>
 	</header>
 	<main class="fx fx--col">
@@ -68,7 +68,6 @@
 
 			span {
 				cursor: pointer;
-				font-size: 1.2rem;
 				margin-left: 1rem;
 				width: 1.5rem;
 				height: 1.5rem;

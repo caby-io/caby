@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import IconLucideX from '~icons/lucide/x';
 
 	// let dialog: HTMLDialogElement;
 
@@ -29,7 +30,7 @@
 		<header class="title fx fx--ac">
 			<h3 class="fx-grow">{title}</h3>
 			<button class="fx fx--cc" aria-label="close" onclick={() => dialog.close()}>
-				<iconify-icon icon="lucide:x"></iconify-icon>
+				<IconLucideX />
 			</button>
 		</header>
 	{/if}
