@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
+	import cabyLogo from '$lib/caby-logo.svg?raw';
 	import IconLucideMoon from '~icons/lucide/moon';
 	import IconLucideSunMedium from '~icons/lucide/sun-medium';
 	import IconLucideCircleUserRound from '~icons/lucide/circle-user-round';
@@ -21,7 +22,9 @@
 </script>
 
 <div class="top-nav fx fx--ac">
-	<h1><span>CABY</span></h1>
+	<div class="logo fx fx--ac" aria-label="Caby">
+		{@html cabyLogo}
+	</div>
 	<section class="search fx-grow">
 		<input type="search" placeholder="🔍︎ Search" disabled />
 	</section>
@@ -59,6 +62,16 @@
 		padding: 0 1em;
 		background-color: var(--clr-background-1);
 		// color: var(--clr-primary);
+
+		> .logo {
+			width: var(--sidebar-width);
+			color: var(--clr-text-0);
+
+			:global(svg) {
+				width: 5rem;
+				height: auto;
+			}
+		}
 
 		> h1 {
 			font-size: 1.5em;

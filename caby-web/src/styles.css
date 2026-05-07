@@ -72,15 +72,25 @@
 	--clr-text-1: oklch(from var(--clr-text-0) calc(l - 0.1) c h);
 	--clr-text-2: oklch(from var(--clr-text-0) calc(l - 0.2) c h);
 
-	--clr-background: oklch(13.97% 0.008 196.32);
-	--clr-background-1: oklch(from var(--clr-background) calc(l + 0.02) c h);
-	--clr-background-2: oklch(from var(--clr-background) calc(l + 0.04) c h);
+	/* --clr-background: oklch(12.625% 0.01044 297.67); */
+	--clr-background: oklch(12.356% 0.01297 273.358);
+	--clr-background-1: oklch(from var(--clr-background) calc(l + 0.03) c h);
+	--clr-background-2: oklch(from var(--clr-background) calc(l + 0.06) c h);
 
 	--clr-primary: oklch(81.14% 0.056 197.54);
 	--clr-secondary: oklch(51.56% 0.07 197.79);
 	--clr-accent: oklch(75.85% 0.11 196.58);
 
-	--clr-border: rgba(255, 255, 255, 0.05);
+	/* palette:
+		oklch(28.92% 0.146 310.18)  // #41005f  gradient start (purple)
+		oklch(44.94% 0.092 232.11)  // #005d7f  gradient end   (teal)
+		oklch(22.10% 0.132 274.15)  // #100456  background     (dark indigo)
+		oklch(93.37% 0.023 277.95)  // #e5e8f9  text           (soft lavender)
+		oklch(100.00% 0.000 89.88)  // #ffffff  white
+		rgb(33, 13, 144)
+	*/
+
+	--clr-border: rgba(255, 255, 255, 0.06);
 	--clr-shadow: rgba(0, 0, 0, 1);
 
 	--clr-success: rgb(19, 193, 19);
