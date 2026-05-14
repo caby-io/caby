@@ -47,16 +47,44 @@
 ```yaml
 # config.yaml
 ---
-registration_enabled: false
-paths:
-  users_path: "users"
-  spaces_path: "spaces"
+# registration_enabled: false
+
+# paths:
+#   users_path: "users"
+#   spaces_path: "spaces"
+web:
+  domain: "" # todo for CORS
+
+auth:
+  passwords:
+    enabled: true
+  # oidc using discovery
+  oidc:
+    issuer_url: "auth.oidc.com"
+  # oidc manual
+  oidc:
+    issuer_url: "auth.oidc.com",
+    authorization_endpoint: "",
+    token_endpoint: "",
+    jwks_uri: "",
+    userinfo_endpoint: "" # optional
+
 spaces:
   - name: home
     archetype: users
     path: /some/other/path # optional override
     readonly: false
   - name: media
+
+roles:
+  - name: admin
+    global_permissions: "*"
+  - name: family
+    spaces:
+      - name: home
+        permissions: # todo
+          - "rw:/"
+
 users:
   - name: caby_guy
     email: caby_guy@caby.io
@@ -93,6 +121,19 @@ graph TD;
 
 - todo: create meta ghosts
 - todo: encode in upload token
+
+# OIDC providers
+
+Supported IdPs (Tier 1) plus Google and Auth0 as reference rows for non-homelab `sub` shapes. All entries support OIDC discovery.
+
+| Provider             | `sub` format                         | `name` claim                                 |
+| -------------------- | ------------------------------------ | -------------------------------------------- |
+| Keycloak             | UUID v4 (`f5dab0e0-…`)               | yes (concat of first+last, if set)           |
+| Authentik            | UUID v4                              | yes (full name field)                        |
+| Authelia             | UUID v4                              | yes (`display_name` field)                   |
+| Pocket-ID            | UUID v4                              | optional (user may not set it)               |
+| Google _(reference)_ | numeric (`110248495921238986420`)    | yes (full name)                              |
+| Auth0 _(reference)_  | `connection\|id` (e.g. `auth0\|abc`) | yes (often present; social connections vary) |
 
 # Misc
 

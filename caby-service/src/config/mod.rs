@@ -12,6 +12,7 @@ use chacha20poly1305::{aead::OsRng, ChaCha20Poly1305, Key, KeyInit};
 use serde::Deserialize;
 use std::{collections::HashMap, env::var, path::PathBuf};
 
+mod auth;
 mod config_file;
 mod validate_config;
 
@@ -82,6 +83,7 @@ pub struct Config {
 
     pub spaces: HashMap<String, SpaceConfig>,
     pub users: HashMap<String, UserConfig>,
+    // todo: roles
 }
 
 impl Config {

@@ -1,5 +1,6 @@
 #![allow(unused)]
 
+use anyhow::Context;
 use std::time::Duration;
 
 use crate::housekeeping::housekeeping;
@@ -37,7 +38,7 @@ mod validation;
 mod web;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> Result<()> {
     // Set up tracing
     tracing_subscriber::fmt()
         .with_target(false)
@@ -47,8 +48,8 @@ async fn main() {
         .init();
 
     // Build config
-    let cfg = Config::new().await.expect("could not load config");
-    init(&cfg).await.expect("init error");
+    let cfg = Config::new().await?;
+    init(&cfg).await?;
 
     // housekeeping
     let handle = task::spawn({
@@ -88,10 +89,14 @@ async fn main() {
         .with_state(cfg);
     let app = NormalizePathLayer::trim_trailing_slash().layer(app);
 
-    let listener = TcpListener::bind("0.0.0.0:8080").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:8080")
+        .await
+        .context("could not bind listener on 0.0.0.0:8080")?;
     axum::serve(listener, ServiceExt::<Request>::into_make_service(app))
         .await
-        .unwrap();
+        .context("server crashed")?;
+
+    Ok(())
 }
 
 async fn handler_files(files_path: Option<Path<String>>) {
