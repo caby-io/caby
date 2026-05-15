@@ -126,7 +126,7 @@ pub async fn provision_user(cfg: &Config, claims: &CoreIdTokenClaims) -> Result<
         let collision = rtm.users.values().any(|u| {
             u.email
                 .as_ref()
-                .map(|existing| existing == new_email)
+                .map(|existing| existing.eq_ignore_ascii_case(new_email))
                 .unwrap_or(false)
         });
         if collision {

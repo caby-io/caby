@@ -32,7 +32,7 @@ pub async fn handle_login(
             // todo: regex the login to see if it looks like an email before doing this expensive lookup
             let Some(user_config) = cfg_rtm.users.values().find(|u| {
                 if let Some(email) = &u.email {
-                    return email == &req.login;
+                    return email.eq_ignore_ascii_case(&req.login);
                 }
                 false
             }) else {
