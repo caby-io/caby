@@ -8,8 +8,6 @@ use serde::Serialize;
 
 use crate::{user::User, Result};
 
-pub mod auth_middleware;
-
 #[derive(Serialize)]
 pub struct Token {
     pub value: String,

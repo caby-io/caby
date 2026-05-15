@@ -124,8 +124,6 @@ graph TD;
 
 # OIDC providers
 
-Supported IdPs (Tier 1) plus Google and Auth0 as reference rows for non-homelab `sub` shapes. All entries support OIDC discovery.
-
 | Provider             | `sub` format                         | `name` claim                                 |
 | -------------------- | ------------------------------------ | -------------------------------------------- |
 | Keycloak             | UUID v4 (`f5dab0e0-…`)               | yes (concat of first+last, if set)           |

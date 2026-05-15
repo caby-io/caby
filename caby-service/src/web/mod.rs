@@ -1,13 +1,9 @@
 use axum::{
-    middleware,
     routing::{get, patch, post, put},
     Router,
 };
 
-use crate::{
-    auth::{self, auth_middleware},
-    config::Config,
-};
+use crate::config::Config;
 
 mod auth_api;
 mod extractors;
