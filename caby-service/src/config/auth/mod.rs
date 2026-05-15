@@ -4,6 +4,7 @@ use crate::{
 };
 use anyhow::anyhow;
 use nest_struct::nest_struct;
+use std::env::var;
 
 // env vars
 pub const ENV_OIDC_CLIENT_ID: &'static str = "OIDC_CLIENT_ID";
@@ -84,27 +85,67 @@ impl TryFrom<ConfigFileOidc> for OIDCConfig {
     type Error = anyhow::Error;
 
     fn try_from(file: ConfigFileOidc) -> Result<Self> {
-        let client_id = file
-            .client_id
-            .ok_or_else(|| anyhow!(".auth.oidc.client_id is required"))?;
-        let client_secret = file
-            .client_secret
-            .ok_or_else(|| anyhow!(".auth.oidc.client_secret is required"))?;
-        let redirect_uri = file
-            .redirect_uri
-            .ok_or_else(|| anyhow!(".auth.oidc.redirect_uri is required"))?;
-        let post_login_redirect = file
-            .post_login_redirect
-            .ok_or_else(|| anyhow!(".auth.oidc.post_login_redirect is required"))?;
-        let scopes = file
-            .scopes
+        let client_id = var(ENV_OIDC_CLIENT_ID)
+            .ok()
+            .or(file.client_id)
+            .ok_or_else(|| {
+                anyhow!(
+                    "OIDC client_id is required (.auth.oidc.client_id or {})",
+                    ENV_OIDC_CLIENT_ID
+                )
+            })?;
+        let client_secret = var(ENV_OIDC_CLIENT_SECRET)
+            .ok()
+            .or(file.client_secret)
+            .ok_or_else(|| {
+                anyhow!(
+                    "OIDC client_secret is required (.auth.oidc.client_secret or {})",
+                    ENV_OIDC_CLIENT_SECRET
+                )
+            })?;
+        let redirect_uri = var(ENV_OIDC_REDIRECT_URI)
+            .ok()
+            .or(file.redirect_uri)
+            .ok_or_else(|| {
+                anyhow!(
+                    "OIDC redirect_uri is required (.auth.oidc.redirect_uri or {})",
+                    ENV_OIDC_REDIRECT_URI
+                )
+            })?;
+        if redirect_uri.ends_with('/') {
+            return Err(anyhow!(".auth.oidc.redirect_uri must not end with '/'"));
+        }
+        let post_login_redirect = var(ENV_OIDC_POST_LOGIN_REDIRECT)
+            .ok()
+            .or(file.post_login_redirect)
+            .ok_or_else(|| {
+                anyhow!(
+                    "OIDC post_login_redirect is required (.auth.oidc.post_login_redirect or {})",
+                    ENV_OIDC_POST_LOGIN_REDIRECT
+                )
+            })?;
+
+        let scopes = var(ENV_OIDC_SCOPES)
+            .ok()
+            .map(|s| {
+                s.split(',')
+                    .map(|x| x.trim().to_string())
+                    .filter(|x| !x.is_empty())
+                    .collect::<Vec<_>>()
+            })
+            .or(file.scopes)
             .unwrap_or_else(|| OIDC_SCOPES_DEFAULT.iter().map(|s| s.to_string()).collect());
+
         let provider = resolve_oidc_provider_config(
-            file.issuer_url,
-            file.authorization_endpoint,
-            file.token_endpoint,
-            file.jwks_uri,
-            file.userinfo_endpoint,
+            var(ENV_OIDC_ISSUER_URL).ok().or(file.issuer_url),
+            var(ENV_OIDC_AUTHORIZATION_ENDPOINT)
+                .ok()
+                .or(file.authorization_endpoint),
+            var(ENV_OIDC_TOKEN_ENDPOINT).ok().or(file.token_endpoint),
+            var(ENV_OIDC_JWKS_URI).ok().or(file.jwks_uri),
+            var(ENV_OIDC_USERINFO_ENDPOINT)
+                .ok()
+                .or(file.userinfo_endpoint),
         )?;
 
         Ok(OIDCConfig {
@@ -125,7 +166,12 @@ fn resolve_oidc_provider_config(
     jwks_uri: Option<String>,
     userinfo_endpoint: Option<String>,
 ) -> Result<OidcProviderConfig> {
-    let issuer_url = issuer_url.ok_or_else(|| anyhow!(".auth.oidc.issuer_url is required"))?;
+    let issuer_url = issuer_url.ok_or_else(|| {
+        anyhow!(
+            "OIDC issuer_url is required (.auth.oidc.issuer_url or {})",
+            ENV_OIDC_ISSUER_URL
+        )
+    })?;
 
     let any_manual_set = authorization_endpoint.is_some()
         || token_endpoint.is_some()
@@ -137,13 +183,22 @@ fn resolve_oidc_provider_config(
     }
 
     let authorization_endpoint = authorization_endpoint.ok_or_else(|| {
-        anyhow!(".auth.oidc.authorization_endpoint is required when manual OIDC endpoints are set")
+        anyhow!(
+            "OIDC authorization_endpoint is required when manual endpoints are set (.auth.oidc.authorization_endpoint or {})",
+            ENV_OIDC_AUTHORIZATION_ENDPOINT
+        )
     })?;
     let token_endpoint = token_endpoint.ok_or_else(|| {
-        anyhow!(".auth.oidc.token_endpoint is required when manual OIDC endpoints are set")
+        anyhow!(
+            "OIDC token_endpoint is required when manual endpoints are set (.auth.oidc.token_endpoint or {})",
+            ENV_OIDC_TOKEN_ENDPOINT
+        )
     })?;
     let jwks_uri = jwks_uri.ok_or_else(|| {
-        anyhow!(".auth.oidc.jwks_uri is required when manual OIDC endpoints are set")
+        anyhow!(
+            "OIDC jwks_uri is required when manual endpoints are set (.auth.oidc.jwks_uri or {})",
+            ENV_OIDC_JWKS_URI
+        )
     })?;
 
     Ok(OidcProviderConfig::Manual {
