@@ -26,10 +26,10 @@ pub struct DownloadUser {
 
 // todo: we need to encode data into the token to speed up this lookup
 async fn find_download_user(cfg: &Config, token: &str) -> crate::Result<DownloadUser> {
-    let app_cfg = cfg.application.load();
+    let cfg_rtm = cfg.runtime.load();
 
     // This is intentionally unoptimized and slow. We should encode the user name into the token so that we don't need to do this at all
-    for (_, user) in app_cfg.users.iter() {
+    for (_, user) in cfg_rtm.users.iter() {
         let download_file = user.path.join(format!("download_{}", token));
 
         if !fs::try_exists(download_file).await.map_err(|err| {

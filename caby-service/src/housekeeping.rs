@@ -41,13 +41,13 @@ impl UserFile {
 pub async fn housekeeping(cfg: &Config) -> Result<()> {
     debug!("starting housekeeping...");
 
-    let app_cfg = cfg.application.load();
+    let cfg_rtm = cfg.runtime.load();
 
     let mut sessions_removed: u32 = 0;
     let mut download_tokens_removed: u32 = 0;
     let mut errors: Vec<String> = vec![];
 
-    for (_, user) in app_cfg.users.iter() {
+    for (_, user) in cfg_rtm.users.iter() {
         let mut dir = match fs::read_dir(&user.path).await {
             Ok(d) => d,
             Err(err) => {
@@ -128,7 +128,7 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
 
     let mut uploads_removed: u32 = 0;
 
-    for (_, space_config) in app_cfg.spaces.iter() {
+    for (_, space_config) in cfg_rtm.spaces.iter() {
         let uploads_dir = space_config.path.join("uploads");
         let mut dir = match fs::read_dir(&uploads_dir).await {
             Ok(d) => d,

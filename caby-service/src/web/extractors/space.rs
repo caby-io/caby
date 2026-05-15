@@ -27,8 +27,8 @@ where
             return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
         };
 
-        let app_cfg = cfg.application.load();
-        let Some(space_config) = app_cfg.spaces.get(&path_params.space) else {
+        let cfg_rtm = cfg.runtime.load();
+        let Some(space_config) = cfg_rtm.spaces.get(&path_params.space) else {
             // todo: log specific err
             return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
         };

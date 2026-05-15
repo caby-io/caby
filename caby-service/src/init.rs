@@ -27,8 +27,8 @@ pub async fn init(cfg: &Config) -> Result<()> {
     init_dir("spaces", &cfg.spaces_path).await?;
 
     // Initialize spaces
-    let app_cfg = cfg.application.load();
-    for (_, space_config) in app_cfg.spaces.iter() {
+    let cfg_rtm = cfg.runtime.load();
+    for (_, space_config) in cfg_rtm.spaces.iter() {
         init_dir(
             &format!("spaces/{}", &space_config.name),
             &space_config.path,

@@ -71,9 +71,9 @@ impl From<&UserConfig> for User {
     }
 }
 
+// config that can be hot reloaded
 #[derive(Clone)]
-pub struct ApplicationSettings {
-    pub auth: AuthConfig,
+pub struct Runtime {
     pub spaces: HashMap<String, SpaceConfig>,
     pub users: HashMap<String, UserConfig>,
     // todo: roles
@@ -91,7 +91,8 @@ pub struct Config {
     pub upload_token_key: Key,
 
     // application settings
-    pub application: Arc<ArcSwap<ApplicationSettings>>,
+    pub auth: AuthConfig,
+    pub runtime: Arc<ArcSwap<Runtime>>,
 }
 
 impl Config {
@@ -233,8 +234,7 @@ impl ConfigBuilder {
     }
 
     pub fn build(self) -> Result<Config> {
-        let application = ApplicationSettings {
-            auth: self.auth.ok_or(anyhow!("missing auth config"))?,
+        let runtime = Runtime {
             spaces: self.spaces,
             users: self.users,
         };
@@ -248,7 +248,8 @@ impl ConfigBuilder {
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
-            application: Arc::new(ArcSwap::from_pointee(application)),
+            auth: self.auth.ok_or(anyhow!("missing auth config"))?,
+            runtime: Arc::new(ArcSwap::from_pointee(runtime)),
         })
     }
 }
