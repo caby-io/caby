@@ -27,11 +27,12 @@ where
             return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
         };
 
-        let Some(space_config) = cfg.spaces.get(&path_params.space) else {
+        let cfg_rtm = cfg.runtime.load();
+        let Some(space_config) = cfg_rtm.spaces.get(&path_params.space) else {
             // todo: log specific err
             return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
         };
 
-        Ok(space_config.clone().into())
+        Ok(space_config.into())
     }
 }

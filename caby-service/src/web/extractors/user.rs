@@ -22,7 +22,8 @@ where
             return Err(JSendBuilder::new().fail("bad request").into_response());
         };
 
-        let Some(user_config) = cfg.users.get(&path_params.user.to_lowercase()) else {
+        let cfg_rtm = cfg.runtime.load();
+        let Some(user_config) = cfg_rtm.users.get(&path_params.user.to_lowercase()) else {
             // todo: log specific err
             return Err(JSendBuilder::new().fail("bad request").into_response());
         };

@@ -1,5 +1,6 @@
 use crate::{
     config::{
+        auth::AuthConfig,
         config_file::{get_config_path, ConfigFile},
         validate_config::is_valid_meta_filename,
     },
@@ -7,11 +8,13 @@ use crate::{
     user::{SpaceAccess, User},
     Result,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
+use arc_swap::ArcSwap;
 use chacha20poly1305::{aead::OsRng, ChaCha20Poly1305, Key, KeyInit};
 use serde::Deserialize;
-use std::{collections::HashMap, env::var, path::PathBuf};
+use std::{collections::HashMap, env::var, path::PathBuf, sync::Arc};
 
+pub mod auth;
 mod config_file;
 mod validate_config;
 
@@ -22,12 +25,12 @@ pub struct SpaceConfig {
     pub path: PathBuf,
 }
 
-impl From<SpaceConfig> for Space {
-    fn from(val: SpaceConfig) -> Self {
+impl From<&SpaceConfig> for Space {
+    fn from(val: &SpaceConfig) -> Self {
         Space {
-            name: val.name,
-            display: val.display,
-            path: val.path,
+            name: val.name.clone(),
+            display: val.display.clone(),
+            path: val.path.clone(),
         }
     }
 }
@@ -68,26 +71,38 @@ impl From<&UserConfig> for User {
     }
 }
 
+// config that can be hot reloaded
+#[derive(Clone)]
+pub struct Runtime {
+    pub spaces: HashMap<String, SpaceConfig>,
+    pub users: HashMap<String, UserConfig>,
+    // todo: roles
+}
+
 #[derive(Clone)]
 pub struct Config {
-    // global settings
+    // system settings
     pub directory_meta_filename: String,
-    // secrets
-    pub upload_token_key: Key,
-
-    // application settings
     pub home_path: PathBuf,
     pub users_path: PathBuf,
     pub spaces_path: PathBuf,
 
-    pub spaces: HashMap<String, SpaceConfig>,
-    pub users: HashMap<String, UserConfig>,
+    // secrets
+    pub upload_token_key: Key,
+
+    // application settings
+    pub auth: AuthConfig,
+    pub runtime: Arc<ArcSwap<Runtime>>,
 }
 
 impl Config {
+    pub fn find_user(&self, name: &str) -> Option<UserConfig> {
+        self.runtime.load().users.get(name).cloned()
+    }
+
     pub async fn new() -> Result<Self> {
         let mut builder = ConfigBuilder::new();
-        let home_path = var("CABY_HOME_PATH").map_err(|err| anyhow!("missing CABY_HOME_PATH"))?;
+        let home_path = var("CABY_HOME_PATH").context("missing CABY_HOME_PATH")?;
 
         // Load minimal settings from env
         builder
@@ -98,6 +113,14 @@ impl Config {
 
         // Load from config
         let config_file = ConfigFile::new_from_path(get_config_path()?).await?;
+
+        let auth = config_file
+            .auth
+            .map(AuthConfig::try_from)
+            .transpose()?
+            .unwrap_or_default();
+        builder.try_set_auth(Some(auth))?;
+
         let Some(spaces_path) = builder.spaces_path.clone() else {
             return Err(anyhow!("no valid spaces path from environment variables"));
         };
@@ -133,13 +156,13 @@ pub struct ConfigBuilder {
     home_path: Option<PathBuf>,
     users_path: Option<PathBuf>,
     spaces_path: Option<PathBuf>,
+    auth: Option<AuthConfig>,
     spaces: HashMap<String, SpaceConfig>,
     users: HashMap<String, UserConfig>,
 }
 
 impl ConfigBuilder {
     pub fn new() -> Self {
-        //
         Self::default()
     }
 
@@ -165,8 +188,8 @@ impl ConfigBuilder {
         };
         let pb = p.into();
         self.home_path = Some(pb.clone());
-        self.try_set_users_path(Some(pb.join("users")));
-        self.try_set_spaces_path(Some(pb.join("spaces")));
+        self.try_set_users_path(Some(pb.join("users")))?;
+        self.try_set_spaces_path(Some(pb.join("spaces")))?;
         Ok(self)
     }
 
@@ -186,13 +209,21 @@ impl ConfigBuilder {
         Ok(self)
     }
 
+    pub fn try_set_auth(&mut self, auth: Option<AuthConfig>) -> Result<&mut Self> {
+        let Some(a) = auth else {
+            return Ok(self);
+        };
+        self.auth = Some(a);
+        Ok(self)
+    }
+
     pub fn try_set_spaces(&mut self, spaces: Option<Vec<SpaceConfig>>) -> Result<&mut Self> {
         let Some(sv) = spaces else {
             return Ok(self);
         };
-        sv.iter().for_each(|s| {
-            self.spaces.insert(s.name.clone(), s.clone());
-        });
+        for s in sv {
+            self.spaces.insert(s.name.clone(), s);
+        }
         Ok(self)
     }
 
@@ -207,6 +238,11 @@ impl ConfigBuilder {
     }
 
     pub fn build(self) -> Result<Config> {
+        let runtime = Runtime {
+            spaces: self.spaces,
+            users: self.users,
+        };
+
         Ok(Config {
             directory_meta_filename: self.directory_meta_filename.ok_or(anyhow!(
                 "missing directory meta filename (CABY_DIRECTORY_META_FILENAME)"
@@ -216,8 +252,8 @@ impl ConfigBuilder {
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
-            spaces: self.spaces,
-            users: self.users,
+            auth: self.auth.ok_or(anyhow!("missing auth config"))?,
+            runtime: Arc::new(ArcSwap::from_pointee(runtime)),
         })
     }
 }

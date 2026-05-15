@@ -8,7 +8,7 @@ use serde::Serialize;
 
 use crate::{user::User, Result};
 
-pub mod auth_middleware;
+pub mod oidc;
 
 #[derive(Serialize)]
 pub struct Token {

@@ -25,6 +25,7 @@
 
 - Requires **no backing services**. Everything is managed by the backend runtime.
 - Files all the way down: Everything from configuration to metadata is stored in readable files.
+- Integrate with your favorite OIDC provider: Authentik, Pocket ID, Authelia, etc.
 - Organize your files within **spaces** for compartmentalization and easy access control
 - Files are uploaded using **chunked uploads** for resumability, performance, and compatibility with certain ingress providers.
 - Supports ARM images for Raspberry Pi and other lightweight devices.

@@ -1,27 +1,72 @@
 use crate::{
     config::{SpaceConfig, UserConfig, UserSpaceConfig},
     validation::{
-        exec_stack, exec_stack_optional,
+        self,
         prefabs::{activation_token_validation, email_validation, username_validation},
     },
     Result,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
+use nest_struct::nest_struct;
 use std::{
-    collections::HashMap,
+    collections::HashSet,
     env::var,
     path::{Path, PathBuf},
 };
 use tokio::fs;
 use tracing::warn;
-use yaml_rust2::YamlLoader;
+use yaml_rust2::{Yaml, YamlLoader};
+
+// TODO: saphyr
 
 const CONFIG_FILE_NAME: &str = "config.yaml";
 
-pub struct ConfigFileSpace {
-    pub name: String,
-    pub display: Option<String>,
-    pub path: Option<PathBuf>,
+#[derive(Default)]
+#[nest_struct]
+pub struct ConfigFile {
+    pub auth: Option<
+        nest! {
+            pub struct ConfigFileAuth {
+                pub passwords: Option<nest! {
+                    pub struct ConfigFileAuthPasswords {
+                        pub enabled: Option<bool>,
+                    }
+                }>,
+                pub oidc: Option<nest! {
+                    pub struct ConfigFileOidc {
+                        pub client_id: Option<String>,
+                        pub client_secret: Option<String>,
+                        pub redirect_uri: Option<String>,
+                        pub post_login_redirect: Option<String>,
+                        pub issuer_url: Option<String>,
+                        pub authorization_endpoint: Option<String>,
+                        pub token_endpoint: Option<String>,
+                        pub jwks_uri: Option<String>,
+                        pub userinfo_endpoint: Option<String>,
+                    }
+                }>,
+            }
+        },
+    >,
+    pub spaces: Vec<
+        nest! {
+            pub struct ConfigFileSpace {
+                pub name: String,
+                pub display: Option<String>,
+                pub path: Option<PathBuf>,
+            }
+        },
+    >,
+    pub users: Vec<
+        nest! {
+            pub struct ConfigFileUser {
+                pub name: String,
+                pub email: Option<String>,
+                pub activation_token: Option<String>,
+                pub spaces: Vec<UserSpaceConfig>,
+            }
+        },
+    >,
 }
 
 impl ConfigFileSpace {
@@ -34,13 +79,6 @@ impl ConfigFileSpace {
     }
 }
 
-pub struct ConfigFileUser {
-    pub name: String,
-    pub email: Option<String>,
-    pub activation_token: Option<String>,
-    pub spaces: Vec<UserSpaceConfig>,
-}
-
 impl ConfigFileUser {
     pub fn into_user_config(self, users_path: &Path) -> UserConfig {
         UserConfig {
@@ -51,12 +89,6 @@ impl ConfigFileUser {
             spaces: self.spaces,
         }
     }
-}
-
-#[derive(Default)]
-pub struct ConfigFile {
-    pub spaces: Vec<ConfigFileSpace>,
-    pub users: Vec<ConfigFileUser>,
 }
 
 pub fn get_config_path() -> Result<PathBuf> {
@@ -73,11 +105,268 @@ pub fn get_config_path() -> Result<PathBuf> {
         .context(format!("CABY_CONFIG_PATH: {:?}", var("CABY_CONFIG_PATH"))))
 }
 
+fn parse_auth_section(config_yaml: &Yaml) -> Result<Option<ConfigFileAuth>> {
+    let auth_yaml = match &config_yaml["auth"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &config_yaml["auth"],
+        _ => return Err(anyhow!(".auth must be a map")),
+    };
+
+    let passwords = parse_auth_passwords_section(auth_yaml)?;
+    let oidc = parse_auth_oidc_section(auth_yaml)?;
+
+    Ok(Some(ConfigFileAuth { passwords, oidc }))
+}
+
+fn parse_auth_passwords_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileAuthPasswords>> {
+    let passwords_yaml = match &auth_yaml["passwords"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &auth_yaml["passwords"],
+        _ => return Err(anyhow!(".auth.passwords must be a map")),
+    };
+
+    let enabled = match &passwords_yaml["enabled"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::Boolean(b) => Some(*b),
+        _ => return Err(anyhow!(".auth.passwords.enabled must be a bool")),
+    };
+
+    Ok(Some(ConfigFileAuthPasswords { enabled }))
+}
+
+// todo: warn user when they set client_secret via yaml
+fn parse_auth_oidc_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileOidc>> {
+    let oidc_yaml = match &auth_yaml["oidc"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &auth_yaml["oidc"],
+        _ => return Err(anyhow!(".auth.oidc must be a map")),
+    };
+
+    let client_id = match &oidc_yaml["client_id"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.client_id must be a string")),
+    };
+
+    let client_secret = match &oidc_yaml["client_secret"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.client_secret must be a string")),
+    };
+
+    let redirect_uri = match &oidc_yaml["redirect_uri"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.redirect_uri must be a string")),
+    };
+
+    let post_login_redirect = match &oidc_yaml["post_login_redirect"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.post_login_redirect must be a string")),
+    };
+
+    let issuer_url = match &oidc_yaml["issuer_url"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.issuer_url must be a string")),
+    };
+
+    let authorization_endpoint = match &oidc_yaml["authorization_endpoint"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => {
+            return Err(anyhow!(
+                ".auth.oidc.authorization_endpoint must be a string"
+            ))
+        }
+    };
+
+    let token_endpoint = match &oidc_yaml["token_endpoint"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.token_endpoint must be a string")),
+    };
+
+    let jwks_uri = match &oidc_yaml["jwks_uri"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.jwks_uri must be a string")),
+    };
+
+    let userinfo_endpoint = match &oidc_yaml["userinfo_endpoint"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.userinfo_endpoint must be a string")),
+    };
+
+    Ok(Some(ConfigFileOidc {
+        client_id,
+        client_secret,
+        redirect_uri,
+        post_login_redirect,
+        issuer_url,
+        authorization_endpoint,
+        token_endpoint,
+        jwks_uri,
+        userinfo_endpoint,
+    }))
+}
+
+fn parse_spaces_section(config_yaml: &Yaml) -> Result<Vec<ConfigFileSpace>> {
+    let mut spaces = vec![];
+    let mut spacenames: HashSet<String> = HashSet::new();
+
+    let spaces_yaml = match &config_yaml["spaces"] {
+        Yaml::Array(arr) => arr,
+        Yaml::BadValue | Yaml::Null => return Err(anyhow!(".spaces is required")),
+        _ => return Err(anyhow!(".spaces must be an array")),
+    };
+
+    for (i, space) in spaces_yaml.iter().enumerate() {
+        let name = match &space["name"] {
+            Yaml::String(s) => s.as_str(),
+            Yaml::BadValue | Yaml::Null => return Err(anyhow!(".spaces[{}].name is required", i)),
+            _ => return Err(anyhow!(".spaces[{}].name must be a string", i)),
+        };
+
+        if !spacenames.insert(name.to_string()) {
+            return Err(anyhow!("duplicate space name '{}' at .spaces[{}]", name, i));
+        }
+
+        let display = match &space["display"] {
+            Yaml::BadValue | Yaml::Null => None,
+            Yaml::String(s) => Some(s.clone()),
+            _ => return Err(anyhow!(".spaces.{}.display must be a string", name)),
+        };
+
+        let path = match &space["path"] {
+            Yaml::BadValue | Yaml::Null => None,
+            Yaml::String(s) => Some(PathBuf::from(s)),
+            _ => return Err(anyhow!(".spaces.{}.path must be a string", name)),
+        };
+
+        spaces.push(ConfigFileSpace {
+            name: name.to_string(),
+            display,
+            path,
+        });
+    }
+
+    Ok(spaces)
+}
+
+fn parse_users_section(
+    config_yaml: &Yaml,
+    spaces: &[ConfigFileSpace],
+) -> Result<Vec<ConfigFileUser>> {
+    let mut users = vec![];
+    let mut usernames: HashSet<String> = HashSet::new();
+
+    let users_yaml = match &config_yaml["users"] {
+        Yaml::BadValue | Yaml::Null => return Ok(users),
+        Yaml::Array(arr) => arr,
+        _ => return Err(anyhow!(".users must be an array")),
+    };
+
+    for (i, user) in users_yaml.iter().enumerate() {
+        let name = match &user["name"] {
+            Yaml::String(s) => s.as_str(),
+            Yaml::BadValue | Yaml::Null => return Err(anyhow!(".users[{}].name is missing", i)),
+            _ => return Err(anyhow!(".users[{}].name must be a string", i)),
+        };
+        if let Some(errs) = validation::exec_stack(&username_validation(), name) {
+            return Err(
+                anyhow!("{}", errs).context(format!("username '{}' failed validation", name))
+            );
+        };
+
+        if !usernames.insert(name.to_lowercase()) {
+            return Err(anyhow!("duplicate user name '{}' at .users[{}]", name, i));
+        }
+
+        let email = match &user["email"] {
+            Yaml::BadValue | Yaml::Null => None,
+            Yaml::String(s) => Some(s.clone()),
+            _ => return Err(anyhow!(".users.{}.email must be a string", name)),
+        };
+        if let Some(errs) = validation::exec_stack_optional(&email_validation(), email.as_deref()) {
+            return Err(anyhow!("{}", errs).context(format!(
+                ".users.{}.email: '{}' failed validation",
+                name,
+                email.as_ref().unwrap()
+            )));
+        }
+
+        let activation_token = match &user["activation_token"] {
+            Yaml::BadValue | Yaml::Null => None,
+            Yaml::String(s) => Some(s.clone()),
+            _ => return Err(anyhow!(".users.{}.activation_token must be a string", name)),
+        };
+        if let Some(errs) = validation::exec_stack_optional(
+            &activation_token_validation(),
+            activation_token.as_deref(),
+        ) {
+            return Err(anyhow!("{}", errs).context(format!(
+                ".users.{}.activation_token: '{}' failed validation",
+                name,
+                activation_token.as_ref().unwrap()
+            )));
+        }
+
+        let mut user_spaces = vec![];
+
+        let user_spaces_yaml = match &user["spaces"] {
+            Yaml::Array(arr) => arr,
+            Yaml::BadValue | Yaml::Null => {
+                return Err(anyhow!(".users.{}.spaces section is missing", name))
+            }
+            _ => return Err(anyhow!(".users.{}.spaces must be an array/list", name)),
+        };
+
+        for (j, space) in user_spaces_yaml.iter().enumerate() {
+            let space_name = match &space["name"] {
+                Yaml::String(s) => s.as_str(),
+                Yaml::BadValue | Yaml::Null => {
+                    return Err(anyhow!(".users.{}.spaces[{}].name is missing", name, j))
+                }
+                _ => {
+                    return Err(anyhow!(
+                        ".users.{}.spaces[{}].name must be a string",
+                        name,
+                        j
+                    ))
+                }
+            };
+
+            if !spaces.iter().any(|s| s.name == space_name) {
+                warn!(
+                    "config: user '{}' has access to a space that does not exist: '{}'",
+                    name, space_name
+                )
+            }
+
+            user_spaces.push(UserSpaceConfig {
+                name: space_name.to_string(),
+                permissions: vec![],
+            });
+        }
+
+        users.push(ConfigFileUser {
+            name: name.to_string(),
+            email,
+            activation_token,
+            spaces: user_spaces,
+        })
+    }
+
+    Ok(users)
+}
+
 impl ConfigFile {
-    // todo: break up parsing from I/O for unit testing
     pub async fn new_from_path(path: PathBuf) -> Result<ConfigFile> {
         let content = fs::read_to_string(&path).await.map_err(|err| {
-            anyhow!(err).context(format!("could not read config file at {:?}", path))
+            anyhow!(err).context(format!("could not read config file {:?}", path))
         })?;
         let docs = YamlLoader::load_from_str(&content)
             .map_err(|err| anyhow!(err).context("could not parse config file as yaml"))?;
@@ -86,132 +375,18 @@ impl ConfigFile {
             return Err(anyhow!("config file is empty"));
         }
 
-        let mut config_file = ConfigFile::default();
         let config_yaml = &docs[0];
 
-        // parse spaces
-        let mut spacenames: HashMap<String, ()> = HashMap::new();
-        for space in config_yaml["spaces"]
-            .as_vec()
-            .ok_or(anyhow!(".spaces is not an array or is missing"))?
-        {
-            let name = space["name"]
-                .as_str()
-                .ok_or(anyhow!("a space is missing a string name"))?;
+        let invalid_config_context = || format!("invalid config {:?}", path);
+        let auth = parse_auth_section(config_yaml).with_context(invalid_config_context)?;
+        let spaces = parse_spaces_section(config_yaml).with_context(invalid_config_context)?;
+        let users =
+            parse_users_section(config_yaml, &spaces).with_context(invalid_config_context)?;
 
-            // Check for space name
-            if spacenames.insert(name.to_string(), ()).is_some() {
-                return Err(anyhow!(".spaces.name: {}", name).context("duplicate space name"));
-            }
-
-            let display = space["display"].as_str().map(|d| d.to_string());
-
-            let path = match space["path"].is_null() {
-                true => Some(PathBuf::from(
-                    space["path"]
-                        .as_str()
-                        .ok_or(anyhow!("could not get .spaces.{} path as string", &name))?,
-                )),
-                false => None,
-            };
-
-            config_file.spaces.push(ConfigFileSpace {
-                name: name.to_string(),
-                display,
-                path,
-            });
-        }
-
-        // parse users
-        let mut usernames: HashMap<String, ()> = HashMap::new();
-        for user in config_yaml["users"]
-            .as_vec()
-            .ok_or(anyhow!(".users is not an array or is missing"))?
-        {
-            let name = user["name"]
-                .as_str()
-                .ok_or(anyhow!("a user is missing a string name"))?;
-            if let Some(errs) = exec_stack(&username_validation(), name) {
-                return Err(
-                    anyhow!("{}", errs).context(format!("username '{}' failed validation", name))
-                );
-            };
-
-            // Check for unique username
-            if usernames.insert(name.to_lowercase(), ()).is_some() {
-                return Err(anyhow!(".users.name: {}", name).context("duplicate user name"));
-            }
-
-            let email = user["email"].as_str();
-            if let Some(errs) = exec_stack_optional(&email_validation(), email) {
-                return Err(anyhow!("{}", errs).context(format!(
-                    ".users.{}.email: '{}' failed validation",
-                    name,
-                    email.unwrap()
-                )));
-            }
-            let email = email.map(|e| e.to_string());
-
-            let activation_token = user["activation_token"].as_str();
-            if let Some(errs) =
-                exec_stack_optional(&activation_token_validation(), activation_token)
-            {
-                return Err(anyhow!("{}", errs).context(format!(
-                    ".users.{}.activation_token: '{}' failed validation",
-                    name,
-                    activation_token.unwrap()
-                )));
-            }
-            let activation_token = activation_token.map(|e| e.to_string());
-
-            // User space access
-            let mut spaces = vec![];
-
-            for space in user["spaces"].as_vec().ok_or(anyhow!(
-                ".users.{}.spaces is not an array or is missing",
-                name
-            ))? {
-                let space_name = space["name"]
-                    .as_str()
-                    .ok_or(anyhow!("a user's space access is missing a name"))?;
-
-                let permissions = match space["permissions"].as_vec() {
-                    Some(space_permissions) => space_permissions
-                        .iter()
-                        .map(|s| {
-                            s.as_str()
-                                .ok_or(anyhow!(
-                                    ".users.{}.spaces.{}.permissions has a non-string permission",
-                                    name,
-                                    space_name
-                                ))
-                                .map(|s| s.to_string())
-                        })
-                        .collect(),
-                    None => Ok(vec![]),
-                }?;
-
-                if !config_file.spaces.iter().any(|s| s.name == space_name) {
-                    warn!(
-                        "user '{}' has access configuration to a space that does not exist: '{}'",
-                        name, space_name
-                    )
-                }
-
-                spaces.push(UserSpaceConfig {
-                    name: space_name.to_string(),
-                    permissions,
-                });
-            }
-
-            config_file.users.push(ConfigFileUser {
-                name: name.to_string(),
-                email,
-                activation_token,
-                spaces,
-            })
-        }
-
-        Ok(config_file)
+        Ok(ConfigFile {
+            auth,
+            spaces,
+            users,
+        })
     }
 }
