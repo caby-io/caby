@@ -5,7 +5,7 @@ use tokio::fs::{create_dir_all, try_exists};
 use tracing::info;
 
 use crate::{
-    auth::oidc::{provision::load_provisioned_users, OIDC_DIR},
+    auth::oidc::{oidc_user::load_provisioned_users, OIDC_DIR},
     config::Config,
     error::Result,
 };

@@ -2,31 +2,24 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Query, State},
-    response::{IntoResponse, Response},
+    response::{IntoResponse, Redirect, Response},
 };
 use openidconnect::{core::CoreClient, AuthorizationCode, Nonce, PkceCodeVerifier, TokenResponse};
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use tracing::error;
+use url::form_urlencoded;
 
 use crate::{
-    auth::oidc::{flow_state::FlowState, OidcClient},
+    auth::oidc::{oidc_auth_code_flow::AuthCodeFlow, oidc_user::provision_user, OidcClient},
     config::Config,
     jsend::JSendBuilder,
+    user::User,
 };
 
 #[derive(Deserialize)]
 pub struct OidcCallbackQuery {
     pub code: String,
     pub state: String,
-}
-
-#[derive(Serialize)]
-pub struct OidcCallbackResponse {
-    pub issuer: String,
-    pub subject: String,
-    pub email: Option<String>,
-    pub preferred_username: Option<String>,
-    pub name: Option<String>,
 }
 
 pub async fn handle_oidc_callback(
@@ -40,13 +33,17 @@ pub async fn handle_oidc_callback(
             .into_response();
     };
 
-    let flow = match FlowState::take(&cfg.home_path, &query.state).await {
+    let Some(oidc_cfg) = cfg.auth.oidc.as_ref() else {
+        error!("oidc: callback hit but config is missing");
+        return JSendBuilder::new().internal_error().into_response();
+    };
+    let post_login_redirect = oidc_cfg.post_login_redirect.clone();
+
+    let flow = match AuthCodeFlow::take(&cfg.home_path, &query.state).await {
         Ok(f) => f,
         Err(err) => {
             error!("oidc: invalid flow state: {:#}", err);
-            return JSendBuilder::new()
-                .fail("invalid or expired OIDC state")
-                .into_response();
+            return redirect_with_error(&post_login_redirect, "invalid or expired OIDC state");
         }
     };
 
@@ -61,7 +58,7 @@ pub async fn handle_oidc_callback(
         Ok(r) => r,
         Err(err) => {
             error!("oidc: could not build token exchange request: {:#}", err);
-            return JSendBuilder::new().internal_error().into_response();
+            return redirect_with_error(&post_login_redirect, "OIDC token exchange failed");
         }
     };
 
@@ -73,15 +70,13 @@ pub async fn handle_oidc_callback(
         Ok(r) => r,
         Err(err) => {
             error!("oidc: token exchange failed: {:#}", err);
-            return JSendBuilder::new()
-                .fail("OIDC token exchange failed")
-                .into_response();
+            return redirect_with_error(&post_login_redirect, "OIDC token exchange failed");
         }
     };
 
     let Some(id_token) = token_response.id_token() else {
         error!("oidc: token response missing id_token");
-        return JSendBuilder::new().internal_error().into_response();
+        return redirect_with_error(&post_login_redirect, "OIDC id_token missing");
     };
 
     let verifier = core.id_token_verifier();
@@ -90,22 +85,44 @@ pub async fn handle_oidc_callback(
         Ok(c) => c,
         Err(err) => {
             error!("oidc: id_token verification failed: {:#}", err);
-            return JSendBuilder::new()
-                .fail("OIDC id_token verification failed")
-                .into_response();
+            return redirect_with_error(&post_login_redirect, "OIDC id_token verification failed");
         }
     };
 
-    JSendBuilder::new()
-        .success(OidcCallbackResponse {
-            issuer: claims.issuer().to_string(),
-            subject: claims.subject().to_string(),
-            email: claims.email().map(|e| e.to_string()),
-            preferred_username: claims.preferred_username().map(|u| u.to_string()),
-            name: claims
-                .name()
-                .and_then(|n| n.get(None))
-                .map(|n| n.to_string()),
-        })
-        .into_response()
+    let user: User = match cfg.find_user(claims.subject().as_str()) {
+        Some(uc) => (&uc).into(),
+        None => match provision_user(&cfg, claims).await {
+            Ok(u) => u,
+            Err(err) => {
+                error!("oidc: provision failed: {:#}", err);
+                return redirect_with_error(&post_login_redirect, "could not provision user");
+            }
+        },
+    };
+
+    let token = match user.create_session().await {
+        Ok(t) => t,
+        Err(err) => {
+            error!(
+                "oidc: could not create session for {}: {:#}",
+                user.name, err
+            );
+            return redirect_with_error(&post_login_redirect, "could not create session");
+        }
+    };
+
+    let fragment = form_urlencoded::Serializer::new(String::new())
+        .append_pair("login_token", &token.value)
+        .append_pair("user", &user.name)
+        .append_pair("expires_at", &token.expires_at.to_rfc3339())
+        .finish();
+
+    Redirect::temporary(&format!("{}#{}", post_login_redirect, fragment)).into_response()
+}
+
+fn redirect_with_error(post_login_redirect: &str, message: &str) -> Response {
+    let fragment = form_urlencoded::Serializer::new(String::new())
+        .append_pair("error", message)
+        .finish();
+    Redirect::temporary(&format!("{}#{}", post_login_redirect, fragment)).into_response()
 }

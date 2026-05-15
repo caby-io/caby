@@ -7,7 +7,7 @@ use tokio::fs;
 use tracing::{debug, info, warn};
 
 use crate::{
-    auth::Token as SessionToken,
+    auth::{oidc::oidc_auth_code_flow::AuthCodeFlow, Token as SessionToken},
     config::Config,
     download::Token as DownloadToken,
     upload::{decode_upload_token, manifest, UPLOAD_TOKEN_LIFETIME_HOURS},
@@ -204,6 +204,14 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
         }
     }
 
+    let mut oidc_flows_removed: u32 = 0;
+    if cfg.auth.oidc.is_some() {
+        match AuthCodeFlow::cleanup(&cfg.home_path).await {
+            Ok(n) => oidc_flows_removed = n,
+            Err(err) => errors.push(format!("could not sweep OIDC flows: {:#}", err)),
+        }
+    }
+
     let mut parts: Vec<String> = Vec::new();
     if sessions_removed > 0 {
         parts.push(format!("{} expired sessions", sessions_removed));
@@ -216,6 +224,9 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
     }
     if uploads_removed > 0 {
         parts.push(format!("{} expired uploads", uploads_removed));
+    }
+    if oidc_flows_removed > 0 {
+        parts.push(format!("{} expired OIDC flow states", oidc_flows_removed));
     }
     if !parts.is_empty() {
         info!("housekeeping removed:\n\t{}", parts.join("\n\t"));

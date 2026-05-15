@@ -14,9 +14,9 @@ use crate::{
     Result,
 };
 
-pub mod flow_state;
-pub mod provision;
-mod provision_names;
+pub mod oidc_auth_code_flow;
+pub mod oidc_user;
+mod oidc_user_names;
 
 pub const OIDC_DIR: &str = "oidc";
 

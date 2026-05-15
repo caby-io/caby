@@ -11,7 +11,7 @@ use openidconnect::{
 use tracing::error;
 
 use crate::{
-    auth::oidc::{flow_state::FlowState, OidcClient},
+    auth::oidc::{oidc_auth_code_flow::AuthCodeFlow, OidcClient},
     config::Config,
     jsend::JSendBuilder,
 };
@@ -50,7 +50,7 @@ pub async fn handle_oidc_login(
         .set_pkce_challenge(pkce_challenge)
         .url();
 
-    if let Err(err) = FlowState::write(
+    if let Err(err) = AuthCodeFlow::write(
         &cfg.home_path,
         csrf_token.secret(),
         pkce_verifier.secret(),

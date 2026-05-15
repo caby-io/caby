@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio::fs;
 
 use crate::{
-    auth::oidc::provision_names::{calculate_name, ADJECTIVES, ANIMALS},
+    auth::oidc::oidc_user_names::{calculate_name, ADJECTIVES, ANIMALS},
     config::{Config, Runtime, UserConfig},
     user::User,
     Result,

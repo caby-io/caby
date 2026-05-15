@@ -124,6 +124,9 @@ impl TryFrom<ConfigFileOidc> for OIDCConfig {
                     ENV_OIDC_POST_LOGIN_REDIRECT
                 )
             })?;
+        url::Url::parse(&post_login_redirect).map_err(|err| {
+            anyhow!(err).context(".auth.oidc.post_login_redirect must be a valid URL")
+        })?;
 
         let extra_scopes = var(ENV_OIDC_EXTRA_SCOPES)
             .ok()
