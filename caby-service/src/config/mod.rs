@@ -1,5 +1,6 @@
 use crate::{
     config::{
+        auth::AuthConfig,
         config_file::{get_config_path, ConfigFile},
         validate_config::is_valid_meta_filename,
     },
@@ -7,7 +8,7 @@ use crate::{
     user::{SpaceAccess, User},
     Result,
 };
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use chacha20poly1305::{aead::OsRng, ChaCha20Poly1305, Key, KeyInit};
 use serde::Deserialize;
 use std::{collections::HashMap, env::var, path::PathBuf};
@@ -23,12 +24,12 @@ pub struct SpaceConfig {
     pub path: PathBuf,
 }
 
-impl From<SpaceConfig> for Space {
-    fn from(val: SpaceConfig) -> Self {
+impl From<&SpaceConfig> for Space {
+    fn from(val: &SpaceConfig) -> Self {
         Space {
-            name: val.name,
-            display: val.display,
-            path: val.path,
+            name: val.name.clone(),
+            display: val.display.clone(),
+            path: val.path.clone(),
         }
     }
 }
@@ -71,16 +72,17 @@ impl From<&UserConfig> for User {
 
 #[derive(Clone)]
 pub struct Config {
-    // global settings
+    // system settings
     pub directory_meta_filename: String,
-    // secrets
-    pub upload_token_key: Key,
-
-    // application settings
     pub home_path: PathBuf,
     pub users_path: PathBuf,
     pub spaces_path: PathBuf,
 
+    // secrets
+    pub upload_token_key: Key,
+
+    // application settings
+    // pub auth: AuthConfig,
     pub spaces: HashMap<String, SpaceConfig>,
     pub users: HashMap<String, UserConfig>,
     // todo: roles
@@ -89,7 +91,7 @@ pub struct Config {
 impl Config {
     pub async fn new() -> Result<Self> {
         let mut builder = ConfigBuilder::new();
-        let home_path = var("CABY_HOME_PATH").map_err(|err| anyhow!("missing CABY_HOME_PATH"))?;
+        let home_path = var("CABY_HOME_PATH").context("missing CABY_HOME_PATH")?;
 
         // Load minimal settings from env
         builder
@@ -141,7 +143,6 @@ pub struct ConfigBuilder {
 
 impl ConfigBuilder {
     pub fn new() -> Self {
-        //
         Self::default()
     }
 
@@ -167,8 +168,8 @@ impl ConfigBuilder {
         };
         let pb = p.into();
         self.home_path = Some(pb.clone());
-        self.try_set_users_path(Some(pb.join("users")));
-        self.try_set_spaces_path(Some(pb.join("spaces")));
+        self.try_set_users_path(Some(pb.join("users")))?;
+        self.try_set_spaces_path(Some(pb.join("spaces")))?;
         Ok(self)
     }
 
@@ -192,9 +193,9 @@ impl ConfigBuilder {
         let Some(sv) = spaces else {
             return Ok(self);
         };
-        sv.iter().for_each(|s| {
-            self.spaces.insert(s.name.clone(), s.clone());
-        });
+        for s in sv {
+            self.spaces.insert(s.name.clone(), s);
+        }
         Ok(self)
     }
 

@@ -32,6 +32,6 @@ where
             return Err(JSendBuilder::new().fail(FILE_NOT_FOUND));
         };
 
-        Ok(space_config.clone().into())
+        Ok(space_config.into())
     }
 }

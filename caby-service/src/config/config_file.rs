@@ -105,8 +105,125 @@ pub fn get_config_path() -> Result<PathBuf> {
 }
 
 fn parse_auth_section(config_yaml: &Yaml) -> Result<Option<ConfigFileAuth>> {
-    let _ = config_yaml;
-    return Ok(None);
+    let auth_yaml = match &config_yaml["auth"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &config_yaml["auth"],
+        _ => return Err(anyhow!(".auth must be a map")),
+    };
+
+    let passwords = parse_auth_passwords_section(auth_yaml)?;
+    let oidc = parse_auth_oidc_section(auth_yaml)?;
+
+    Ok(Some(ConfigFileAuth { passwords, oidc }))
+}
+
+fn parse_auth_passwords_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileAuthPasswords>> {
+    let passwords_yaml = match &auth_yaml["passwords"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &auth_yaml["passwords"],
+        _ => return Err(anyhow!(".auth.passwords must be a map")),
+    };
+
+    let enabled = match &passwords_yaml["enabled"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::Boolean(b) => Some(*b),
+        _ => return Err(anyhow!(".auth.passwords.enabled must be a bool")),
+    };
+
+    Ok(Some(ConfigFileAuthPasswords { enabled }))
+}
+
+fn parse_auth_oidc_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileOidc>> {
+    let oidc_yaml = match &auth_yaml["oidc"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &auth_yaml["oidc"],
+        _ => return Err(anyhow!(".auth.oidc must be a map")),
+    };
+
+    let client_id = match &oidc_yaml["client_id"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.client_id must be a string")),
+    };
+
+    let client_secret = match &oidc_yaml["client_secret"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.client_secret must be a string")),
+    };
+
+    let redirect_uri = match &oidc_yaml["redirect_uri"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.redirect_uri must be a string")),
+    };
+
+    let post_login_redirect = match &oidc_yaml["post_login_redirect"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.post_login_redirect must be a string")),
+    };
+
+    let scopes = match &oidc_yaml["scopes"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::Array(arr) => Some(
+            arr.iter()
+                .enumerate()
+                .map(|(k, item)| match item {
+                    Yaml::String(s) => Ok(s.clone()),
+                    _ => Err(anyhow!(".auth.oidc.scopes[{}] must be a string", k)),
+                })
+                .collect::<Result<Vec<_>>>()?,
+        ),
+        _ => return Err(anyhow!(".auth.oidc.scopes must be an array")),
+    };
+
+    let issuer_url = match &oidc_yaml["issuer_url"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.issuer_url must be a string")),
+    };
+
+    let authorization_endpoint = match &oidc_yaml["authorization_endpoint"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => {
+            return Err(anyhow!(
+                ".auth.oidc.authorization_endpoint must be a string"
+            ))
+        }
+    };
+
+    let token_endpoint = match &oidc_yaml["token_endpoint"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.token_endpoint must be a string")),
+    };
+
+    let jwks_uri = match &oidc_yaml["jwks_uri"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.jwks_uri must be a string")),
+    };
+
+    let userinfo_endpoint = match &oidc_yaml["userinfo_endpoint"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".auth.oidc.userinfo_endpoint must be a string")),
+    };
+
+    Ok(Some(ConfigFileOidc {
+        client_id,
+        client_secret,
+        redirect_uri,
+        post_login_redirect,
+        scopes,
+        issuer_url,
+        authorization_endpoint,
+        token_endpoint,
+        jwks_uri,
+        userinfo_endpoint,
+    }))
 }
 
 fn parse_spaces_section(config_yaml: &Yaml) -> Result<Vec<ConfigFileSpace>> {
@@ -160,8 +277,8 @@ fn parse_users_section(
     let mut usernames: HashSet<String> = HashSet::new();
 
     let users_yaml = match &config_yaml["users"] {
+        Yaml::BadValue | Yaml::Null => return Ok(users),
         Yaml::Array(arr) => arr,
-        Yaml::BadValue | Yaml::Null => return Err(anyhow!(".users section is missing")),
         _ => return Err(anyhow!(".users must be an array")),
     };
 
@@ -237,7 +354,7 @@ fn parse_users_section(
 
             if !spaces.iter().any(|s| s.name == space_name) {
                 warn!(
-                    "user '{}' has access configuration to a space that does not exist: '{}'",
+                    "config: user '{}' has access to a space that does not exist: '{}'",
                     name, space_name
                 )
             }
