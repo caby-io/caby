@@ -27,7 +27,9 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 .route("/logout", post(auth_api::handle_logout))
                 .nest(
                     "/oidc",
-                    Router::new().route("/login", get(auth_api::handle_oidc_login)),
+                    Router::new()
+                        .route("/login", get(auth_api::handle_oidc_login))
+                        .route("/callback", get(auth_api::handle_oidc_callback)),
                 ), // .route("/test", get(auth_api::handle_test_auth)),
         )
         // .nest(
