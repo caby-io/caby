@@ -135,6 +135,7 @@ fn parse_auth_passwords_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileAut
     Ok(Some(ConfigFileAuthPasswords { enabled }))
 }
 
+// todo: warn user when they set client_secret via yaml
 fn parse_auth_oidc_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileOidc>> {
     let oidc_yaml = match &auth_yaml["oidc"] {
         Yaml::BadValue | Yaml::Null => return Ok(None),
