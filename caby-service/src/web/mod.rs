@@ -3,7 +3,7 @@ use axum::{
     Router,
 };
 
-use crate::config::Config;
+use crate::state::AppState;
 
 mod auth_api;
 mod extractors;
@@ -13,7 +13,7 @@ mod spaces_api;
 mod upload;
 mod users_api;
 
-pub fn api_router(cfg: &Config) -> Router<Config> {
+pub fn api_router(state: &AppState) -> Router<AppState> {
     Router::new()
         .nest(
             "/auth",

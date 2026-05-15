@@ -32,6 +32,7 @@ mod housekeeping;
 mod init;
 mod jsend;
 mod space;
+mod state;
 mod upload;
 mod user;
 mod validation;
@@ -73,8 +74,10 @@ async fn main() -> Result<()> {
         // TODO make this come from an env var
         .allow_origin(Any);
 
+    let state = state::AppState { config: cfg };
+
     let app = Router::new()
-        .nest("/v0", web::api_router(&cfg))
+        .nest("/v0", web::api_router(&state))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(
@@ -86,7 +89,7 @@ async fn main() -> Result<()> {
             // .on_failure(tower_http::trace::DefaultOnFailure::new().level(tracing::Level::WARN)),
         )
         .layer(cors_layer)
-        .with_state(cfg);
+        .with_state(state);
     let app = NormalizePathLayer::trim_trailing_slash().layer(app);
 
     let listener = TcpListener::bind("0.0.0.0:8080")
