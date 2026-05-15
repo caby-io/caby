@@ -14,7 +14,7 @@ use chacha20poly1305::{aead::OsRng, ChaCha20Poly1305, Key, KeyInit};
 use serde::Deserialize;
 use std::{collections::HashMap, env::var, path::PathBuf, sync::Arc};
 
-mod auth;
+pub mod auth;
 mod config_file;
 mod validate_config;
 

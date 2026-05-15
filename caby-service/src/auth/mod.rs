@@ -8,6 +8,8 @@ use serde::Serialize;
 
 use crate::{user::User, Result};
 
+pub mod oidc;
+
 #[derive(Serialize)]
 pub struct Token {
     pub value: String,

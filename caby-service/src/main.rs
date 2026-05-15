@@ -74,7 +74,7 @@ async fn main() -> Result<()> {
         // TODO make this come from an env var
         .allow_origin(Any);
 
-    let state = state::AppState { config: cfg };
+    let state = state::AppState::new(cfg).await?;
 
     let app = Router::new()
         .nest("/v0", web::api_router(&state))

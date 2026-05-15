@@ -42,7 +42,7 @@ pub struct AuthConfig {
                 pub scopes: Vec<String>,
                 pub provider: nest! {
                     #[derive(Clone)]
-                    enum OidcProviderConfig {
+                    pub enum OidcProviderConfig {
                         Discovery {
                             issuer_url: String,
                         },
