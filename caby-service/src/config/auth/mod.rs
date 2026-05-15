@@ -11,7 +11,7 @@ pub const ENV_OIDC_CLIENT_ID: &'static str = "OIDC_CLIENT_ID";
 pub const ENV_OIDC_CLIENT_SECRET: &'static str = "OIDC_CLIENT_SECRET";
 pub const ENV_OIDC_REDIRECT_URI: &'static str = "OIDC_REDIRECT_URI";
 pub const ENV_OIDC_POST_LOGIN_REDIRECT: &'static str = "OIDC_POST_LOGIN_REDIRECT";
-pub const ENV_OIDC_SCOPES: &'static str = "OIDC_SCOPES";
+pub const ENV_OIDC_EXTRA_SCOPES: &'static str = "OIDC_EXTRA_SCOPES";
 
 pub const ENV_OIDC_ISSUER_URL: &'static str = "OIDC_ISSUER_URL";
 pub const ENV_OIDC_AUTHORIZATION_ENDPOINT: &'static str = "OIDC_AUTHORIZATION_ENDPOINT";
@@ -20,8 +20,7 @@ pub const ENV_OIDC_JWKS_URI: &'static str = "OIDC_JWKS_URI";
 pub const ENV_OIDC_USERINFO_ENDPOINT: &'static str = "OIDC_USERINFO_ENDPOINT";
 
 // defaults
-// note: openid scope is already added by oidc-rs lib
-pub const OIDC_SCOPES_DEFAULT: &[&'static str] = &["profile", "email"];
+pub const OIDC_EXTRA_SCOPES_DEFAULT: &[&'static str] = &["profile", "email"];
 
 #[derive(Clone)]
 #[nest_struct]
@@ -40,7 +39,7 @@ pub struct AuthConfig {
                 pub client_secret: String,
                 pub redirect_uri: String,
                 pub post_login_redirect: String,
-                pub scopes: Vec<String>,
+                pub extra_scopes: Vec<String>,
                 pub provider: nest! {
                     #[derive(Clone)]
                     pub enum OidcProviderConfig {
@@ -126,7 +125,7 @@ impl TryFrom<ConfigFileOidc> for OIDCConfig {
                 )
             })?;
 
-        let scopes = var(ENV_OIDC_SCOPES)
+        let extra_scopes = var(ENV_OIDC_EXTRA_SCOPES)
             .ok()
             .map(|s| {
                 s.split(',')
@@ -134,8 +133,12 @@ impl TryFrom<ConfigFileOidc> for OIDCConfig {
                     .filter(|x| !x.is_empty())
                     .collect::<Vec<_>>()
             })
-            .or(file.scopes)
-            .unwrap_or_else(|| OIDC_SCOPES_DEFAULT.iter().map(|s| s.to_string()).collect());
+            .unwrap_or_else(|| {
+                OIDC_EXTRA_SCOPES_DEFAULT
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect()
+            });
 
         let provider = resolve_oidc_provider_config(
             var(ENV_OIDC_ISSUER_URL).ok().or(file.issuer_url),
@@ -154,7 +157,7 @@ impl TryFrom<ConfigFileOidc> for OIDCConfig {
             client_secret,
             redirect_uri,
             post_login_redirect,
-            scopes,
+            extra_scopes,
             provider,
         })
     }

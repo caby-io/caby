@@ -46,7 +46,7 @@ pub async fn handle_oidc_login(
             CsrfToken::new_random,
             Nonce::new_random,
         )
-        .add_scopes(oidc_cfg.scopes.iter().map(|s| Scope::new(s.clone())))
+        .add_scopes(oidc_cfg.extra_scopes.iter().map(|s| Scope::new(s.clone())))
         .set_pkce_challenge(pkce_challenge)
         .url();
 

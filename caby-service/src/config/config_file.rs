@@ -38,7 +38,6 @@ pub struct ConfigFile {
                         pub client_secret: Option<String>,
                         pub redirect_uri: Option<String>,
                         pub post_login_redirect: Option<String>,
-                        pub scopes: Option<Vec<String>>,
                         pub issuer_url: Option<String>,
                         pub authorization_endpoint: Option<String>,
                         pub token_endpoint: Option<String>,
@@ -167,20 +166,6 @@ fn parse_auth_oidc_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileOidc>> {
         _ => return Err(anyhow!(".auth.oidc.post_login_redirect must be a string")),
     };
 
-    let scopes = match &oidc_yaml["scopes"] {
-        Yaml::BadValue | Yaml::Null => None,
-        Yaml::Array(arr) => Some(
-            arr.iter()
-                .enumerate()
-                .map(|(k, item)| match item {
-                    Yaml::String(s) => Ok(s.clone()),
-                    _ => Err(anyhow!(".auth.oidc.scopes[{}] must be a string", k)),
-                })
-                .collect::<Result<Vec<_>>>()?,
-        ),
-        _ => return Err(anyhow!(".auth.oidc.scopes must be an array")),
-    };
-
     let issuer_url = match &oidc_yaml["issuer_url"] {
         Yaml::BadValue | Yaml::Null => None,
         Yaml::String(s) => Some(s.clone()),
@@ -220,7 +205,6 @@ fn parse_auth_oidc_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileOidc>> {
         client_secret,
         redirect_uri,
         post_login_redirect,
-        scopes,
         issuer_url,
         authorization_endpoint,
         token_endpoint,
