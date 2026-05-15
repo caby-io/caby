@@ -25,11 +25,12 @@ pub async fn handle_login(
 ) -> Response {
     let resp = jsend::JSendBuilder::new();
 
-    let mut user_config = match cfg.users.get(&req.login.to_lowercase()) {
+    let app_cfg = cfg.application.load();
+    let mut user_config = match app_cfg.users.get(&req.login.to_lowercase()) {
         Some(u) => u,
         None => {
             // todo: regex the login to see if it looks like an email before doing this expensive lookup
-            let Some(user_config) = cfg.users.values().find(|u| {
+            let Some(user_config) = app_cfg.users.values().find(|u| {
                 if let Some(email) = &u.email {
                     return email == &req.login;
                 }

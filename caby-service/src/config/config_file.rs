@@ -28,7 +28,9 @@ pub struct ConfigFile {
         nest! {
             pub struct ConfigFileAuth {
                 pub passwords: Option<nest! {
-                    enabled: Option<bool>
+                    pub struct ConfigFileAuthPasswords {
+                        pub enabled: Option<bool>,
+                    }
                 }>,
                 pub oidc: Option<nest! {
                     pub struct ConfigFileOidc {

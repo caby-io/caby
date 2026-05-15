@@ -39,8 +39,10 @@ pub async fn handle_token_lookup(
     let resp = JSendBuilder::new();
     // todo: validate token before performing lookup
 
+    let app_cfg = cfg.application.load();
+
     // lookup user by the provided activation token
-    let Some(user_config) = cfg
+    let Some(user_config) = app_cfg
         .users
         .values()
         .find(|u| u.activation_token.as_deref() == Some(&req.activation_token))
@@ -119,8 +121,10 @@ pub async fn handle_user_token_activation(
 ) -> Response {
     let resp = JSendBuilder::new();
 
+    let app_cfg = cfg.application.load();
+
     // lookup user by the provided activation token
-    let Some(user_config) = cfg
+    let Some(user_config) = app_cfg
         .users
         .values()
         .find(|u| u.activation_token.as_deref() == Some(&req.activation_token))

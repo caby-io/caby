@@ -29,8 +29,10 @@ async fn find_session(
     token: &str,
     user_name: Option<&str>,
 ) -> crate::Result<(Token, User)> {
+    let app_cfg = cfg.application.load();
+
     if let Some(name) = user_name {
-        let user = cfg
+        let user = app_cfg
             .users
             .get(&name.to_lowercase())
             .ok_or_else(|| anyhow!("user does not exist: {}", name))?;
@@ -45,7 +47,7 @@ async fn find_session(
     }
 
     // This is intentionally unoptimized and slow. We should encode the user name into the token so that we don't need to do this at all
-    for (_, user) in cfg.users.iter() {
+    for (_, user) in app_cfg.users.iter() {
         let session_file = user.path.join(format!("session_{}", token));
 
         if !fs::try_exists(session_file).await.map_err(|err| {

@@ -23,7 +23,8 @@ impl<'a> From<&'a Space> for SpaceResponse<'a> {
 
 // todo: obfuscate the path from both endpoints?
 pub async fn handle_list_spaces(State(cfg): State<Config>) -> Response {
-    let spaces: Vec<Space> = cfg.spaces.values().map(Space::from).collect();
+    let app_cfg = cfg.application.load();
+    let spaces: Vec<Space> = app_cfg.spaces.values().map(Space::from).collect();
     let spaces: Vec<SpaceResponse> = spaces.iter().map(SpaceResponse::from).collect();
 
     JSendBuilder::new().success(spaces).into_response()
