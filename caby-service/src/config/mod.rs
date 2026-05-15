@@ -96,6 +96,10 @@ pub struct Config {
 }
 
 impl Config {
+    pub fn find_user(&self, name: &str) -> Option<UserConfig> {
+        self.runtime.load().users.get(name).cloned()
+    }
+
     pub async fn new() -> Result<Self> {
         let mut builder = ConfigBuilder::new();
         let home_path = var("CABY_HOME_PATH").context("missing CABY_HOME_PATH")?;

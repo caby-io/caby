@@ -1,10 +1,14 @@
-use std::path::Path;
+use std::{path::Path, sync::Arc};
 
 use anyhow::{anyhow, Ok};
 use tokio::fs::{create_dir_all, try_exists};
 use tracing::info;
 
-use crate::{auth::oidc::OIDC_DIR, config::Config, error::Result};
+use crate::{
+    auth::oidc::{provision::load_provisioned_users, OIDC_DIR},
+    config::Config,
+    error::Result,
+};
 
 async fn init_dir(name: &str, path: &Path) -> Result<()> {
     let exists = try_exists(path)
@@ -27,6 +31,18 @@ pub async fn init(cfg: &Config) -> Result<()> {
     init_dir("spaces", &cfg.spaces_path).await?;
     if cfg.auth.oidc.is_some() {
         init_dir(OIDC_DIR, &cfg.home_path.join(OIDC_DIR)).await?;
+    }
+
+    let users = load_provisioned_users(&cfg.users_path).await?;
+    if !users.is_empty() {
+        info!("found {} provisioned OIDC users", users.len());
+        cfg.runtime.rcu(|r| {
+            let mut next = (**r).clone();
+            for (k, v) in &users {
+                next.users.entry(k.clone()).or_insert_with(|| v.clone());
+            }
+            Arc::new(next)
+        });
     }
 
     // Initialize spaces
