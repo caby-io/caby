@@ -14,6 +14,10 @@ use crate::{
     Result,
 };
 
+pub mod flow_state;
+
+pub const OIDC_DIR: &str = "oidc";
+
 pub struct OidcClient {
     pub http: HttpClient,
     pub metadata: CoreProviderMetadata,

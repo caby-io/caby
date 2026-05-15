@@ -24,7 +24,11 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                     post(auth_api::handle_user_token_activation),
                 )
                 .route("/login", post(auth_api::handle_login))
-                .route("/logout", post(auth_api::handle_logout)), // .route("/test", get(auth_api::handle_test_auth)),
+                .route("/logout", post(auth_api::handle_logout))
+                .nest(
+                    "/oidc",
+                    Router::new().route("/login", get(auth_api::handle_oidc_login)),
+                ), // .route("/test", get(auth_api::handle_test_auth)),
         )
         // .nest(
         //     "/users",

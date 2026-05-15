@@ -4,7 +4,7 @@ use anyhow::{anyhow, Ok};
 use tokio::fs::{create_dir_all, try_exists};
 use tracing::info;
 
-use crate::{config::Config, error::Result};
+use crate::{auth::oidc::OIDC_DIR, config::Config, error::Result};
 
 async fn init_dir(name: &str, path: &Path) -> Result<()> {
     let exists = try_exists(path)
@@ -25,6 +25,9 @@ pub async fn init(cfg: &Config) -> Result<()> {
     // Initial core application paths
     init_dir("users", &cfg.users_path).await?;
     init_dir("spaces", &cfg.spaces_path).await?;
+    if cfg.auth.oidc.is_some() {
+        init_dir(OIDC_DIR, &cfg.home_path.join(OIDC_DIR)).await?;
+    }
 
     // Initialize spaces
     let cfg_rtm = cfg.runtime.load();

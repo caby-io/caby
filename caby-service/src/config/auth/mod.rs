@@ -20,7 +20,8 @@ pub const ENV_OIDC_JWKS_URI: &'static str = "OIDC_JWKS_URI";
 pub const ENV_OIDC_USERINFO_ENDPOINT: &'static str = "OIDC_USERINFO_ENDPOINT";
 
 // defaults
-pub const OIDC_SCOPES_DEFAULT: &[&'static str] = &["openid", "profile", "email"];
+// note: openid scope is already added by oidc-rs lib
+pub const OIDC_SCOPES_DEFAULT: &[&'static str] = &["profile", "email"];
 
 #[derive(Clone)]
 #[nest_struct]

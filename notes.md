@@ -12,6 +12,7 @@
 
 ```
 /app/cabynet
+  ├── /oidc
   ├── /users
   ├── /spaces
     ├── /user
@@ -24,6 +25,7 @@
       ├── /meta
       ├── /shares
       └── /uploads
+  ├── .secrets
   └── config.yaml
 ```
 
