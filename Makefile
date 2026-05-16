@@ -1,8 +1,10 @@
 .DEFAULT_GOAL := tmux
 
-.PHONY: bootstrap init-service init-service-tools init-web init-config run-service run-web tmux debug-mobile-win debug-mobile-win-cleanup
+.PHONY: bootstrap init-service init-service-tools init-web init-config run-service run-web tmux debug-mobile-win debug-mobile-win-cleanup debug-mobile-adb debug-mobile-adb-cleanup
 
 WSL_IP ?= $(shell hostname -I 2>/dev/null | awk '{print $$1}')
+ADB ?= adb.exe
+MOBILE_PORTS := 5173 8080 1411
 
 bootstrap: init-service init-service-tools init-web init-config
 
@@ -58,3 +60,15 @@ debug-mobile-win:
 debug-mobile-win-cleanup:
 	@echo ">>> debug-mobile-win-cleanup — removing portproxy + firewall rules"
 	gsudo.exe "$$(wslpath -w scripts/debug-mobile-win-cleanup.bat)"
+
+debug-mobile-adb:
+	@echo ">>> debug-mobile-adb — adb reverse for dev ports"
+	@for port in $(MOBILE_PORTS); do \
+		$(ADB) reverse tcp:$$port tcp:$$port; \
+	done
+
+debug-mobile-adb-cleanup:
+	@echo ">>> debug-mobile-adb-cleanup — removing adb reverse mappings"
+	@for port in $(MOBILE_PORTS); do \
+		$(ADB) reverse --remove tcp:$$port || true; \
+	done
