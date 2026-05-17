@@ -38,6 +38,9 @@
 	import MoveDialog from './MoveDialog.svelte';
 	import EntriesOverviewNav from '$lib/files/overview/EntriesOverviewNav.svelte';
 	import { fsEntryIntoFiles } from '$lib/files/upload/drop';
+	import { getContext } from 'svelte';
+
+	const menu = getContext<{ open: boolean }>('menu');
 	import { UploadGroup } from '$lib/files/upload/upload_group';
 
 	const space = $derived(page.params.space!);
@@ -406,10 +409,16 @@
 <svelte:window on:keydown={onKeyDown} />
 
 <div class="files-view fx">
-	<section class="left fx fx--col">
+	<section class="left fx fx--col" class:open={menu.open}>
 		<SpacesSelector {current_space} {spaces} />
 		<EntriesOverviewNav {overview_entries} {space} />
 	</section>
+	<div
+		class="menu-backdrop"
+		class:open={menu.open}
+		role="presentation"
+		onclick={() => (menu.open = false)}
+	></div>
 	<section class="right fx-grow fx fx--col">
 		<EntriesBar
 			{selected_entries}
@@ -495,6 +504,8 @@
 />
 
 <style lang="scss">
+	@use '$lib/styles/breakpoints' as bp;
+
 	.files-view {
 		border-top: 1px solid var(--clr-border);
 	}
@@ -503,6 +514,47 @@
 		background-color: var(--clr-background-1);
 		width: var(--sidebar-width);
 		overflow-x: auto;
+
+		@media (max-width: bp.$bp-files-sidebar) {
+			position: fixed;
+			top: var(--top-nav-height);
+			left: 0;
+			bottom: 0;
+			z-index: 2;
+			transform: translateX(-100%);
+			visibility: hidden;
+			transition:
+				transform 0.25s ease,
+				visibility 0s linear 0.25s;
+
+			&.open {
+				transform: translateX(0);
+				visibility: visible;
+				transition:
+					transform 0.25s ease,
+					visibility 0s linear 0s;
+			}
+		}
+	}
+
+	.menu-backdrop {
+		display: none;
+
+		@media (max-width: bp.$bp-files-sidebar) {
+			display: block;
+			position: fixed;
+			inset: var(--top-nav-height) 0 0 0;
+			background: rgba(0, 0, 0, 0.4);
+			z-index: 1;
+			opacity: 0;
+			pointer-events: none;
+			transition: opacity 0.25s ease;
+
+			&.open {
+				opacity: 1;
+				pointer-events: auto;
+			}
+		}
 	}
 
 	.right {
@@ -545,6 +597,11 @@
 			bottom: 0;
 			left: 0;
 			width: 100%;
+
+			@media (max-width: bp.$bp-files-sidebar) {
+				padding: 0 1rem;
+				opacity: 0.9;
+			}
 		}
 
 		> aside.add-action {

@@ -118,7 +118,7 @@
 
 	.add-list {
 		display: grid;
-		grid-template-columns: 1fr 1fr;
+		grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 		grid-auto-rows: 5rem;
 		gap: 0.5rem;
 		padding: 1rem;
