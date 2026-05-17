@@ -30,9 +30,9 @@
 	<header class="fx fx--ac">
 		<h1>Upload Progress</h1>
 		<h2>{progress_percent}%</h2>
-		<span class="fx fx--cc border-0 box-shadow-0-card" on:click={() => dialog.show()}>
+		<!-- <span class="fx fx--cc border-0 box-shadow-0-card" on:click={() => dialog.show()}>
 			<IconLucideChevronUp />
-		</span>
+		</span> -->
 	</header>
 	<main class="fx fx--col">
 		<section class="fx">
