@@ -31,6 +31,7 @@
 		const input = document.createElement('input');
 		input.setAttribute('type', 'file');
 		input.setAttribute('multiple', 'multiple');
+		input.setAttribute('accept', '*/*');
 		input.onchange = (_) => {
 			handleUploadFiles(input.files!);
 			dialog.close();
