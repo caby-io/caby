@@ -91,7 +91,6 @@
 			background: none;
 			border: none;
 			padding: 0.25rem;
-			color: inherit;
 			cursor: pointer;
 			font-size: 1.4rem;
 
