@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { join } from '$lib/fs';
 	import type { EntryProps, FileFields } from '$lib/files/entry';
+	import IconFlatColorIconsFile from '~icons/flat-color-icons/file';
 
 	let {
 		entry,
@@ -33,7 +34,7 @@
 	ondrop={(e) => onDrop!(e, entry)}
 	oncontextmenu={(e) => onContextMenu!(e, entry)}
 >
-	<section class="display fx fx--cc fx-grow">📃</section>
+	<section class="display fx fx--cc fx-grow"><IconFlatColorIconsFile /></section>
 	<section class="info">
 		<!-- todo: consider splitting extension so we can show it-->
 		<h1 title={entry.name}>{entry.name}</h1>

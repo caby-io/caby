@@ -1,12 +1,13 @@
 <script lang="ts">
 	import IconLucideSquareCheckBig from '~icons/lucide/square-check-big';
+	import IconFlatColorIconsFile from '~icons/flat-color-icons/file';
 </script>
 
 <tr>
 	<td data-cell="select" class="check"><IconLucideSquareCheckBig /></td>
 	<td data-cell="main" class="main">
 		<div class="fx fx-cc">
-			<div class="icon fx fx-cc">📄</div>
+			<div class="icon fx fx-cc"><IconFlatColorIconsFile /></div>
 			<div class="text fx-grow">
 				<div class="name">ㅤ</div>
 				<div class="size">ㅤ</div>

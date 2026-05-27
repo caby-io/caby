@@ -6,7 +6,7 @@
 	import { uploadManager } from './upload/upload_manager.svelte';
 	import IconFlatColorIconsFolder from '~icons/flat-color-icons/folder';
 	import IconLucidePlus from '~icons/lucide/plus';
-	import IconStreamlineFlexColorTextFileFlat from '~icons/streamline-flex-color/text-file-flat';
+	import IconFlatColorIconsFile from '~icons/flat-color-icons/file';
 	import IconPhUploadFill from '~icons/ph/upload-fill';
 	import IconLogosYoutubeIcon from '~icons/logos/youtube-icon';
 
@@ -77,14 +77,14 @@
 			</button>
 			<button class="fx fx--ac border-0 box-shadow-0-card" onclick={() => openFileDialog()}>
 				<div class="fx fx--cc">
-					<IconStreamlineFlexColorTextFileFlat class="action-icon" />
+					<IconFlatColorIconsFile class="action-icon" />
 					<span class="overlay"><IconPhUploadFill class="overlay-icon" /></span>
 				</div>
 				Upload Files
 			</button>
 			<button class="fx fx--ac border-0 box-shadow-0-card" disabled>
 				<div class="fx fx--cc">
-					<IconStreamlineFlexColorTextFileFlat class="action-icon" />
+					<IconFlatColorIconsFile class="action-icon" />
 					<span class="overlay"><IconLucidePlus class="overlay-icon" /></span>
 				</div>
 				New File (coming soon)
@@ -119,7 +119,7 @@
 
 	.add-list {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 		grid-auto-rows: 5rem;
 		gap: 0.5rem;
 		padding: 1rem;

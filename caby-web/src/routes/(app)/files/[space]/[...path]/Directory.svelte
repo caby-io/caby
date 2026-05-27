@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { DirFields, EntryProps } from '$lib/files/entry';
 	import { join } from '$lib/fs';
+	import IconFlatColorIconsFolder from '~icons/flat-color-icons/folder';
 
 	let {
 		entry,
@@ -36,7 +37,7 @@
 	ondrop={(e) => onDrop!(e, entry)}
 	oncontextmenu={(e) => onContextMenu!(e, entry)}
 >
-	<section class="display fx fx--cc fx-grow">📁</section>
+	<section class="display fx fx--cc fx-grow"><IconFlatColorIconsFolder /></section>
 	<section class="info">
 		<h1>
 			<!-- todo: figure out a better solution for the double event -->
