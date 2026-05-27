@@ -3,12 +3,18 @@
 	import type { OverviewEntry } from './overview_entry';
 	import Self from './OverviewEntrySelect.svelte';
 	import IconLucideChevronRight from '~icons/lucide/chevron-right';
+	import IconFlatColorIconsFolder from '~icons/flat-color-icons/folder';
+	import IconFlatColorIconsOpenedFolder from '~icons/flat-color-icons/opened-folder';
 
 	let {
 		entry = $bindable(),
 		space,
 		onSelect
 	}: { entry: OverviewEntry; space: string; onSelect?: (entry: OverviewEntry) => void } = $props();
+
+	let EntryIcon = $derived(
+		entry.icon ?? (entry.is_expanded ? IconFlatColorIconsOpenedFolder : IconFlatColorIconsFolder)
+	);
 </script>
 
 <section class="entry-branch">
@@ -22,7 +28,7 @@
 			<IconLucideChevronRight />
 		</div>
 		<div class="fx">
-			<div class="icon">{entry.icon || (entry.is_expanded ? '📂' : '📁')}</div>
+			<div class="icon fx fx--ac"><EntryIcon /></div>
 			<div class="name fx-grow">{entry.name}</div>
 		</div>
 	</div>
@@ -45,8 +51,7 @@
 		}
 
 		.control {
-			font-size: 1.2rem;
-			margin-right: 0.5rem;
+			margin-right: 0.25rem;
 			transition: transform 0.2s;
 		}
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { OverviewEntry } from './overview_entry';
 	import OverviewEntrySelect from './OverviewEntrySelect.svelte';
+	import IconFlatColorIconsDatabase from '~icons/flat-color-icons/database';
 
 	let {
 		overview_entries,
@@ -12,7 +13,7 @@
 
 	let root_entry: OverviewEntry = $state({
 		entry_type: 'directory',
-		icon: '🗄️',
+		icon: IconFlatColorIconsDatabase,
 		name: space,
 		path: '',
 		children: [],

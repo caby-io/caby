@@ -1,6 +1,8 @@
+import type { Component } from 'svelte';
+
 export type OverviewEntry = {
 	entry_type: string;
-	icon?: string;
+	icon?: Component;
 	name: string;
 	path: string; // relative path of the file from the mount root
 	children: Array<OverviewEntry>;

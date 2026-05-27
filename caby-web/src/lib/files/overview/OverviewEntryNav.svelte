@@ -3,6 +3,8 @@
 	import type { OverviewEntry } from './overview_entry';
 	import Self from './OverviewEntryNav.svelte';
 	import IconLucideChevronRight from '~icons/lucide/chevron-right';
+	import IconFlatColorIconsFolder from '~icons/flat-color-icons/folder';
+	import IconFlatColorIconsOpenedFolder from '~icons/flat-color-icons/opened-folder';
 
 	let { entry = $bindable(), space }: { entry: OverviewEntry; space: string } = $props();
 </script>
@@ -13,7 +15,13 @@
 			<IconLucideChevronRight />
 		</div>
 		<a class="fx" href={`/${join(`files`, space, entry.path)}`}>
-			<div class="icon"><span>{entry.is_expanded ? '📂' : '📁'}</span></div>
+			<div class="icon fx fx--ac">
+				{#if entry.is_expanded}
+					<IconFlatColorIconsOpenedFolder />
+				{:else}
+					<IconFlatColorIconsFolder />
+				{/if}
+			</div>
 			<div class="name fx-grow">{entry.name}</div>
 		</a>
 	</div>
@@ -36,14 +44,8 @@
 		}
 
 		.control {
-			font-size: 1.2rem;
-			margin-right: 0.5rem;
+			margin-right: 0.25rem;
 			transition: transform 0.2s;
-		}
-
-		.icon > span {
-			display: inline-block;
-			text-decoration: none;
 		}
 
 		.name {
