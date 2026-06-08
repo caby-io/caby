@@ -18,6 +18,7 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
         .nest(
             "/auth",
             Router::new()
+                .route("/info", get(auth_api::handle_auth_info))
                 .route("/token/lookup", post(auth_api::handle_token_lookup))
                 .route(
                     "/token/activate",

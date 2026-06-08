@@ -1,3 +1,4 @@
+pub mod auth_info;
 pub mod auth_login;
 pub mod auth_logout;
 pub mod auth_oidc_callback;
@@ -6,6 +7,7 @@ pub mod auth_test;
 pub mod auth_token;
 
 // Re-export for cleanliness
+pub use auth_info::handle_auth_info;
 pub use auth_login::handle_login;
 pub use auth_logout::handle_logout;
 pub use auth_oidc_callback::handle_oidc_callback;

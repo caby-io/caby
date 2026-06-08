@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { login as authLogin } from '$lib/api/api_auth';
+	import { getAuthInfo, login as authLogin } from '$lib/api/api_auth';
 	import { client } from '$lib/stores/client.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -7,6 +7,26 @@
 	let loading: boolean = $state(false);
 	let login: string = $state('');
 	let password: string = $state('');
+	let oidcEnabled: boolean = $state(false);
+
+	$effect(() => {
+		(async () => {
+			const resp = await getAuthInfo(client);
+			if (resp.status === 'success') {
+				oidcEnabled = resp.data.oidc_enabled;
+			}
+		})();
+	});
+
+	const loginWithOidc = () => {
+		const redirect = page.url.searchParams.get('redirect');
+		if (redirect) {
+			sessionStorage.setItem('oidc_post_redirect', redirect);
+		} else {
+			sessionStorage.removeItem('oidc_post_redirect');
+		}
+		window.location.href = `${client.api_base}/auth/oidc/login`;
+	};
 
 	type LoginErrors = {
 		login?: string;
@@ -72,6 +92,16 @@
 	<header class="title fx fx--ac">
 		<h3 class="fx-grow">Login</h3>
 	</header>
+	{#if oidcEnabled}
+		<div class="fx fx--col oidc-container fx">
+			<button class="button primary fx-grow" onclick={loginWithOidc}>Login with SSO</button>
+		</div>
+		<div class="divider fx fx--cc">
+			<hr class="fx-grow box-shadow-0" />
+			<span>or</span>
+			<hr class="fx-grow box-shadow-0" />
+		</div>
+	{/if}
 	<form class="fx fx--col">
 		<label for="login">Username/Email</label>
 		<input id="login" class="fx-grow" class:error={errors.login} type="text" bind:value={login} />
@@ -111,8 +141,42 @@
 		width: fit-content;
 		min-width: 20rem;
 
-		> form {
+		.oidc-container {
 			margin: 1rem;
+			text-align: center;
+
+			> button {
+				background: var(--clr-background-1);
+				border: 2px solid transparent;
+				border-radius: 10px;
+				background-image:
+					linear-gradient(var(--clr-background-1), var(--clr-background-1)),
+					linear-gradient(320deg, var(--clr-primary), var(--clr-accent));
+				background-origin: border-box;
+				background-clip: padding-box, border-box;
+				color: var(--clr-primary);
+			}
+		}
+
+		.divider {
+			margin: 0 1rem;
+			color: var(--clr-text-2);
+
+			> span {
+				margin: 0 0.5rem;
+			}
+
+			> hr {
+				border: none;
+				height: 3px;
+				flex-grow: 1;
+				background-color: var(--clr-border);
+				// box-shadow: var(--clr-text-2);
+			}
+		}
+
+		> form {
+			margin: 0.25rem 1rem 1rem;
 
 			> label {
 				margin: 0.25em 0;
