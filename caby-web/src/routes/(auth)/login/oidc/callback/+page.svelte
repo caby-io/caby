@@ -6,44 +6,46 @@
 
 	let errorMessage: string | undefined = $state(undefined);
 
+	const tryCompleteOidcLogin = async () => {
+		const params = new URLSearchParams(window.location.hash.slice(1));
+		history.replaceState(null, '', window.location.pathname);
+
+		const error = params.get('error');
+		if (error) {
+			errorMessage = error;
+			return;
+		}
+
+		const value = params.get('login_token');
+		const expiresAt = params.get('expires_at');
+		if (!value || !expiresAt) {
+			errorMessage = 'invalid OIDC callback';
+			return;
+		}
+
+		const token: Token = {
+			value,
+			issued_at: new Date(),
+			expires_at: new Date(expiresAt)
+		};
+
+		await cookieStore.set({
+			name: 'login_token',
+			sameSite: 'strict',
+			expires: token.expires_at.getTime(),
+			value: encodeURIComponent(JSON.stringify(token))
+		});
+
+		client.setLoginToken(token);
+
+		const redirect = sessionStorage.getItem('oidc_post_redirect');
+		sessionStorage.removeItem('oidc_post_redirect');
+
+		await goto(redirect ?? '/files');
+	};
+
 	$effect(() => {
-		(async () => {
-			const params = new URLSearchParams(window.location.hash.slice(1));
-			history.replaceState(null, '', window.location.pathname);
-
-			const error = params.get('error');
-			if (error) {
-				errorMessage = error;
-				return;
-			}
-
-			const value = params.get('login_token');
-			const expiresAt = params.get('expires_at');
-			if (!value || !expiresAt) {
-				errorMessage = 'invalid OIDC callback';
-				return;
-			}
-
-			const token: Token = {
-				value,
-				issued_at: new Date(),
-				expires_at: new Date(expiresAt)
-			};
-
-			await cookieStore.set({
-				name: 'login_token',
-				sameSite: 'strict',
-				expires: token.expires_at.getTime(),
-				value: encodeURIComponent(JSON.stringify(token))
-			});
-
-			client.setLoginToken(token);
-
-			const redirect = sessionStorage.getItem('oidc_post_redirect');
-			sessionStorage.removeItem('oidc_post_redirect');
-
-			await goto(redirect ?? '/files');
-		})();
+		tryCompleteOidcLogin();
 	});
 </script>
 

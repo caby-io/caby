@@ -9,14 +9,12 @@
 	let password: string = $state('');
 	let oidcEnabled: boolean = $state(false);
 
-	$effect(() => {
-		(async () => {
-			const resp = await getAuthInfo(client);
-			if (resp.status === 'success') {
-				oidcEnabled = resp.data.oidc_enabled;
-			}
-		})();
-	});
+	const tryLoadAuthInfo = async () => {
+		const resp = await getAuthInfo(client);
+		if (resp.status === 'success') {
+			oidcEnabled = resp.data.oidc_enabled;
+		}
+	};
 
 	const loginWithOidc = () => {
 		const redirect = page.url.searchParams.get('redirect');
@@ -86,6 +84,10 @@
 		}
 		await goto('/files');
 	};
+
+	$effect(() => {
+		tryLoadAuthInfo();
+	});
 </script>
 
 <div class="fx fx--col box-shadow-0-card border-0 container">
