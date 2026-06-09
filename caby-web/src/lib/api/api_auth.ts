@@ -1,6 +1,23 @@
 import { client } from '$lib/stores/client.svelte';
 import { ApiRequestBuilder, type ApiClient, type Token } from './client';
 
+export type AuthInfoData = {
+	passwords_enabled: boolean;
+	oidc_enabled: boolean;
+};
+
+type AuthInfoSuccess = { status: 'success'; status_code: number; data: AuthInfoData };
+type AuthInfoFail = { status: 'fail'; status_code: number; data: string };
+type AuthInfoError = { status: 'error'; status_code: number; message: string };
+
+export type AuthInfoResponse = AuthInfoSuccess | AuthInfoFail | AuthInfoError;
+
+export const getAuthInfo = async (client: ApiClient): Promise<AuthInfoResponse> => {
+	const req = ApiRequestBuilder.get(`auth/info`).intoRequest();
+	const resp = await client.exec<AuthInfoData>(req);
+	return resp as AuthInfoResponse;
+};
+
 export type LoginData = {
 	user: string;
 	login_token: Token;
