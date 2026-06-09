@@ -9,7 +9,7 @@ pub use self::error::{Error, Result};
 
 use axum::{
     extract::{Path, Request},
-    http::{header, Method},
+    http::Method,
     Router, ServiceExt,
 };
 use config::Config;
@@ -69,8 +69,8 @@ async fn main() -> Result<()> {
             Method::PATCH,
             Method::DELETE,
         ])
-        .allow_headers([header::ACCEPT, header::AUTHORIZATION, header::CONTENT_TYPE])
-        .allow_origin(cfg.urls.frontend_origin_header()?)
+        .allow_headers(web::headers::CORS_ALLOWED_REQUEST_HEADERS.to_vec())
+        .allow_origin(cfg.urls.cors_allowed_origins()?)
         .allow_credentials(true);
 
     let state = state::AppState::new(cfg).await?;

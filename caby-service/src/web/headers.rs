@@ -1,9 +1,14 @@
 use axum::{
-    http::{HeaderMap, StatusCode},
+    http::{
+        header::{HeaderName, ACCEPT, AUTHORIZATION, CONTENT_TYPE},
+        HeaderMap, StatusCode,
+    },
     response::{IntoResponse, Response},
 };
 
 use crate::jsend::JSendBuilder;
+
+pub const CORS_ALLOWED_REQUEST_HEADERS: &[HeaderName] = &[ACCEPT, AUTHORIZATION, CONTENT_TYPE];
 
 // The header key (&str) should always be a &'static str so we should not copy it into a String
 pub enum HeaderError<'a> {

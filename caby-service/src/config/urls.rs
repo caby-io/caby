@@ -6,6 +6,7 @@ use url::Url;
 
 pub const ENV_BACKEND_URL: &str = "CABY_BACKEND_URL";
 pub const ENV_FRONTEND_URL: &str = "CABY_FRONTEND_URL";
+pub const ENV_CORS_EXTRA_ORIGINS: &str = "CORS_EXTRA_ORIGINS";
 
 #[derive(Clone)]
 pub struct UrlsConfig {
@@ -22,16 +23,36 @@ impl UrlsConfig {
         format!("{}login/oidc/callback", self.frontend.as_str())
     }
 
-    pub fn frontend_origin_header(&self) -> Result<HeaderValue> {
-        let origin = self.frontend.origin().ascii_serialization();
-        if origin == "null" {
-            return Err(anyhow!(
-                ".urls.frontend has an opaque origin and cannot be used for CORS"
-            ));
+    pub fn cors_allowed_origins(&self) -> Result<Vec<HeaderValue>> {
+        let mut origins = vec![origin_header_from_url(".urls.frontend", &self.frontend)?];
+
+        if let Ok(raw) = var(ENV_CORS_EXTRA_ORIGINS) {
+            for entry in raw.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+                let url = Url::parse(entry).with_context(|| {
+                    format!(
+                        "{} contains an invalid URL: {:?}",
+                        ENV_CORS_EXTRA_ORIGINS, entry
+                    )
+                })?;
+                let label = format!("{} entry {:?}", ENV_CORS_EXTRA_ORIGINS, entry);
+                origins.push(origin_header_from_url(&label, &url)?);
+            }
         }
-        HeaderValue::from_str(&origin)
-            .map_err(|e| anyhow!(e).context("frontend origin is not a valid HeaderValue"))
+
+        Ok(origins)
     }
+}
+
+fn origin_header_from_url(label: &str, url: &Url) -> Result<HeaderValue> {
+    let origin = url.origin().ascii_serialization();
+    if origin == "null" {
+        return Err(anyhow!(
+            "{} has an opaque origin and cannot be used for CORS",
+            label
+        ));
+    }
+    HeaderValue::from_str(&origin)
+        .map_err(|e| anyhow!(e).context(format!("{} origin is not a valid HeaderValue", label)))
 }
 
 impl TryFrom<Option<ConfigFileUrls>> for UrlsConfig {
