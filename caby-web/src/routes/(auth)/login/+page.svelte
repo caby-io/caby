@@ -147,6 +147,7 @@
 			margin: 1rem;
 			text-align: center;
 
+			// todo: finalize and add this button to styles.css
 			> button {
 				background: var(--clr-background-1);
 				border: 2px solid transparent;
