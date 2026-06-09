@@ -24,6 +24,14 @@ const CONFIG_FILE_NAME: &str = "config.yaml";
 #[derive(Default)]
 #[nest_struct]
 pub struct ConfigFile {
+    pub urls: Option<
+        nest! {
+            pub struct ConfigFileUrls {
+                pub backend: Option<String>,
+                pub frontend: Option<String>,
+            }
+        },
+    >,
     pub auth: Option<
         nest! {
             pub struct ConfigFileAuth {
@@ -103,6 +111,28 @@ pub fn get_config_path() -> Result<PathBuf> {
     Err(anyhow!("could not find a valid config location")
         .context(format!("CABY_HOME_PATH: {:?}", var("CABY_HOME_PATH")))
         .context(format!("CABY_CONFIG_PATH: {:?}", var("CABY_CONFIG_PATH"))))
+}
+
+fn parse_urls_section(config_yaml: &Yaml) -> Result<Option<ConfigFileUrls>> {
+    let urls_yaml = match &config_yaml["urls"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &config_yaml["urls"],
+        _ => return Err(anyhow!(".urls must be a map")),
+    };
+
+    let backend = match &urls_yaml["backend"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".urls.backend must be a string")),
+    };
+
+    let frontend = match &urls_yaml["frontend"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::String(s) => Some(s.clone()),
+        _ => return Err(anyhow!(".urls.frontend must be a string")),
+    };
+
+    Ok(Some(ConfigFileUrls { backend, frontend }))
 }
 
 fn parse_auth_section(config_yaml: &Yaml) -> Result<Option<ConfigFileAuth>> {
@@ -378,12 +408,14 @@ impl ConfigFile {
         let config_yaml = &docs[0];
 
         let invalid_config_context = || format!("invalid config {:?}", path);
+        let urls = parse_urls_section(config_yaml).with_context(invalid_config_context)?;
         let auth = parse_auth_section(config_yaml).with_context(invalid_config_context)?;
         let spaces = parse_spaces_section(config_yaml).with_context(invalid_config_context)?;
         let users =
             parse_users_section(config_yaml, &spaces).with_context(invalid_config_context)?;
 
         Ok(ConfigFile {
+            urls,
             auth,
             spaces,
             users,

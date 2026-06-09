@@ -2,6 +2,7 @@ use crate::{
     config::{
         auth::AuthConfig,
         config_file::{get_config_path, ConfigFile},
+        urls::UrlsConfig,
         validate_config::is_valid_meta_filename,
     },
     space::Space,
@@ -16,6 +17,7 @@ use std::{collections::HashMap, env::var, path::PathBuf, sync::Arc};
 
 pub mod auth;
 mod config_file;
+pub mod urls;
 mod validate_config;
 
 #[derive(Clone, Deserialize)]
@@ -91,6 +93,7 @@ pub struct Config {
     pub upload_token_key: Key,
 
     // application settings
+    pub urls: UrlsConfig,
     pub auth: AuthConfig,
     pub runtime: Arc<ArcSwap<Runtime>>,
 }
@@ -114,9 +117,12 @@ impl Config {
         // Load from config
         let config_file = ConfigFile::new_from_path(get_config_path()?).await?;
 
+        let urls = UrlsConfig::try_from(config_file.urls)?;
+        builder.try_set_urls(Some(urls.clone()))?;
+
         let auth = config_file
             .auth
-            .map(AuthConfig::try_from)
+            .map(|a| AuthConfig::try_from((a, &urls)))
             .transpose()?
             .unwrap_or_default();
         builder.try_set_auth(Some(auth))?;
@@ -156,6 +162,7 @@ pub struct ConfigBuilder {
     home_path: Option<PathBuf>,
     users_path: Option<PathBuf>,
     spaces_path: Option<PathBuf>,
+    urls: Option<UrlsConfig>,
     auth: Option<AuthConfig>,
     spaces: HashMap<String, SpaceConfig>,
     users: HashMap<String, UserConfig>,
@@ -209,6 +216,14 @@ impl ConfigBuilder {
         Ok(self)
     }
 
+    pub fn try_set_urls(&mut self, urls: Option<UrlsConfig>) -> Result<&mut Self> {
+        let Some(u) = urls else {
+            return Ok(self);
+        };
+        self.urls = Some(u);
+        Ok(self)
+    }
+
     pub fn try_set_auth(&mut self, auth: Option<AuthConfig>) -> Result<&mut Self> {
         let Some(a) = auth else {
             return Ok(self);
@@ -252,6 +267,7 @@ impl ConfigBuilder {
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
+            urls: self.urls.ok_or(anyhow!("missing urls config"))?,
             auth: self.auth.ok_or(anyhow!("missing auth config"))?,
             runtime: Arc::new(ArcSwap::from_pointee(runtime)),
         })

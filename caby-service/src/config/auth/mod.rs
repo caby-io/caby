@@ -1,5 +1,8 @@
 use crate::{
-    config::config_file::{ConfigFileAuth, ConfigFileOidc},
+    config::{
+        config_file::{ConfigFileAuth, ConfigFileOidc},
+        urls::UrlsConfig,
+    },
     Result,
 };
 use anyhow::anyhow;
@@ -69,22 +72,25 @@ impl Default for AuthConfig {
     }
 }
 
-impl TryFrom<ConfigFileAuth> for AuthConfig {
+impl TryFrom<(ConfigFileAuth, &UrlsConfig)> for AuthConfig {
     type Error = anyhow::Error;
 
-    fn try_from(file: ConfigFileAuth) -> Result<Self> {
+    fn try_from((file, urls): (ConfigFileAuth, &UrlsConfig)) -> Result<Self> {
         let passwords = PasswordsAuthConfig {
             enabled: file.passwords.and_then(|p| p.enabled).unwrap_or(true),
         };
-        let oidc = file.oidc.map(OIDCConfig::try_from).transpose()?;
+        let oidc = file
+            .oidc
+            .map(|o| OIDCConfig::try_from((o, urls)))
+            .transpose()?;
         Ok(AuthConfig { passwords, oidc })
     }
 }
 
-impl TryFrom<ConfigFileOidc> for OIDCConfig {
+impl TryFrom<(ConfigFileOidc, &UrlsConfig)> for OIDCConfig {
     type Error = anyhow::Error;
 
-    fn try_from(file: ConfigFileOidc) -> Result<Self> {
+    fn try_from((file, urls): (ConfigFileOidc, &UrlsConfig)) -> Result<Self> {
         let client_id = var(ENV_OIDC_CLIENT_ID)
             .ok()
             .or(file.client_id)
@@ -106,24 +112,13 @@ impl TryFrom<ConfigFileOidc> for OIDCConfig {
         let redirect_uri = var(ENV_OIDC_REDIRECT_URI)
             .ok()
             .or(file.redirect_uri)
-            .ok_or_else(|| {
-                anyhow!(
-                    "OIDC redirect_uri is required (.auth.oidc.redirect_uri or {})",
-                    ENV_OIDC_REDIRECT_URI
-                )
-            })?;
-        if redirect_uri.ends_with('/') {
-            return Err(anyhow!(".auth.oidc.redirect_uri must not end with '/'"));
-        }
+            .unwrap_or_else(|| urls.oidc_callback_url());
+        url::Url::parse(&redirect_uri)
+            .map_err(|err| anyhow!(err).context(".auth.oidc.redirect_uri must be a valid URL"))?;
         let post_login_redirect = var(ENV_OIDC_POST_LOGIN_REDIRECT)
             .ok()
             .or(file.post_login_redirect)
-            .ok_or_else(|| {
-                anyhow!(
-                    "OIDC post_login_redirect is required (.auth.oidc.post_login_redirect or {})",
-                    ENV_OIDC_POST_LOGIN_REDIRECT
-                )
-            })?;
+            .unwrap_or_else(|| urls.oidc_post_login_redirect_url());
         url::Url::parse(&post_login_redirect).map_err(|err| {
             anyhow!(err).context(".auth.oidc.post_login_redirect must be a valid URL")
         })?;
