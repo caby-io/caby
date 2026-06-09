@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import IconLucideArrowRight from '~icons/lucide/arrow-right';
 	import type { Token } from '$lib/api/client';
 	import { client } from '$lib/stores/client.svelte';
 
@@ -53,7 +54,12 @@
 	<div class="body fx fx--col">
 		{#if errorMessage}
 			<span class="error-message">{errorMessage}</span>
-			<a href="/login" class="button primary">Back to login</a>
+			<div class="actions fx">
+				<button class="button primary fx fx--cc fx-grow" onclick={() => goto('/login')}>
+					<span>Back to login</span>
+					<IconLucideArrowRight width="1em" height="1em" />
+				</button>
+			</div>
 		{/if}
 	</div>
 </div>
@@ -82,9 +88,16 @@
 
 			.error-message {
 				color: var(--clr-error);
+				text-transform: capitalize;
+			}
 
-				&::first-letter {
-					text-transform: uppercase;
+			.actions {
+				text-align: center;
+
+				.button {
+					> span {
+						margin-right: 0.25rem;
+					}
 				}
 			}
 		}
