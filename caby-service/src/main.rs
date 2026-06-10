@@ -69,7 +69,7 @@ async fn main() -> Result<()> {
             Method::PATCH,
             Method::DELETE,
         ])
-        .allow_headers(web::headers::CORS_ALLOWED_REQUEST_HEADERS.to_vec())
+        .allow_headers(web::headers::cors_allowed_request_headers())
         .allow_origin(cfg.urls.cors_allowed_origins()?)
         .allow_credentials(true);
 

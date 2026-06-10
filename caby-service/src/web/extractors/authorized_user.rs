@@ -15,9 +15,8 @@ use crate::{
     config::Config,
     jsend::JSendBuilder,
     user::User,
+    web::headers::HEADER_CABY_USER_NAME,
 };
-
-const HEADER_CABY_USER: &str = "Caby-User-Name";
 
 #[derive(Serialize)]
 pub struct UnauthorizedResponse<'a> {
@@ -109,7 +108,7 @@ where
 
         let user = parts
             .headers
-            .get(HEADER_CABY_USER)
+            .get(&HEADER_CABY_USER_NAME)
             .and_then(|h| h.to_str().ok());
 
         let (token, user) = match find_session(&cfg, token_str, user).await {
