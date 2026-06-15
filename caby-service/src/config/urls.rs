@@ -1,5 +1,5 @@
 use crate::{config::config_file::ConfigFileUrls, Result};
-use anyhow::{anyhow, Context};
+use anyhow::anyhow;
 use axum::http::HeaderValue;
 use std::env::var;
 use url::Url;
@@ -12,27 +12,7 @@ pub const ENV_CORS_EXTRA_ORIGINS: &str = "CORS_EXTRA_ORIGINS";
 pub struct UrlsConfig {
     pub backend: Url,
     pub frontend: Url,
-}
-
-impl UrlsConfig {
-    pub fn cors_allowed_origins(&self) -> Result<Vec<HeaderValue>> {
-        let mut origins = vec![origin_header_from_url(".urls.frontend", &self.frontend)?];
-
-        if let Ok(raw) = var(ENV_CORS_EXTRA_ORIGINS) {
-            for entry in raw.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
-                let url = Url::parse(entry).with_context(|| {
-                    format!(
-                        "{} contains an invalid URL: {:?}",
-                        ENV_CORS_EXTRA_ORIGINS, entry
-                    )
-                })?;
-                let label = format!("{} entry {:?}", ENV_CORS_EXTRA_ORIGINS, entry);
-                origins.push(origin_header_from_url(&label, &url)?);
-            }
-        }
-
-        Ok(origins)
-    }
+    pub cors_allowed_origins: Vec<HeaderValue>,
 }
 
 fn origin_header_from_url(label: &str, url: &Url) -> Result<HeaderValue> {
@@ -47,50 +27,49 @@ fn origin_header_from_url(label: &str, url: &Url) -> Result<HeaderValue> {
         .map_err(|e| anyhow!(e).context(format!("{} origin is not a valid HeaderValue", label)))
 }
 
-impl TryFrom<Option<ConfigFileUrls>> for UrlsConfig {
-    type Error = anyhow::Error;
-
-    fn try_from(file: Option<ConfigFileUrls>) -> Result<Self> {
+impl UrlsConfig {
+    pub fn try_new(file: Option<ConfigFileUrls>) -> Result<Self> {
         let (file_backend, file_frontend) = match file {
             Some(f) => (f.backend, f.frontend),
             None => (None, None),
         };
 
-        let backend = resolve_url(
-            "backend",
-            ".urls.backend",
-            ENV_BACKEND_URL,
-            var(ENV_BACKEND_URL).ok().or(file_backend),
-        )?;
-        let frontend = resolve_url(
-            "frontend",
-            ".urls.frontend",
-            ENV_FRONTEND_URL,
-            var(ENV_FRONTEND_URL).ok().or(file_frontend),
-        )?;
+        let input_backend = var(ENV_BACKEND_URL).ok().or(file_backend).ok_or_else(|| {
+            anyhow!(
+                "Backend URL is required (.urls.backend or {})",
+                ENV_BACKEND_URL
+            )
+        })?;
+        let backend = Url::parse(&input_backend)
+            .map_err(|err| anyhow!(err).context("Backend URL must be a valid URL"))?;
 
-        Ok(UrlsConfig { backend, frontend })
+        let input_frontend = var(ENV_FRONTEND_URL)
+            .ok()
+            .or(file_frontend)
+            .ok_or_else(|| {
+                anyhow!(
+                    "Frontend URL is required (.urls.frontend or {})",
+                    ENV_FRONTEND_URL
+                )
+            })?;
+        let frontend = Url::parse(&input_frontend)
+            .map_err(|err| anyhow!(err).context("Frontend URL must be a valid URL"))?;
+
+        let mut cors_allowed_origins = vec![origin_header_from_url("Frontend URL", &frontend)?];
+        if let Ok(raw) = var(ENV_CORS_EXTRA_ORIGINS) {
+            for entry in raw.split(',').map(|s| s.trim()).filter(|s| !s.is_empty()) {
+                let label = format!("{} entry {:?}", ENV_CORS_EXTRA_ORIGINS, entry);
+                let url = Url::parse(entry).map_err(|err| {
+                    anyhow!(err).context(format!("{} must be a valid URL", label))
+                })?;
+                cors_allowed_origins.push(origin_header_from_url(&label, &url)?);
+            }
+        }
+
+        Ok(UrlsConfig {
+            backend,
+            frontend,
+            cors_allowed_origins,
+        })
     }
-}
-
-fn resolve_url(field: &str, yaml_path: &str, env_name: &str, raw: Option<String>) -> Result<Url> {
-    let raw =
-        raw.ok_or_else(|| anyhow!("{} url is required ({} or {})", field, yaml_path, env_name))?;
-
-    let mut url =
-        Url::parse(&raw).with_context(|| format!("{} is not a valid URL: {:?}", yaml_path, raw))?;
-
-    if url.query().is_some() || url.fragment().is_some() {
-        return Err(anyhow!(
-            "{} must not include a query or fragment",
-            yaml_path
-        ));
-    }
-
-    if !url.path().ends_with('/') {
-        let normalized = format!("{}/", url.path());
-        url.set_path(&normalized);
-    }
-
-    Ok(url)
 }

@@ -70,7 +70,7 @@ async fn main() -> Result<()> {
             Method::DELETE,
         ])
         .allow_headers(web::headers::cors_allowed_request_headers())
-        .allow_origin(cfg.urls.cors_allowed_origins()?)
+        .allow_origin(cfg.urls.cors_allowed_origins.clone())
         .allow_credentials(true);
 
     let state = state::AppState::new(cfg).await?;

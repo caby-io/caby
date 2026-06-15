@@ -117,7 +117,7 @@ impl Config {
         // Load from config
         let config_file = ConfigFile::new_from_path(get_config_path()?).await?;
 
-        let urls = UrlsConfig::try_from(config_file.urls)?;
+        let urls = UrlsConfig::try_new(config_file.urls)?;
         builder.try_set_urls(Some(urls.clone()))?;
 
         let auth = AuthConfig::try_new(config_file.auth, &urls)?;
