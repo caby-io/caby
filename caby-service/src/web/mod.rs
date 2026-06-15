@@ -8,7 +8,7 @@ use crate::state::AppState;
 mod auth_api;
 mod extractors;
 mod files_api;
-mod headers;
+pub mod headers;
 mod spaces_api;
 mod upload;
 mod users_api;

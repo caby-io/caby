@@ -34,6 +34,10 @@ init-config:
 	else \
 		mkdir -p "$$(dirname "$$CONFIG_PATH")"; \
 		printf '%s\n' \
+			'urls:' \
+			'  backend: http://localhost:8080' \
+			'  frontend: http://localhost:5173' \
+			'' \
 			'spaces:' \
 			'  - name: home' \
 			'    display: Home' \

@@ -9,7 +9,10 @@ use crate::{
         manifest::{self, ManifestEntryType, UploadManifest},
         UploadToken, UploadTokenPayload,
     },
-    web::{headers::get_required_header, upload::*},
+    web::{
+        headers::{get_required_header, HEADER_CABY_CHUNK_INDEX, HEADER_CABY_UPLOAD_TOKEN},
+        upload::*,
+    },
 };
 use axum::{
     body::Body,
@@ -148,7 +151,7 @@ pub async fn handle_upload_chunk(
     let resp = JSendBuilder::new();
 
     // parse the upload token
-    let upload_token_str = match get_required_header(&headers, HEADER_UPLOAD_TOKEN) {
+    let upload_token_str = match get_required_header(&headers, &HEADER_CABY_UPLOAD_TOKEN) {
         Ok(v) => v,
         Err(err) => return err.into_response(),
     };
@@ -170,7 +173,7 @@ pub async fn handle_upload_chunk(
 
     // note: this should enable async chunk upload eventually
     // determine the chunk index
-    let chunk_index_str = match get_required_header(&headers, HEADER_CHUNK_INDEX) {
+    let chunk_index_str = match get_required_header(&headers, &HEADER_CABY_CHUNK_INDEX) {
         Ok(v) => v,
         Err(err) => return err.into_response(),
     };
@@ -303,7 +306,7 @@ pub async fn handle_update_upload(
         .map_or(PathBuf::from(""), PathBuf::from);
 
     // parse the upload token
-    let upload_token_str = match get_required_header(&headers, HEADER_UPLOAD_TOKEN) {
+    let upload_token_str = match get_required_header(&headers, &HEADER_CABY_UPLOAD_TOKEN) {
         Ok(v) => v,
         Err(err) => return err.into_response(),
     };
@@ -410,7 +413,7 @@ pub async fn handle_publish_upload(
     let resp = JSendBuilder::new();
 
     // parse the upload token
-    let upload_token_str = match get_required_header(&headers, HEADER_UPLOAD_TOKEN) {
+    let upload_token_str = match get_required_header(&headers, &HEADER_CABY_UPLOAD_TOKEN) {
         Ok(v) => v,
         Err(err) => return err.into_response(),
     };

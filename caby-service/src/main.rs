@@ -9,17 +9,14 @@ pub use self::error::{Error, Result};
 
 use axum::{
     extract::{Path, Request},
+    http::Method,
     Router, ServiceExt,
 };
 use config::Config;
 use init::init;
 use tokio::{net::TcpListener, task, time};
 use tower::Layer;
-use tower_http::{
-    cors::{Any, CorsLayer},
-    normalize_path::NormalizePathLayer,
-    trace::TraceLayer,
-};
+use tower_http::{cors::CorsLayer, normalize_path::NormalizePathLayer, trace::TraceLayer};
 use tracing::info;
 
 mod auth;
@@ -64,15 +61,17 @@ async fn main() -> Result<()> {
         }
     });
 
-    // TEMP
     let cors_layer = CorsLayer::new()
-        .allow_methods(Any)
-        // temp
-        .allow_headers(Any)
-        // .allow_headers([header::ACCEPT, header::CONTENT_TYPE])
-        // allow requests from any origin
-        // TODO make this come from an env var
-        .allow_origin(Any);
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PUT,
+            Method::PATCH,
+            Method::DELETE,
+        ])
+        .allow_headers(web::headers::cors_allowed_request_headers())
+        .allow_origin(cfg.urls.cors_allowed_origins.clone())
+        .allow_credentials(true);
 
     let state = state::AppState::new(cfg).await?;
 

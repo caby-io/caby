@@ -42,8 +42,3 @@ pub enum ConflictStrategy {
     Prompt,
     Deconflict,
 }
-
-// Upload tokens
-
-pub const HEADER_UPLOAD_TOKEN: &str = "Caby-Upload-Token";
-pub const HEADER_CHUNK_INDEX: &str = "Caby-Chunk-Index";
