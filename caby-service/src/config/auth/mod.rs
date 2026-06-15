@@ -20,6 +20,7 @@ pub const ENV_OIDC_JWKS_URI: &'static str = "OIDC_JWKS_URI";
 pub const ENV_OIDC_USERINFO_ENDPOINT: &'static str = "OIDC_USERINFO_ENDPOINT";
 
 // defaults
+pub const DEFAULT_PASSWORDS_ENABLED: bool = true;
 pub const DEFAULT_OIDC_SCOPES: &[&'static str] = &["profile", "email"];
 
 #[derive(Clone)]
@@ -59,15 +60,6 @@ pub struct AuthConfig {
             }
         },
     >,
-}
-
-impl Default for AuthConfig {
-    fn default() -> Self {
-        AuthConfig {
-            passwords: PasswordsAuthConfig { enabled: true },
-            oidc: None,
-        }
-    }
 }
 
 fn parse_scopes(raw: String) -> Vec<String> {
@@ -133,7 +125,7 @@ fn build_oidc_provider(
 ) -> Result<OidcProviderConfig> {
     let issuer_url = issuer_url.ok_or_else(|| {
         anyhow!(
-            "OIDC issuer_url is required (.auth.oidc.issuer_url or {})",
+            "OIDC issuer URL is required (.auth.oidc.issuer_url or {})",
             ENV_OIDC_ISSUER_URL
         )
     })?;
@@ -148,19 +140,19 @@ fn build_oidc_provider(
 
     let authorization_endpoint = authorization_endpoint.ok_or_else(|| {
             anyhow!(
-                "OIDC authorization_endpoint is required for manual provider discovery (.auth.oidc.authorization_endpoint or {})",
+                "OIDC authorization endpoint is required when not using auto discovery (.auth.oidc.authorization_endpoint or {})",
                 ENV_OIDC_AUTHORIZATION_ENDPOINT
             )
         })?;
     let token_endpoint = token_endpoint.ok_or_else(|| {
             anyhow!(
-                "OIDC token_endpoint is required for manual provider discovery (.auth.oidc.token_endpoint or {})",
+                "OIDC token endpoint is required when not using auto discovery (.auth.oidc.token_endpoint or {})",
                 ENV_OIDC_TOKEN_ENDPOINT
             )
         })?;
     let jwks_uri = jwks_uri.ok_or_else(|| {
         anyhow!(
-            "OIDC jwks_uri is required for manual provider discovery (.auth.oidc.jwks_uri or {})",
+            "OIDC JWKS URI is required when not using auto discovery (.auth.oidc.jwks_uri or {})",
             ENV_OIDC_JWKS_URI
         )
     })?;
@@ -193,7 +185,7 @@ pub struct AuthConfigBuilder {
 impl AuthConfigBuilder {
     pub fn new() -> Self {
         Self {
-            passwords_enabled: true,
+            passwords_enabled: DEFAULT_PASSWORDS_ENABLED,
             oidc_scopes: DEFAULT_OIDC_SCOPES.iter().map(|s| s.to_string()).collect(),
             ..Self::default()
         }
@@ -279,20 +271,20 @@ impl AuthConfigBuilder {
     fn build_oidc_config(self) -> Result<OIDCConfig> {
         let client_id = self.oidc_client_id.ok_or_else(|| {
             anyhow!(
-                "OIDC client_id is required (.auth.oidc.client_id or {})",
+                "OIDC client ID is required (.auth.oidc.client_id or {})",
                 ENV_OIDC_CLIENT_ID
             )
         })?;
         let client_secret = self.oidc_client_secret.ok_or_else(|| {
             anyhow!(
-                "OIDC client_secret is required (.auth.oidc.client_secret or {})",
+                "OIDC client secret is required (.auth.oidc.client_secret or {})",
                 ENV_OIDC_CLIENT_SECRET
             )
         })?;
 
         let redirect_uri = self.oidc_redirect_uri.ok_or_else(|| {
             anyhow!(
-                "OIDC redirect_uri is required (.auth.oidc.redirect_uri or {})",
+                "OIDC redirect URI is required (.auth.oidc.redirect_uri or {})",
                 ENV_OIDC_REDIRECT_URI
             )
         })?;
@@ -301,13 +293,12 @@ impl AuthConfigBuilder {
 
         let post_login_redirect = self.oidc_post_login_redirect.ok_or_else(|| {
             anyhow!(
-                "OIDC post_login_redirect is required (.auth.oidc.post_login_redirect or {})",
+                "OIDC post login redirect is required (.auth.oidc.post_login_redirect or {})",
                 ENV_OIDC_POST_LOGIN_REDIRECT
             )
         })?;
-        url::Url::parse(&post_login_redirect).map_err(|err| {
-            anyhow!(err).context(".auth.oidc.post_login_redirect must be a valid URL")
-        })?;
+        url::Url::parse(&post_login_redirect)
+            .map_err(|err| anyhow!(err).context("OIDC post login redirect must be a valid URL"))?;
 
         let provider = build_oidc_provider(
             self.oidc_issuer_url,
