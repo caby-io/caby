@@ -15,14 +15,6 @@ pub struct UrlsConfig {
 }
 
 impl UrlsConfig {
-    pub fn oidc_callback_url(&self) -> String {
-        format!("{}v0/auth/oidc/callback", self.backend.as_str())
-    }
-
-    pub fn oidc_post_login_redirect_url(&self) -> String {
-        format!("{}login/oidc/callback", self.frontend.as_str())
-    }
-
     pub fn cors_allowed_origins(&self) -> Result<Vec<HeaderValue>> {
         let mut origins = vec![origin_header_from_url(".urls.frontend", &self.frontend)?];
 

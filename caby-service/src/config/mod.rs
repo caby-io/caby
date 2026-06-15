@@ -120,11 +120,7 @@ impl Config {
         let urls = UrlsConfig::try_from(config_file.urls)?;
         builder.try_set_urls(Some(urls.clone()))?;
 
-        let auth = config_file
-            .auth
-            .map(|a| AuthConfig::try_from((a, &urls)))
-            .transpose()?
-            .unwrap_or_default();
+        let auth = AuthConfig::try_new(config_file.auth, &urls)?;
         builder.try_set_auth(Some(auth))?;
 
         let Some(spaces_path) = builder.spaces_path.clone() else {

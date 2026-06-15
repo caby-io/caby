@@ -1,13 +1,10 @@
 use crate::{
-    config::{
-        config_file::{ConfigFileAuth, ConfigFileOidc},
-        urls::UrlsConfig,
-    },
+    config::{config_file::ConfigFileAuth, urls::UrlsConfig},
     Result,
 };
 use anyhow::anyhow;
 use nest_struct::nest_struct;
-use std::env::var;
+use std::{collections::BTreeSet, env::var};
 
 // env vars
 pub const ENV_OIDC_CLIENT_ID: &'static str = "OIDC_CLIENT_ID";
@@ -23,7 +20,7 @@ pub const ENV_OIDC_JWKS_URI: &'static str = "OIDC_JWKS_URI";
 pub const ENV_OIDC_USERINFO_ENDPOINT: &'static str = "OIDC_USERINFO_ENDPOINT";
 
 // defaults
-pub const OIDC_EXTRA_SCOPES_DEFAULT: &[&'static str] = &["profile", "email"];
+pub const DEFAULT_OIDC_SCOPES: &[&'static str] = &["profile", "email"];
 
 #[derive(Clone)]
 #[nest_struct]
@@ -42,7 +39,8 @@ pub struct AuthConfig {
                 pub client_secret: String,
                 pub redirect_uri: String,
                 pub post_login_redirect: String,
-                pub extra_scopes: Vec<String>,
+                // using btree so that we have a consistent list between requests
+                pub scopes: BTreeSet<String>,
                 pub provider: nest! {
                     #[derive(Clone)]
                     pub enum OidcProviderConfig {
@@ -72,96 +70,61 @@ impl Default for AuthConfig {
     }
 }
 
-impl TryFrom<(ConfigFileAuth, &UrlsConfig)> for AuthConfig {
-    type Error = anyhow::Error;
+fn parse_scopes(raw: String) -> Vec<String> {
+    raw.split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
 
-    fn try_from((file, urls): (ConfigFileAuth, &UrlsConfig)) -> Result<Self> {
-        let passwords = PasswordsAuthConfig {
-            enabled: file.passwords.and_then(|p| p.enabled).unwrap_or(true),
+impl AuthConfig {
+    pub fn try_new(file_part: Option<ConfigFileAuth>, urls: &UrlsConfig) -> Result<Self> {
+        let mut b = AuthConfigBuilder::new();
+
+        // url-derived defaults
+        b.try_set_oidc_redirect_uri(Some(format!(
+            "{}v0/auth/oidc/callback",
+            urls.backend.as_str()
+        )));
+        b.try_set_oidc_post_login_redirect(Some(format!(
+            "{}login/oidc/callback",
+            urls.frontend.as_str()
+        )));
+
+        // config file
+        if let Some(f) = file_part {
+            b.try_set_passwords_enabled(f.passwords.and_then(|p| p.enabled));
+
+            if let Some(o) = f.oidc {
+                b.try_set_oidc_client_id(o.client_id)
+                    .try_set_oidc_client_secret(o.client_secret)
+                    .try_set_oidc_redirect_uri(o.redirect_uri)
+                    .try_set_oidc_post_login_redirect(o.post_login_redirect)
+                    .try_set_oidc_issuer_url(o.issuer_url)
+                    .try_set_oidc_authorization_endpoint(o.authorization_endpoint)
+                    .try_set_oidc_token_endpoint(o.token_endpoint)
+                    .try_set_oidc_jwks_uri(o.jwks_uri)
+                    .try_set_oidc_userinfo_endpoint(o.userinfo_endpoint);
+            };
         };
-        let oidc = file
-            .oidc
-            .map(|o| OIDCConfig::try_from((o, urls)))
-            .transpose()?;
-        Ok(AuthConfig { passwords, oidc })
+
+        // env overrides
+        b.try_set_oidc_client_id(var(ENV_OIDC_CLIENT_ID).ok())
+            .try_set_oidc_client_secret(var(ENV_OIDC_CLIENT_SECRET).ok())
+            .try_set_oidc_redirect_uri(var(ENV_OIDC_REDIRECT_URI).ok())
+            .try_set_oidc_post_login_redirect(var(ENV_OIDC_POST_LOGIN_REDIRECT).ok())
+            .try_add_oidc_scopes(var(ENV_OIDC_EXTRA_SCOPES).ok().map(parse_scopes))
+            .try_set_oidc_issuer_url(var(ENV_OIDC_ISSUER_URL).ok())
+            .try_set_oidc_authorization_endpoint(var(ENV_OIDC_AUTHORIZATION_ENDPOINT).ok())
+            .try_set_oidc_token_endpoint(var(ENV_OIDC_TOKEN_ENDPOINT).ok())
+            .try_set_oidc_jwks_uri(var(ENV_OIDC_JWKS_URI).ok())
+            .try_set_oidc_userinfo_endpoint(var(ENV_OIDC_USERINFO_ENDPOINT).ok());
+
+        b.build()
     }
 }
 
-impl TryFrom<(ConfigFileOidc, &UrlsConfig)> for OIDCConfig {
-    type Error = anyhow::Error;
-
-    fn try_from((file, urls): (ConfigFileOidc, &UrlsConfig)) -> Result<Self> {
-        let client_id = var(ENV_OIDC_CLIENT_ID)
-            .ok()
-            .or(file.client_id)
-            .ok_or_else(|| {
-                anyhow!(
-                    "OIDC client_id is required (.auth.oidc.client_id or {})",
-                    ENV_OIDC_CLIENT_ID
-                )
-            })?;
-        let client_secret = var(ENV_OIDC_CLIENT_SECRET)
-            .ok()
-            .or(file.client_secret)
-            .ok_or_else(|| {
-                anyhow!(
-                    "OIDC client_secret is required (.auth.oidc.client_secret or {})",
-                    ENV_OIDC_CLIENT_SECRET
-                )
-            })?;
-        let redirect_uri = var(ENV_OIDC_REDIRECT_URI)
-            .ok()
-            .or(file.redirect_uri)
-            .unwrap_or_else(|| urls.oidc_callback_url());
-        url::Url::parse(&redirect_uri)
-            .map_err(|err| anyhow!(err).context(".auth.oidc.redirect_uri must be a valid URL"))?;
-        let post_login_redirect = var(ENV_OIDC_POST_LOGIN_REDIRECT)
-            .ok()
-            .or(file.post_login_redirect)
-            .unwrap_or_else(|| urls.oidc_post_login_redirect_url());
-        url::Url::parse(&post_login_redirect).map_err(|err| {
-            anyhow!(err).context(".auth.oidc.post_login_redirect must be a valid URL")
-        })?;
-
-        let extra_scopes = var(ENV_OIDC_EXTRA_SCOPES)
-            .ok()
-            .map(|s| {
-                s.split(',')
-                    .map(|x| x.trim().to_string())
-                    .filter(|x| !x.is_empty())
-                    .collect::<Vec<_>>()
-            })
-            .unwrap_or_else(|| {
-                OIDC_EXTRA_SCOPES_DEFAULT
-                    .iter()
-                    .map(|s| s.to_string())
-                    .collect()
-            });
-
-        let provider = resolve_oidc_provider_config(
-            var(ENV_OIDC_ISSUER_URL).ok().or(file.issuer_url),
-            var(ENV_OIDC_AUTHORIZATION_ENDPOINT)
-                .ok()
-                .or(file.authorization_endpoint),
-            var(ENV_OIDC_TOKEN_ENDPOINT).ok().or(file.token_endpoint),
-            var(ENV_OIDC_JWKS_URI).ok().or(file.jwks_uri),
-            var(ENV_OIDC_USERINFO_ENDPOINT)
-                .ok()
-                .or(file.userinfo_endpoint),
-        )?;
-
-        Ok(OIDCConfig {
-            client_id,
-            client_secret,
-            redirect_uri,
-            post_login_redirect,
-            extra_scopes,
-            provider,
-        })
-    }
-}
-
-fn resolve_oidc_provider_config(
+fn build_oidc_provider(
     issuer_url: Option<String>,
     authorization_endpoint: Option<String>,
     token_endpoint: Option<String>,
@@ -175,30 +138,29 @@ fn resolve_oidc_provider_config(
         )
     })?;
 
-    let any_manual_set = authorization_endpoint.is_some()
-        || token_endpoint.is_some()
-        || jwks_uri.is_some()
-        || userinfo_endpoint.is_some();
-
-    if !any_manual_set {
+    if authorization_endpoint.is_none()
+        && token_endpoint.is_none()
+        && jwks_uri.is_none()
+        && userinfo_endpoint.is_none()
+    {
         return Ok(OidcProviderConfig::Discovery { issuer_url });
     }
 
     let authorization_endpoint = authorization_endpoint.ok_or_else(|| {
-        anyhow!(
-            "OIDC authorization_endpoint is required when manual endpoints are set (.auth.oidc.authorization_endpoint or {})",
-            ENV_OIDC_AUTHORIZATION_ENDPOINT
-        )
-    })?;
+            anyhow!(
+                "OIDC authorization_endpoint is required for manual provider discovery (.auth.oidc.authorization_endpoint or {})",
+                ENV_OIDC_AUTHORIZATION_ENDPOINT
+            )
+        })?;
     let token_endpoint = token_endpoint.ok_or_else(|| {
-        anyhow!(
-            "OIDC token_endpoint is required when manual endpoints are set (.auth.oidc.token_endpoint or {})",
-            ENV_OIDC_TOKEN_ENDPOINT
-        )
-    })?;
+            anyhow!(
+                "OIDC token_endpoint is required for manual provider discovery (.auth.oidc.token_endpoint or {})",
+                ENV_OIDC_TOKEN_ENDPOINT
+            )
+        })?;
     let jwks_uri = jwks_uri.ok_or_else(|| {
         anyhow!(
-            "OIDC jwks_uri is required when manual endpoints are set (.auth.oidc.jwks_uri or {})",
+            "OIDC jwks_uri is required for manual provider discovery (.auth.oidc.jwks_uri or {})",
             ENV_OIDC_JWKS_URI
         )
     })?;
@@ -210,4 +172,173 @@ fn resolve_oidc_provider_config(
         jwks_uri,
         userinfo_endpoint,
     })
+}
+
+// todo: consider making a sub-builder for oidc if passwords expands
+#[derive(Default)]
+pub struct AuthConfigBuilder {
+    passwords_enabled: bool,
+    oidc_issuer_url: Option<String>,
+    oidc_client_id: Option<String>,
+    oidc_client_secret: Option<String>,
+    oidc_redirect_uri: Option<String>,
+    oidc_post_login_redirect: Option<String>,
+    oidc_scopes: BTreeSet<String>,
+    oidc_authorization_endpoint: Option<String>,
+    oidc_token_endpoint: Option<String>,
+    oidc_jwks_uri: Option<String>,
+    oidc_userinfo_endpoint: Option<String>,
+}
+
+impl AuthConfigBuilder {
+    pub fn new() -> Self {
+        Self {
+            passwords_enabled: true,
+            oidc_scopes: DEFAULT_OIDC_SCOPES.iter().map(|s| s.to_string()).collect(),
+            ..Self::default()
+        }
+    }
+
+    pub fn try_set_passwords_enabled(&mut self, v: Option<bool>) -> &mut Self {
+        if let Some(v) = v {
+            self.passwords_enabled = v;
+        }
+        self
+    }
+
+    pub fn try_set_oidc_client_id(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_client_id = Some(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_client_secret(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_client_secret = Some(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_redirect_uri(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_redirect_uri = Some(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_post_login_redirect(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_post_login_redirect = Some(v);
+        }
+        self
+    }
+
+    pub fn try_add_oidc_scopes(&mut self, v: Option<Vec<String>>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_scopes.extend(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_issuer_url(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_issuer_url = Some(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_authorization_endpoint(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_authorization_endpoint = Some(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_token_endpoint(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_token_endpoint = Some(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_jwks_uri(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_jwks_uri = Some(v);
+        }
+        self
+    }
+
+    pub fn try_set_oidc_userinfo_endpoint(&mut self, v: Option<String>) -> &mut Self {
+        if let Some(v) = v {
+            self.oidc_userinfo_endpoint = Some(v);
+        }
+        self
+    }
+
+    fn build_oidc_config(self) -> Result<OIDCConfig> {
+        let client_id = self.oidc_client_id.ok_or_else(|| {
+            anyhow!(
+                "OIDC client_id is required (.auth.oidc.client_id or {})",
+                ENV_OIDC_CLIENT_ID
+            )
+        })?;
+        let client_secret = self.oidc_client_secret.ok_or_else(|| {
+            anyhow!(
+                "OIDC client_secret is required (.auth.oidc.client_secret or {})",
+                ENV_OIDC_CLIENT_SECRET
+            )
+        })?;
+
+        let redirect_uri = self.oidc_redirect_uri.ok_or_else(|| {
+            anyhow!(
+                "OIDC redirect_uri is required (.auth.oidc.redirect_uri or {})",
+                ENV_OIDC_REDIRECT_URI
+            )
+        })?;
+        url::Url::parse(&redirect_uri)
+            .map_err(|err| anyhow!(err).context("OIDC redirect URI must be a valid URL"))?;
+
+        let post_login_redirect = self.oidc_post_login_redirect.ok_or_else(|| {
+            anyhow!(
+                "OIDC post_login_redirect is required (.auth.oidc.post_login_redirect or {})",
+                ENV_OIDC_POST_LOGIN_REDIRECT
+            )
+        })?;
+        url::Url::parse(&post_login_redirect).map_err(|err| {
+            anyhow!(err).context(".auth.oidc.post_login_redirect must be a valid URL")
+        })?;
+
+        let provider = build_oidc_provider(
+            self.oidc_issuer_url,
+            self.oidc_authorization_endpoint,
+            self.oidc_token_endpoint,
+            self.oidc_jwks_uri,
+            self.oidc_userinfo_endpoint,
+        )?;
+
+        Ok(OIDCConfig {
+            client_id,
+            client_secret,
+            redirect_uri,
+            post_login_redirect,
+            scopes: self.oidc_scopes,
+            provider,
+        })
+    }
+
+    pub fn build(self) -> Result<AuthConfig> {
+        let passwords = PasswordsAuthConfig {
+            enabled: self.passwords_enabled,
+        };
+
+        let oidc = if self.oidc_issuer_url.is_some() {
+            Some(self.build_oidc_config()?)
+        } else {
+            // todo: warn the user if other oidc fields are set
+            None
+        };
+
+        Ok(AuthConfig { passwords, oidc })
+    }
 }
