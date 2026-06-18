@@ -46,7 +46,7 @@ pub struct Entry {
 
     // common fields
     pub name: String,
-    pub path: String, // relative path of the file from the mount root
+    pub path: String, // relative path of the file within the space
     pub created_at: Option<SystemTime>,
     pub pretty_created_at: String,
     pub modified_at: Option<SystemTime>,
