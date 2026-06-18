@@ -26,7 +26,7 @@ async fn init_dir(name: &str, path: &Path) -> Result<()> {
 }
 
 pub async fn init(cfg: &Config) -> Result<()> {
-    // Initial core application paths
+    // Initialize core application paths
     init_dir("users", &cfg.users_path).await?;
     init_dir("spaces", &cfg.spaces_path).await?;
     if cfg.auth.oidc.is_some() {
