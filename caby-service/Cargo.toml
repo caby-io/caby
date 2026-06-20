@@ -34,6 +34,8 @@ nest_struct = "0.5.5"
 arc-swap = "1.9.1"
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
 url = "2.5"
+libvips = "2.1"
+infer = "0.19"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

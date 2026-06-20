@@ -12,7 +12,7 @@ use crate::{files::EntryType, space::Space, Result};
 pub struct OverviewEntry {
     pub entry_type: EntryType,
     pub name: String,
-    pub path: String, // relative path of the file from the mount root
+    pub path: String, // relative path of the file within the space
     pub children: Vec<OverviewEntry>,
 }
 

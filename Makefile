@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := tmux
 
-.PHONY: bootstrap init-service init-service-tools init-web init-config run-service run-web tmux debug-mobile-win debug-mobile-win-cleanup debug-mobile-adb debug-mobile-adb-cleanup
+.PHONY: bootstrap init-service init-service-tools init-web init-config run-service run-web tmux fmt fmt-service fmt-web debug-mobile-win debug-mobile-win-cleanup debug-mobile-adb debug-mobile-adb-cleanup
 
 WSL_IP ?= $(shell hostname -I 2>/dev/null | awk '{print $$1}')
 ADB ?= adb.exe
@@ -55,6 +55,16 @@ run-web:
 
 tmux:
 	tmux new-session -s caby-dev -d ./caby-service/scripts/run-dev.sh \; split-window -h ./caby-web/scripts/run-dev.sh \; attach
+
+fmt: fmt-service fmt-web
+
+fmt-service:
+	@echo ">>> fmt-service"
+	cd caby-service && cargo +nightly fmt
+
+fmt-web:
+	@echo ">>> fmt-web"
+	cd caby-web && pnpm run format
 
 debug-mobile-win:
 	@echo ">>> debug-mobile-win — exposing dev ports to LAN via Windows portproxy + firewall"

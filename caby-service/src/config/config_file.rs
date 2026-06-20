@@ -56,6 +56,13 @@ pub struct ConfigFile {
             }
         },
     >,
+    pub img_thumbs: Option<
+        nest! {
+            pub struct ConfigFileImgThumbs {
+                pub max_edge: Option<u32>,
+            }
+        },
+    >,
     pub spaces: Vec<
         nest! {
             pub struct ConfigFileSpace {
@@ -243,6 +250,27 @@ fn parse_auth_oidc_section(auth_yaml: &Yaml) -> Result<Option<ConfigFileOidc>> {
     }))
 }
 
+fn parse_img_thumbs_section(config_yaml: &Yaml) -> Result<Option<ConfigFileImgThumbs>> {
+    let img_thumbs_yaml = match &config_yaml["img_thumbs"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &config_yaml["img_thumbs"],
+        _ => return Err(anyhow!(".img_thumbs must be a map")),
+    };
+
+    let max_edge = match &img_thumbs_yaml["max_edge"] {
+        Yaml::BadValue | Yaml::Null => None,
+        Yaml::Integer(i) if *i > 0 && *i <= u32::MAX as i64 => Some(*i as u32),
+        Yaml::Integer(_) => {
+            return Err(anyhow!(
+                ".img_thumbs.max_edge must be a positive integer that fits in u32"
+            ))
+        }
+        _ => return Err(anyhow!(".img_thumbs.max_edge must be a positive integer")),
+    };
+
+    Ok(Some(ConfigFileImgThumbs { max_edge }))
+}
+
 fn parse_spaces_section(config_yaml: &Yaml) -> Result<Vec<ConfigFileSpace>> {
     let mut spaces = vec![];
     let mut spacenames: HashSet<String> = HashSet::new();
@@ -410,6 +438,8 @@ impl ConfigFile {
         let invalid_config_context = || format!("invalid config {:?}", path);
         let urls = parse_urls_section(config_yaml).with_context(invalid_config_context)?;
         let auth = parse_auth_section(config_yaml).with_context(invalid_config_context)?;
+        let img_thumbs =
+            parse_img_thumbs_section(config_yaml).with_context(invalid_config_context)?;
         let spaces = parse_spaces_section(config_yaml).with_context(invalid_config_context)?;
         let users =
             parse_users_section(config_yaml, &spaces).with_context(invalid_config_context)?;
@@ -417,6 +447,7 @@ impl ConfigFile {
         Ok(ConfigFile {
             urls,
             auth,
+            img_thumbs,
             spaces,
             users,
         })

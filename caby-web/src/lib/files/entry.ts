@@ -17,6 +17,9 @@ export type Entry<T = any> = {
 export type FileFields = {
 	size: number;
 	pretty_size: string;
+	media_type?: string;
+	kind: string;
+	preview_url?: string;
 };
 
 export type DirFields = {

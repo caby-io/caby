@@ -13,20 +13,20 @@ use axum::{
     Router, ServiceExt,
 };
 use config::Config;
-use init::init;
 use tokio::{net::TcpListener, task, time};
 use tower::Layer;
 use tower_http::{cors::CorsLayer, normalize_path::NormalizePathLayer, trace::TraceLayer};
 use tracing::info;
 
 mod auth;
+mod bootstrap;
 mod config;
 mod ctx;
 mod download;
 mod error;
 mod files;
 mod housekeeping;
-mod init;
+mod img_thumbs;
 mod jsend;
 mod space;
 mod state;
@@ -45,9 +45,10 @@ async fn main() -> Result<()> {
         .with_max_level(tracing::Level::DEBUG)
         .init();
 
-    // Build config
     let cfg = Config::new().await?;
-    init(&cfg).await?;
+    // Create early to pay slow init early
+    let _vips = bootstrap::vips::init()?;
+    bootstrap::fs::init(&cfg).await?;
 
     // housekeeping
     let handle = task::spawn({

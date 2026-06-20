@@ -4,6 +4,7 @@ pub mod files_list;
 pub mod files_move;
 pub mod files_overview;
 pub mod files_put;
+pub mod files_thumbnail;
 pub mod files_upload;
 
 // Re-export for cleanliness
@@ -13,6 +14,7 @@ pub use files_list::handle_list_files;
 pub use files_move::handle_move_files;
 pub use files_overview::handle_files_overview;
 pub use files_put::handle_put_files;
+pub use files_thumbnail::handle_get_thumbnail;
 pub use files_upload::{
     handle_publish_upload, handle_register_upload, handle_update_upload, handle_upload_chunk,
 };

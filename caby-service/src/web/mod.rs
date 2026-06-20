@@ -64,6 +64,10 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                     "/download/{space}/{*file_path}",
                     get(files_api::handle_download_files),
                 )
+                .route(
+                    "/thumbnail/{space}/{*file_path}",
+                    get(files_api::handle_get_thumbnail),
+                )
                 .route("/{space}", put(files_api::handle_put_files))
                 .route("/{space}/{*file_path}", put(files_api::handle_put_files))
                 .route("/upload/{space}", post(files_api::handle_register_upload))

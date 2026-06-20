@@ -2,6 +2,7 @@ use crate::{
     config::{
         auth::AuthConfig,
         config_file::{get_config_path, ConfigFile},
+        img_thumbs::ImgThumbsConfig,
         urls::UrlsConfig,
         validate_config::is_valid_meta_filename,
     },
@@ -17,6 +18,7 @@ use std::{collections::HashMap, env::var, path::PathBuf, sync::Arc};
 
 pub mod auth;
 mod config_file;
+pub mod img_thumbs;
 pub mod urls;
 mod validate_config;
 
@@ -90,11 +92,12 @@ pub struct Config {
     pub spaces_path: PathBuf,
 
     // secrets
-    pub upload_token_key: Key,
+    pub token_encryption_key: Key,
 
     // application settings
     pub urls: UrlsConfig,
     pub auth: AuthConfig,
+    pub img_thumbs: ImgThumbsConfig,
     pub runtime: Arc<ArcSwap<Runtime>>,
 }
 
@@ -122,6 +125,9 @@ impl Config {
 
         let auth = AuthConfig::try_new(config_file.auth, &urls)?;
         builder.try_set_auth(Some(auth))?;
+
+        let img_thumbs = ImgThumbsConfig::try_new(config_file.img_thumbs)?;
+        builder.try_set_img_thumbs(Some(img_thumbs))?;
 
         let Some(spaces_path) = builder.spaces_path.clone() else {
             return Err(anyhow!("no valid spaces path from environment variables"));
@@ -160,6 +166,7 @@ pub struct ConfigBuilder {
     spaces_path: Option<PathBuf>,
     urls: Option<UrlsConfig>,
     auth: Option<AuthConfig>,
+    img_thumbs: Option<ImgThumbsConfig>,
     spaces: HashMap<String, SpaceConfig>,
     users: HashMap<String, UserConfig>,
 }
@@ -228,6 +235,14 @@ impl ConfigBuilder {
         Ok(self)
     }
 
+    pub fn try_set_img_thumbs(&mut self, img_thumbs: Option<ImgThumbsConfig>) -> Result<&mut Self> {
+        let Some(t) = img_thumbs else {
+            return Ok(self);
+        };
+        self.img_thumbs = Some(t);
+        Ok(self)
+    }
+
     pub fn try_set_spaces(&mut self, spaces: Option<Vec<SpaceConfig>>) -> Result<&mut Self> {
         let Some(sv) = spaces else {
             return Ok(self);
@@ -259,12 +274,13 @@ impl ConfigBuilder {
                 "missing directory meta filename (CABY_DIRECTORY_META_FILENAME)"
             ))?,
             // todo: get from file
-            upload_token_key: ChaCha20Poly1305::generate_key(&mut OsRng),
+            token_encryption_key: ChaCha20Poly1305::generate_key(&mut OsRng),
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
             urls: self.urls.ok_or(anyhow!("missing urls config"))?,
             auth: self.auth.ok_or(anyhow!("missing auth config"))?,
+            img_thumbs: self.img_thumbs.unwrap_or_default(),
             runtime: Arc::new(ArcSwap::from_pointee(runtime)),
         })
     }

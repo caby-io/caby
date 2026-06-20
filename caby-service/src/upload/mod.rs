@@ -27,9 +27,9 @@ pub struct UploadTokenPayload {
     pub base_path: String,
     pub chunk_size: u64,
     pub total_size: u64,
-    // TODO: validate the file list without always loading it. Two modes:
-    //   (a) short list — encode inline in the token
-    //   (b) long list — encode just the total size, then validate per-file on
+    // todo: have two modes for payload:
+    //   1. short file list: encode inline in the token
+    //   2. long file list: encode just the total size, then validate per-file on
     //       completion (so the user can't burn all the space)
 }
 
@@ -47,7 +47,7 @@ impl UploadTokenPayload {
 pub type UploadToken = String;
 
 pub fn generate_upload_token(cfg: &Config, payload: UploadTokenPayload) -> Result<UploadToken> {
-    let cipher = ChaCha20Poly1305::new(&cfg.upload_token_key);
+    let cipher = ChaCha20Poly1305::new(&cfg.token_encryption_key);
     let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
 
     let plaintext = bitcode::encode(&payload);
@@ -72,7 +72,7 @@ pub fn decode_upload_token(cfg: &Config, token: &str) -> Result<UploadTokenPaylo
     };
     let nonce = Nonce::from_slice(nonce_bytes);
 
-    let cipher = ChaCha20Poly1305::new(&cfg.upload_token_key);
+    let cipher = ChaCha20Poly1305::new(&cfg.token_encryption_key);
     let plaintext = cipher
         .decrypt(nonce, ciphertext)
         .map_err(|err| anyhow!(err).context("could not decrypt upload token"))?;
