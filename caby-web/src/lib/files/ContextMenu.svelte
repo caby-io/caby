@@ -39,6 +39,7 @@
 
 	// todo: check that this isn't too expensive
 	const handleWindowClick = (e: MouseEvent) => {
+		if (e.button !== 0) return;
 		if (dialog.contains(e.target as Node)) {
 			return;
 		}
