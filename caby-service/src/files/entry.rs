@@ -180,10 +180,7 @@ async fn build_entry(
         factory.set_directory();
     } else if metadata.is_file() {
         let media_type = MediaType::from_path(&dir_entry.path());
-        let kind = media_type
-            .as_ref()
-            .map(FileKind::from)
-            .unwrap_or_default();
+        let kind = media_type.as_ref().map(FileKind::from).unwrap_or_default();
         let preview_url = if kind == FileKind::Image {
             thumb_urls.map(|b| b.url_for(Path::new(&path)))
         } else {
