@@ -9,7 +9,7 @@ use tracing::{error, warn};
 use crate::{config::Config, error::Result, img_thumbs, space::Space};
 
 use super::{
-    media_type::{FileCategory, MediaType},
+    media_type::{FileKind, MediaType},
     pretty,
 };
 
@@ -30,8 +30,8 @@ pub enum EntryFields {
         size: u64,
         pretty_size: String,
         media_type: Option<MediaType>,
-        category: FileCategory,
-        thumb_url: Option<String>,
+        kind: FileKind,
+        preview_url: Option<String>,
     },
     Symlink {
         is_broken: bool,
@@ -104,8 +104,8 @@ impl EntryFactory {
         &mut self,
         metadata: &Metadata,
         media_type: Option<MediaType>,
-        category: FileCategory,
-        thumb_url: Option<String>,
+        kind: FileKind,
+        preview_url: Option<String>,
     ) -> &mut Self {
         let size = metadata.size();
         self.entry_type = Some(EntryType::File);
@@ -113,8 +113,8 @@ impl EntryFactory {
             size,
             pretty_size: pretty::bytes(size),
             media_type,
-            category,
-            thumb_url,
+            kind,
+            preview_url,
         });
         self
     }
@@ -180,16 +180,16 @@ async fn build_entry(
         factory.set_directory();
     } else if metadata.is_file() {
         let media_type = MediaType::from_path(&dir_entry.path());
-        let category = media_type
+        let kind = media_type
             .as_ref()
-            .map(FileCategory::from)
+            .map(FileKind::from)
             .unwrap_or_default();
-        let thumb_url = if category == FileCategory::Image {
+        let preview_url = if kind == FileKind::Image {
             thumb_urls.map(|b| b.url_for(Path::new(&path)))
         } else {
             None
         };
-        factory.set_file(&metadata, media_type, category, thumb_url);
+        factory.set_file(&metadata, media_type, kind, preview_url);
     } else if metadata.is_symlink() {
         // todo: validate that the symlink doesn't go outside where we are allowed to go
         // todo: this probably goes to the wrong place

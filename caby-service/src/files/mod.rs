@@ -13,7 +13,7 @@ pub mod overview;
 pub mod pretty;
 
 pub use entry::{build_entries, Entry, EntryFields, EntryType};
-pub use media_type::{FileCategory, MediaType};
+pub use media_type::{FileKind, MediaType};
 
 // Returns a sanitized full path from the input path
 pub fn joined_path(root_path: &Path, space: &Path, relative_path: &Path) -> Option<PathBuf> {

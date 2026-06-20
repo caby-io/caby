@@ -16,7 +16,7 @@ impl MediaType {
 
 #[derive(Serialize, PartialEq, Default, Debug)]
 #[serde(rename_all = "lowercase")]
-pub enum FileCategory {
+pub enum FileKind {
     Image,
     Video,
     Audio,
@@ -27,7 +27,7 @@ pub enum FileCategory {
     Other,
 }
 
-impl From<&MediaType> for FileCategory {
+impl From<&MediaType> for FileKind {
     fn from(media_type: &MediaType) -> Self {
         let mime = media_type.0.as_str();
 
