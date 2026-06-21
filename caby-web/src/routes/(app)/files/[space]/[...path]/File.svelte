@@ -9,7 +9,9 @@
 
 	let {
 		entry,
+		selection_mode = false,
 		onSelect,
+		onPreview,
 		onDragStart,
 		onDragEnd,
 		// onDragEnter,
@@ -46,6 +48,16 @@
 	let preview_url = $derived(entry.entry_fields.preview_url);
 	let show_preview = $derived(kind === 'image' && !!preview_url && !img_failed);
 	let KindIcon = $derived(pickKindIcon(kind));
+	let can_preview = $derived(entry.entry_fields.can_preview);
+
+	function handleDisplayClick(ev: MouseEvent) {
+		ev.stopPropagation();
+		if (!can_preview || selection_mode || ev.metaKey || ev.ctrlKey) {
+			onSelect?.(ev);
+		} else {
+			onPreview?.(entry);
+		}
+	}
 </script>
 
 <div
@@ -63,11 +75,17 @@
 	oncontextmenu={(e) => onContextMenu!(e, entry)}
 >
 	{#if show_preview}
-		<section class="display fx fx--cc fx-grow">
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<section class="display fx fx--cc fx-grow" class:can-preview={can_preview} onclick={handleDisplayClick}>
 			<img src={preview_url} alt={entry.name} loading="lazy" onerror={() => (img_failed = true)} />
 		</section>
 	{:else}
-		<section class="display fx fx--cc fx-grow"><KindIcon /></section>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<!-- svelte-ignore a11y_no_static_element_interactions -->
+		<section class="display fx fx--cc fx-grow" class:can-preview={can_preview} onclick={handleDisplayClick}>
+			<KindIcon />
+		</section>
 	{/if}
 	<section class="info">
 		<!-- todo: consider splitting extension so we can show it-->

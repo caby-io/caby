@@ -138,6 +138,12 @@
 		last_selected = selected;
 	};
 
+	// todo
+	const handlePreview = (entry: Entry) => {
+		const index = entries.findIndex((e) => e === entry);
+		if (index >= 0) handleSelectOp(new MouseEvent('click'), { index, entry });
+	};
+
 	const handleDeselect = () => {
 		entries
 			.filter((e) => e.is_selected === true)
@@ -466,6 +472,7 @@
 							{space}
 							onSelect={(e: MouseEvent) =>
 								handleSelectOp(e, { index: index + dir_entries.length, entry: entry })}
+							onPreview={(entry) => handlePreview(entry)}
 							onDragStart={onEntryDragStart}
 							onDragEnd={onEntryDragEnd}
 							onDragOver={onEntryDragOver}

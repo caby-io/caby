@@ -6,6 +6,7 @@
 	let {
 		entry,
 		space,
+		selection_mode = false,
 		onSelect,
 		onDragStart,
 		onDragEnd,
@@ -41,8 +42,12 @@
 	<section class="info">
 		<h1>
 			<!-- todo: figure out a better solution for the double event -->
-			<a onclick={() => (onSelect = undefined)} href={`/${join('files', space!, entry.path)}`}
-				>{entry.name}</a
+			<a
+				onclick={(e) => {
+					if (selection_mode) e.preventDefault();
+					else onSelect = undefined;
+				}}
+				href={`/${join('files', space!, entry.path)}`}>{entry.name}</a
 			>
 		</h1>
 		{entry.pretty_modified_at}

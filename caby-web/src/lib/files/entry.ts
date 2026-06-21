@@ -32,9 +32,14 @@ export type EntryProps<T> = {
 	entry: Entry<T>;
 	space?: string;
 
+	// touch-only: when true, taps on the thumbnail also select (instead of preview/navigate)
+	selection_mode?: boolean;
+
 	// general events
 	// used to select the card when appropriate
 	onSelect?: (e: MouseEvent) => void;
+	// fired when the user taps a previewable file's thumbnail
+	onPreview?: (entry: Entry) => void;
 
 	// drag events
 	onDragStart?: (e: DragEvent, entry: Entry) => void;
