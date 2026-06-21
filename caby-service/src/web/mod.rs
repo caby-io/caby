@@ -68,6 +68,10 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                     "/thumbnail/{space}/{*file_path}",
                     get(files_api::handle_get_thumbnail),
                 )
+                .route(
+                    "/preview/{space}/{*file_path}",
+                    get(files_api::handle_get_preview),
+                )
                 .route("/{space}", put(files_api::handle_put_files))
                 .route("/{space}/{*file_path}", put(files_api::handle_put_files))
                 .route("/upload/{space}", post(files_api::handle_register_upload))

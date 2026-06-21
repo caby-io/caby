@@ -12,7 +12,29 @@ impl MediaType {
             .first_raw()
             .map(|m| Self(m.to_owned()))
     }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
 }
+
+const PREVIEWABLE_MIMES: &[&str] = &[
+    // images
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/gif",
+    "image/avif",
+    // video — browser-renderable codecs only
+    "video/mp4",
+    "video/webm",
+    // audio
+    "audio/mpeg",
+    "audio/mp4",
+    "audio/ogg",
+    "audio/wav",
+    "audio/webm",
+];
 
 #[derive(Serialize, PartialEq, Default, Debug)]
 #[serde(rename_all = "lowercase")]
@@ -25,6 +47,16 @@ pub enum FileKind {
     Document,
     #[default]
     Other,
+}
+
+impl FileKind {
+    pub fn can_preview(&self, mime: Option<&MediaType>) -> bool {
+        if !matches!(self, Self::Image | Self::Video | Self::Audio) {
+            return false;
+        }
+        let Some(m) = mime else { return false };
+        PREVIEWABLE_MIMES.contains(&m.as_str())
+    }
 }
 
 impl From<&MediaType> for FileKind {

@@ -12,6 +12,7 @@ use tracing::warn;
 
 use crate::{
     config::Config,
+    files::media,
     img_thumbs::{self, ThumbError},
     jsend::JSendBuilder,
     space::{Space, SpaceDir},
@@ -45,10 +46,10 @@ pub async fn handle_get_thumbnail(
     let Some(token) = query.token else {
         return unauthorized_resp();
     };
-    let payload = match img_thumbs::decode_thumb_token(&cfg, &token) {
+    let payload = match media::decode_token(&cfg, &token) {
         Ok(p) => p,
         Err(err) => {
-            warn!("could not decode thumb token: {:#}", err);
+            warn!("could not decode media token: {:#}", err);
             return unauthorized_resp();
         }
     };

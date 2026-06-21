@@ -20,6 +20,8 @@ export type FileFields = {
 	media_type?: string;
 	kind: string;
 	preview_url?: string;
+	can_preview: boolean;
+	media_url?: string;
 };
 
 export type DirFields = {

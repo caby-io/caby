@@ -3,6 +3,7 @@ pub mod files_download;
 pub mod files_list;
 pub mod files_move;
 pub mod files_overview;
+pub mod files_preview;
 pub mod files_put;
 pub mod files_thumbnail;
 pub mod files_upload;
@@ -13,6 +14,7 @@ pub use files_download::{handle_download_files, handle_register_download};
 pub use files_list::handle_list_files;
 pub use files_move::handle_move_files;
 pub use files_overview::handle_files_overview;
+pub use files_preview::handle_get_preview;
 pub use files_put::handle_put_files;
 pub use files_thumbnail::handle_get_thumbnail;
 pub use files_upload::{
