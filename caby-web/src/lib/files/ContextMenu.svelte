@@ -1,6 +1,6 @@
 <script module lang="ts">
-	import { getDownloadURL } from '$lib/api/api_files';
 	import { client } from '$lib/stores/client.svelte';
+	import { downloadEntries } from './download';
 	import type { Entry } from './entry';
 
 	export type ContextMenuProps = {
@@ -65,17 +65,7 @@
 
 	const handleDownload = async () => {
 		if (!entry) return;
-		const url = await getDownloadURL(client, space, [entry]);
-		if (!url) {
-			console.error('could not get download url');
-			return;
-		}
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = '';
-		document.body.appendChild(a);
-		a.click();
-		a.remove();
+		await downloadEntries(client, space, [entry]);
 	};
 </script>
 

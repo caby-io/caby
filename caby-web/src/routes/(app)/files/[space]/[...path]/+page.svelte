@@ -24,6 +24,7 @@
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
+	import { downloadEntries } from '$lib/files/download';
 	import { getFilesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
 	import { getSpaces } from '$lib/api/api_spaces';
 	import type { Space } from '$lib/space';
@@ -105,12 +106,21 @@
 
 	// Select Operations
 
+	let selection_mode = $state<null | 'touch' | 'desktop'>(null);
+	let in_selection = $derived(selection_mode !== null);
+
 	let selected_entries: Set<Entry> = $derived(
 		new Set(entries.filter((e) => e.is_selected === true))
 	);
 	let last_selected: SelectedEntry | undefined = $state();
 
+	$effect(() => {
+		if (selection_mode === 'desktop' && selected_entries.size === 0) selection_mode = null;
+	});
+
 	const handleSelectOp = async (e: MouseEvent, selected: SelectedEntry) => {
+		if (selection_mode === null) selection_mode = 'desktop';
+
 		// for now we will only allow selection across the same entry type
 		// if shift then try selecting across
 		if (
@@ -150,6 +160,11 @@
 			.forEach((e) => {
 				e.is_selected = false;
 			});
+	};
+
+	const exitSelection = () => {
+		handleDeselect();
+		selection_mode = null;
 	};
 
 	// Self Drag Operations
@@ -302,6 +317,20 @@
 	});
 
 	const handleContextMenu = (e: MouseEvent, entry?: Entry) => {
+		// For mobile, go into selection mode instead. Browsers fire `contextmenu` as a
+		// PointerEvent (subclass of MouseEvent) so we can read pointerType directly.
+		const pointer_type = e instanceof PointerEvent ? e.pointerType : 'mouse';
+		if (entry && (pointer_type === 'touch' || pointer_type === 'pen')) {
+			e.preventDefault();
+			e.stopPropagation();
+			selection_mode = 'touch';
+			entry.is_selected = true;
+			const index = entries.findIndex((x) => x === entry);
+			if (index >= 0) last_selected = { index, entry };
+			if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+			return;
+		}
+
 		e.preventDefault();
 		e.stopPropagation();
 
@@ -357,6 +386,17 @@
 		move_entries_dialog!.showModal();
 	};
 
+	const handleMoveSelected = () => {
+		if (selected_entries.size < 1) return;
+		target_move_entries = selected_entries;
+		move_entries_dialog!.showModal();
+	};
+
+	const handleDownloadSelected = async () => {
+		if (selected_entries.size < 1) return;
+		await downloadEntries(client, space, Array.from(selected_entries));
+	};
+
 	// svelte-ignore non_reactive_update
 	let delete_entries_dialog: HTMLDialogElement;
 	let delete_entries: Entry[] = $state([]);
@@ -400,6 +440,10 @@
 				handleAddContent();
 			case 'Delete':
 				handleDeleteSelected();
+				return;
+			case 'Escape':
+				if (selected_entries.size > 0) exitSelection();
+				return;
 		}
 	};
 
@@ -428,10 +472,13 @@
 	<section class="right fx-grow fx fx--col">
 		<EntriesBar
 			{selected_entries}
+			{in_selection}
 			{add_content_dialog}
 			{space}
 			{handleDeleteSelected}
-			{handleDeselect}
+			{handleMoveSelected}
+			{handleDownloadSelected}
+			{exitSelection}
 		/>
 		<main
 			class="entries fx-grow"
@@ -451,6 +498,7 @@
 						<Directory
 							{entry}
 							{space}
+							selection_mode={in_selection}
 							onSelect={(e: MouseEvent) => handleSelectOp(e, { index, entry })}
 							onDragStart={onEntryDragStart}
 							onDragEnd={onEntryDragEnd}
@@ -470,6 +518,7 @@
 						<File
 							{entry}
 							{space}
+							selection_mode={in_selection}
 							onSelect={(e: MouseEvent) =>
 								handleSelectOp(e, { index: index + dir_entries.length, entry: entry })}
 							onPreview={(entry) => handlePreview(entry)}

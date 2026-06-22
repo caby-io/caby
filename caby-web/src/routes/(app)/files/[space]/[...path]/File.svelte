@@ -77,13 +77,21 @@
 	{#if show_preview}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<section class="display fx fx--cc fx-grow" class:can-preview={can_preview} onclick={handleDisplayClick}>
+		<section
+			class="display fx fx--cc fx-grow"
+			class:can-preview={can_preview}
+			onclick={handleDisplayClick}
+		>
 			<img src={preview_url} alt={entry.name} loading="lazy" onerror={() => (img_failed = true)} />
 		</section>
 	{:else}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<!-- svelte-ignore a11y_no_static_element_interactions -->
-		<section class="display fx fx--cc fx-grow" class:can-preview={can_preview} onclick={handleDisplayClick}>
+		<section
+			class="display fx fx--cc fx-grow"
+			class:can-preview={can_preview}
+			onclick={handleDisplayClick}
+		>
 			<KindIcon />
 		</section>
 	{/if}
