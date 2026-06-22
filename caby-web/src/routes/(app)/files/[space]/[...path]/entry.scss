@@ -28,6 +28,10 @@ $td-main-width: 40rem;
 		border: 1px solid var(--clr-border);
 		transition: background-color 0.1s;
 
+		&.can-preview {
+			cursor: zoom-in;
+		}
+
 		img {
 			position: absolute;
 			inset: 0;

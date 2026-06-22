@@ -6,9 +6,10 @@ use serde::{Deserialize, Serialize};
 use tokio::fs::{self, read_dir, read_link, DirEntry};
 use tracing::{error, warn};
 
-use crate::{config::Config, error::Result, img_thumbs, space::Space};
+use crate::{config::Config, error::Result, space::Space};
 
 use super::{
+    media::MediaUrlFactory,
     media_type::{FileKind, MediaType},
     pretty,
 };
@@ -32,6 +33,8 @@ pub enum EntryFields {
         media_type: Option<MediaType>,
         kind: FileKind,
         preview_url: Option<String>,
+        can_preview: bool,
+        media_url: Option<String>,
     },
     Symlink {
         is_broken: bool,
@@ -106,6 +109,8 @@ impl EntryFactory {
         media_type: Option<MediaType>,
         kind: FileKind,
         preview_url: Option<String>,
+        can_preview: bool,
+        media_url: Option<String>,
     ) -> &mut Self {
         let size = metadata.size();
         self.entry_type = Some(EntryType::File);
@@ -115,6 +120,8 @@ impl EntryFactory {
             media_type,
             kind,
             preview_url,
+            can_preview,
+            media_url,
         });
         self
     }
@@ -158,7 +165,7 @@ impl EntryFactory {
 async fn build_entry(
     dir_entry: DirEntry,
     live_path: &Path,
-    thumb_urls: Option<&img_thumbs::ThumbUrlBuilder<'_>>,
+    media_urls: Option<&MediaUrlFactory<'_>>,
 ) -> Result<Entry> {
     let metadata = dir_entry.metadata().await?;
 
@@ -182,11 +189,24 @@ async fn build_entry(
         let media_type = MediaType::from_path(&dir_entry.path());
         let kind = media_type.as_ref().map(FileKind::from).unwrap_or_default();
         let preview_url = if kind == FileKind::Image {
-            thumb_urls.map(|b| b.url_for(Path::new(&path)))
+            media_urls.map(|b| b.thumbnail_url_for(Path::new(&path)))
         } else {
             None
         };
-        factory.set_file(&metadata, media_type, kind, preview_url);
+        let can_preview = kind.can_preview(media_type.as_ref());
+        let media_url = if can_preview {
+            media_urls.map(|b| b.preview_url_for(Path::new(&path)))
+        } else {
+            None
+        };
+        factory.set_file(
+            &metadata,
+            media_type,
+            kind,
+            preview_url,
+            can_preview,
+            media_url,
+        );
     } else if metadata.is_symlink() {
         // todo: validate that the symlink doesn't go outside where we are allowed to go
         // todo: this probably goes to the wrong place
@@ -216,10 +236,10 @@ async fn build_entry(
 pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<Vec<Entry>> {
     // todo: read meta and live in parallel?
     let live_path = space.live();
-    let thumb_urls = match img_thumbs::ThumbUrlBuilder::new(cfg, &space.name, path) {
+    let media_urls = match MediaUrlFactory::new(cfg, &space.name, path) {
         Ok(b) => Some(b),
         Err(err) => {
-            warn!("could not generate thumb token for {:?}: {:#}", path, err);
+            warn!("could not generate media token for {:?}: {:#}", path, err);
             None
         }
     };
@@ -228,7 +248,7 @@ pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<V
     let mut result = vec![];
     while let Some(dir_entry) = entries.next_entry().await? {
         let filename = dir_entry.file_name();
-        match build_entry(dir_entry, &live_path, thumb_urls.as_ref()).await {
+        match build_entry(dir_entry, &live_path, media_urls.as_ref()).await {
             Ok(e) => result.push(e),
             Err(err) => {
                 // todo: send errored entries with the list

@@ -7,6 +7,7 @@ use tokio::{fs, io};
 use crate::error::Result;
 
 pub mod entry;
+pub mod media;
 pub mod media_type;
 pub mod ops;
 pub mod overview;
