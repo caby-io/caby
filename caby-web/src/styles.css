@@ -125,6 +125,11 @@ html {
 	color-scheme: light dark;
 }
 
+html:has(dialog[open]) {
+	overflow: hidden;
+	overscroll-behavior: none;
+}
+
 img {
 	max-width: 100%;
 	display: block;

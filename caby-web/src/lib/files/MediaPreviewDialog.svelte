@@ -170,13 +170,17 @@
 		main.stage {
 			min-height: 0;
 			padding: 1rem;
-			touch-action: pan-y;
+			touch-action: none;
 
 			img,
 			video {
 				max-width: 100%;
 				max-height: 100%;
 				object-fit: contain;
+			}
+
+			img {
+				touch-action: none;
 			}
 
 			audio {
