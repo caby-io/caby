@@ -13,9 +13,74 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  release:
-    name: Build & push (${{ matrix.image }})
+  build:
+    name: Build ${{ matrix.image.name }} (${{ matrix.platform.name }})
     if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ${{ matrix.platform.runner }}
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { name: caby-service, context: caby-service, dockerfile: caby-service/ci/Dockerfile }
+          - { name: caby-web, context: caby-web, dockerfile: caby-web/ci/Dockerfile }
+        platform:
+          - { name: linux/amd64, pair: linux-amd64, runner: ubuntu-latest }
+          - { name: linux/arm64, pair: linux-arm64, runner: ubuntu-24.04-arm }
+
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Image labels
+        id: meta
+        uses: docker/metadata-action@v6
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}
+
+      - name: Build & push by digest
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.dockerfile }}
+          platforms: ${{ matrix.platform.name }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.image.name }}-${{ matrix.platform.pair }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.name }}-${{ matrix.platform.pair }}
+
+      - name: Export digest
+        run: |
+          mkdir -p "${{ runner.temp }}/digests"
+          digest="${{ steps.build.outputs.digest }}"
+          touch "${{ runner.temp }}/digests/${digest#sha256:}"
+
+      - name: Upload digest
+        uses: actions/upload-artifact@v4
+        with:
+          name: digests-${{ matrix.image.name }}-${{ matrix.platform.pair }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  merge:
+    name: Merge & push ${{ matrix.image.name }}
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -23,29 +88,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - image: caby-service
-            context: caby-service
-            dockerfile: caby-service/ci/Dockerfile
-          - image: caby-web
-            context: caby-web
-            dockerfile: caby-web/ci/Dockerfile
+        image:
+          - { name: caby-service }
+          - { name: caby-web }
 
     steps:
       - name: Resolve target commit
         id: commit
         run: |
           SHA="${{ github.event.workflow_run.head_sha || github.sha }}"
-          echo "sha=$SHA" >> $GITHUB_OUTPUT
-          echo "short_sha=${SHA:0:7}" >> $GITHUB_OUTPUT
-          echo "build_ts=$(date -u +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+          echo "short_sha=${SHA:0:7}" >> "$GITHUB_OUTPUT"
+          echo "build_ts=$(date -u +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/checkout@v6
+      - name: Download digests
+        uses: actions/download-artifact@v4
         with:
-          ref: ${{ steps.commit.outputs.sha }}
-
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v4
+          path: ${{ runner.temp }}/digests
+          pattern: digests-${{ matrix.image.name }}-*
+          merge-multiple: true
 
       - name: Set up Buildx
         uses: docker/setup-buildx-action@v4
@@ -69,8 +129,8 @@ jobs:
         uses: docker/metadata-action@v6
         with:
           images: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}
-            name=docker.io/${{ vars.DOCKERHUB_NAMESPACE }}/${{ matrix.image }},enable=${{ github.ref_type == 'tag' }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}
+            name=docker.io/${{ vars.DOCKERHUB_NAMESPACE }}/${{ matrix.image.name }},enable=${{ github.ref_type == 'tag' }}
           tags: |
             type=raw,value=edge,enable={{is_default_branch}}
             type=raw,value=edge-${{ steps.commit.outputs.build_ts }}-${{ steps.commit.outputs.short_sha }},enable={{is_default_branch}}
@@ -79,21 +139,21 @@ jobs:
           flavor: |
             latest=auto
 
-      - name: Build & push
-        uses: docker/build-push-action@v7
-        with:
-          context: ${{ matrix.context }}
-          file: ${{ matrix.dockerfile }}
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+      - name: Create manifest list & push
+        working-directory: ${{ runner.temp }}/digests
+        run: |
+          docker buildx imagetools create \
+            $(jq -cr '.tags | map("-t " + .) | join(" ")' <<< "$DOCKER_METADATA_OUTPUT_JSON") \
+            $(printf 'ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}@sha256:%s ' *)
+
+      - name: Inspect image
+        run: |
+          docker buildx imagetools inspect \
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}:${{ steps.meta.outputs.version }}
 
   github-release:
     name: GitHub Release
-    needs: release
+    needs: merge
     if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
     permissions:
