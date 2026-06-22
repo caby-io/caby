@@ -33,6 +33,7 @@
 	import EntriesBar from './EntriesBar.svelte';
 	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
 	import ContextMenu, { type ContextMenuProps } from '$lib/files/ContextMenu.svelte';
+	import MediaPreviewDialog from '$lib/files/MediaPreviewDialog.svelte';
 	import SpacesSelector from './SpacesSelector.svelte';
 	import { client } from '$lib/stores/client.svelte';
 	import RenameDialog from './RenameDialog.svelte';
@@ -148,10 +149,17 @@
 		last_selected = selected;
 	};
 
-	// todo
+	// Media Preview
+
+	let preview_entries = $derived(file_entries.filter((e) => e.entry_fields.can_preview));
+	let preview_open = $state(false);
+	let preview_start_index = $state(0);
+
 	const handlePreview = (entry: Entry) => {
-		const index = entries.findIndex((e) => e === entry);
-		if (index >= 0) handleSelectOp(new MouseEvent('click'), { index, entry });
+		const index = preview_entries.indexOf(entry);
+		if (index < 0) return;
+		preview_start_index = index;
+		preview_open = true;
 	};
 
 	const handleDeselect = () => {
@@ -557,6 +565,11 @@
 	{handleAddContent}
 	{handleDeleteEntries}
 	{handleRenameEntry}
+/>
+<MediaPreviewDialog
+	bind:open={preview_open}
+	entries={preview_entries}
+	start_index={preview_start_index}
 />
 
 <style lang="scss">
