@@ -17,7 +17,7 @@ COPY src ./src
 RUN cargo build --release
 
 # Release Stage
-FROM debian:12-slim
+FROM debian:13-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libvips ca-certificates \
