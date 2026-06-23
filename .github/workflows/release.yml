@@ -6,7 +6,9 @@ on:
     types: [completed]
     branches: [main]
   push:
-    tags: ['v*']
+    tags: ["v*"]
+  # Manual edge build: pick any branch via the "Run workflow" dropdown to
+  workflow_dispatch:
 
 concurrency:
   group: release-${{ github.event.workflow_run.head_sha || github.ref }}
@@ -24,8 +26,16 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - { name: caby-service, context: caby-service, dockerfile: caby-service/ci/Dockerfile }
-          - { name: caby-web, context: caby-web, dockerfile: caby-web/ci/Dockerfile }
+          - {
+              name: caby-service,
+              context: caby-service,
+              dockerfile: caby-service/ci/Dockerfile,
+            }
+          - {
+              name: caby-web,
+              context: caby-web,
+              dockerfile: caby-web/ci/Dockerfile,
+            }
         platform:
           - { name: linux/amd64, pair: linux-amd64, runner: ubuntu-latest }
           - { name: linux/arm64, pair: linux-arm64, runner: ubuntu-24.04-arm }
@@ -132,8 +142,8 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}
             name=docker.io/${{ vars.DOCKERHUB_NAMESPACE }}/${{ matrix.image.name }},enable=${{ github.ref_type == 'tag' }}
           tags: |
-            type=raw,value=edge,enable={{is_default_branch}}
-            type=raw,value=edge-${{ steps.commit.outputs.build_ts }}-${{ steps.commit.outputs.short_sha }},enable={{is_default_branch}}
+            type=raw,value=edge,enable=${{ github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch }}
+            type=raw,value=edge-${{ steps.commit.outputs.build_ts }}-${{ steps.commit.outputs.short_sha }},enable=${{ github.event_name == 'workflow_dispatch' || github.ref_name == github.event.repository.default_branch }}
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
           flavor: |
