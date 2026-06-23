@@ -135,6 +135,34 @@ graph TD;
 | Google _(reference)_ | numeric (`110248495921238986420`)    | yes (full name)                              |
 | Auth0 _(reference)_  | `connection\|id` (e.g. `auth0\|abc`) | yes (often present; social connections vary) |
 
+# Video preview transcode
+
+## Video TODOs
+
+Should probably do this after task/queue system is done
+
+- stop playing video when closing preview
+- add preview configuration
+- show thumbnail for video
+- show preview thumbnail in preview mode so the resolution change isn't jarring
+
+Benchmarked on i9-10900K (10c/20t), software x264 only (no GPU). Sources: 4K HEVC @ 50 Mbps (iPhone-style) and 1080p H.264 @ 18 Mbps (Android-style), both with added grain so they're hard to compress (conservative). `s/min` = CPU-seconds per minute of source.
+
+| Source → target                          | Speed    | CPU/min | Bitrate    | Storage    |
+| ---------------------------------------- | -------- | ------- | ---------- | ---------- |
+| iPhone 4K HEVC → 720p H.264 (veryfast)   | 3.1× RT  | ~19 s   | ~770 kbps  | ~6 MB/min  |
+| iPhone 4K HEVC → 720p H.264 (medium)     | 3.2× RT  | ~19 s   | ~900 kbps  | ~7 MB/min  |
+| iPhone 4K HEVC → 1080p H.264 (veryfast)  | 3.1× RT  | ~19 s   | ~1950 kbps | ~15 MB/min |
+| iPhone 4K HEVC → 1080p H.264 (medium)    | 2.5× RT  | ~24 s   | ~2470 kbps | ~18 MB/min |
+| Android 1080p H.264 → 720p H.264 (vfast) | 10.8× RT | ~6 s    | ~1570 kbps | ~12 MB/min |
+| 1080p → 720p VP9 (cpu-used 4)            | 1.6× RT  | ~37 s   | ~2230 kbps | ~17 MB/min |
+| 1080p → 720p AV1 (svt preset 8)          | 3.3× RT  | ~18 s   | ~1140 kbps | ~9 MB/min  |
+
+- 4K cases are decode-bound (~3× RT regardless of output res — HEVC 4K decode dominates).
+- Only transcode inputs that aren't already browser-playable (HEVC/HDR) — H.264/VP9 already stream via ServeFile.
+- Weak home servers ~3-10× slower software-only; hw accel (QSV/VAAPI/NVENC) ~5-30× RT — biggest lever.
+- todo: not lazy-in-handler like thumbs (occupies cores for minutes) — needs job queue + concurrency cap.
+
 # Misc
 
 ```
