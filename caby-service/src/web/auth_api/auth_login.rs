@@ -44,6 +44,23 @@ pub async fn handle_login(
 
     let user: User = user_config.into();
 
+    // Handle unactivated users
+    let is_activated = match user.is_activated().await {
+        Ok(a) => a,
+        Err(err) => {
+            error!(
+                "could not check if user {} is activated: {:#}",
+                user.name, err
+            );
+            return resp.internal_error().into_response();
+        }
+    };
+
+    if !is_activated {
+        warn!("login attempt for un-activated user: {}", user.name);
+        return resp.fail("account not activated").into_response();
+    }
+
     let is_password = match user.is_password(&req.password).await {
         Ok(p) => p,
         Err(err) => {

@@ -82,7 +82,13 @@
 			class:can-preview={can_preview}
 			onclick={handleDisplayClick}
 		>
-			<img src={preview_url} alt={entry.name} loading="lazy" onerror={() => (img_failed = true)} />
+			<img
+				src={preview_url}
+				alt={entry.name}
+				loading="lazy"
+				draggable="false"
+				onerror={() => (img_failed = true)}
+			/>
 		</section>
 	{:else}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
