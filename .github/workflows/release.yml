@@ -6,9 +6,8 @@ on:
     types: [completed]
     branches: [main]
   push:
-    tags: ['v*']
+    tags: ["v*"]
   # Manual edge build: pick any branch via the "Run workflow" dropdown to
-  # publish it as the latest ghcr.io/.../caby-*:edge image (for mobile testing).
   workflow_dispatch:
 
 concurrency:
@@ -27,8 +26,16 @@ jobs:
       fail-fast: false
       matrix:
         image:
-          - { name: caby-service, context: caby-service, dockerfile: caby-service/ci/Dockerfile }
-          - { name: caby-web, context: caby-web, dockerfile: caby-web/ci/Dockerfile }
+          - {
+              name: caby-service,
+              context: caby-service,
+              dockerfile: caby-service/ci/Dockerfile,
+            }
+          - {
+              name: caby-web,
+              context: caby-web,
+              dockerfile: caby-web/ci/Dockerfile,
+            }
         platform:
           - { name: linux/amd64, pair: linux-amd64, runner: ubuntu-latest }
           - { name: linux/arm64, pair: linux-arm64, runner: ubuntu-24.04-arm }
