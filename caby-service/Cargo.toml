@@ -28,7 +28,7 @@ argon2 = "0.5.3"
 chrono = { version = "0.4.44", features = ["serde"] }
 rand = "0.10.1"
 email_address = "0.2.9"
-chacha20poly1305 = "0.10.1"
+chacha20poly1305 = "0.11.0"
 openidconnect = "4.0.1"
 nest_struct = "0.5.5"
 arc-swap = "1.9.1"
