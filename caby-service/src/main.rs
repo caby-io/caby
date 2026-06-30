@@ -28,6 +28,7 @@ mod files;
 mod housekeeping;
 mod img_thumbs;
 mod jsend;
+mod share;
 mod space;
 mod state;
 mod upload;
