@@ -9,6 +9,7 @@ mod auth_api;
 mod extractors;
 mod files_api;
 pub mod headers;
+mod shares_api;
 mod spaces_api;
 mod upload;
 mod users_api;
@@ -90,5 +91,9 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 // .route("/upload/complete", post(files_api::handle_complete_upload))
                 .route("/delete/{space}", post(files_api::handle_delete_files))
                 .route("/move/{space}", post(files_api::handle_move_files)),
+        )
+        .nest(
+            "/shares",
+            Router::new().route("/{space}", post(shares_api::handle_create_share)),
         )
 }
