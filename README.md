@@ -25,11 +25,60 @@
 
 - Requires **no backing services**. Everything is managed by the backend runtime.
 - Files all the way down: Everything from configuration to metadata is stored in readable files.
-- Integrate with your favorite OIDC provider: Authentik, Pocket ID, Authelia, etc.
+- Integrate with your favorite OIDC provider: Authentik, Pocket ID, Authelia, etc. Or, use the built-in password auth.
 - Organize your files within **spaces** for compartmentalization and easy access control
 - Files are uploaded using **chunked uploads** for resumability, performance, and compatibility with certain ingress providers.
 - Supports ARM images for Raspberry Pi and other lightweight devices.
 
-## 📖 Documentation
+## 🗺️ Roadmap
 
-Caby's documentation and install instructions can be found at [caby.io/docs](https://caby.io/docs/overview).
+What we're working towards in the near future:
+
+- [ ] File shares _(in progress)_
+- [ ] Fine-grained user access
+- [ ] Background tasks (download files, convert videos, and more)
+- [ ] Device syncing
+
+Are we missing something? Let us know on [Discord](https://discord.gg/Z2JkSs2Hzy) or [open an issue](https://github.com/caby-io/caby/issues).
+
+## 🚀 Quick Start
+
+For more complete installation and configuration information please refer to [Caby's documentation](https://caby.io/getting-started/).
+
+### Docker Compose
+
+Grab the starter `compose.yaml` and `config.yaml`:
+
+```bash
+curl -O https://raw.githubusercontent.com/caby-io/caby/main/examples/quick-start/compose.yaml
+curl -O https://raw.githubusercontent.com/caby-io/caby/main/examples/quick-start/config.yaml
+```
+
+Certain configuration items in Caby are set statically in a file so we'll need to prepare their values ahead of deployment:
+
+- Your username, and
+- Your activation token
+
+The activation token must be exactly 64 characters long. We can generate one with:
+
+```bash
+openssl rand -hex 32
+```
+
+Now open up the config file and edit the username and activation token to match:
+
+```yaml
+users:
+  - name: <your cool username>
+    activation_token: <a 64 character token>
+```
+
+Save the config file and deploy:
+
+```bash
+docker compose up -d
+```
+
+Navigate to the activation page to set your password (e.g. http://localhost:3000/activate) and login.
+
+For raw `docker run`, reverse-proxy setup, and full configuration options, see the [Docker installation guide](https://caby.io/installation/docker/).

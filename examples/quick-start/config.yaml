@@ -1,0 +1,22 @@
+urls:
+  # Where your backend server is exposed (e.g. https://files-api.caby.net)
+  backend: http://localhost:8080
+  # Where your frontend server is exposed (e.g. https://files.caby.net)
+  frontend: http://localhost:3000
+
+# A list of spaces or compartments
+spaces:
+  - name: home
+    display: "🏠 Home"
+  - name: media
+    display: "🎞️ Media"
+
+users:
+  - name: YOUR_USERNAME
+    # a token for first-time login — generate one with `openssl rand -hex 32`
+    activation_token: REPLACE_WITH_A_UNIQUE_64_CHARACTER_TOKEN
+    spaces:
+      - name: home
+        permissions: "*"
+      - name: media
+        permissions: "*"

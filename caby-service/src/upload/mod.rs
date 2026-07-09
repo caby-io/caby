@@ -4,8 +4,8 @@ use anyhow::anyhow;
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use bitcode::{Decode, Encode};
 use chacha20poly1305::{
-    aead::{Aead, OsRng},
-    AeadCore, ChaCha20Poly1305, KeyInit, Nonce,
+    aead::{Aead, Generate},
+    ChaCha20Poly1305, KeyInit, Nonce,
 };
 use chrono::{DateTime, Duration, Utc};
 use tokio::{
@@ -48,7 +48,7 @@ pub type UploadToken = String;
 
 pub fn generate_upload_token(cfg: &Config, payload: UploadTokenPayload) -> Result<UploadToken> {
     let cipher = ChaCha20Poly1305::new(&cfg.token_encryption_key);
-    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+    let nonce = Nonce::generate();
 
     let plaintext = bitcode::encode(&payload);
     let ciphertext = cipher
@@ -70,11 +70,12 @@ pub fn decode_upload_token(cfg: &Config, token: &str) -> Result<UploadTokenPaylo
     let Some((nonce_bytes, ciphertext)) = combined.split_at_checked(12) else {
         return Err(anyhow!("upload token is too short"));
     };
-    let nonce = Nonce::from_slice(nonce_bytes);
+    let nonce = Nonce::try_from(nonce_bytes)
+        .map_err(|err| anyhow!(err).context("could not read upload token nonce"))?;
 
     let cipher = ChaCha20Poly1305::new(&cfg.token_encryption_key);
     let plaintext = cipher
-        .decrypt(nonce, ciphertext)
+        .decrypt(&nonce, ciphertext)
         .map_err(|err| anyhow!(err).context("could not decrypt upload token"))?;
 
     bitcode::decode(&plaintext)
