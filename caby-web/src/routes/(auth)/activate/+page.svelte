@@ -58,7 +58,7 @@
 
 		// check that form fields are filled before sending req
 		if (form.activation_token.trim().length < 1) {
-			errors.activation_token = 'activation code required';
+			errors.activation_token = 'activation token required';
 		}
 		if (form.password.length < 1) {
 			errors.password = 'password required';
@@ -100,9 +100,9 @@
 		<h3 class="fx-grow">Activate Account</h3>
 	</header>
 	<form class="fx fx--col">
-		<label for="activation-code">Activation Code</label>
+		<label for="activation-token">Activation Token</label>
 		<input
-			id="activation-code"
+			id="activation-token"
 			class="fx-grow"
 			class:error={errors.activation_token}
 			type="text"
