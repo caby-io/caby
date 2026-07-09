@@ -1,0 +1,25 @@
+services:
+  # backend service
+  caby-service:
+    image: ghcr.io/caby-io/caby-service:edge
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      # everything (files, users, shares, ...) is saved here
+      - cabynet:/app/cabynet
+      # the main configuration. Caby only needs read access to this
+      - ./config.yaml:/app/cabynet/config.yaml:ro
+
+  # frontend service
+  caby-web:
+    image: ghcr.io/caby-io/caby-web:edge
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # needs to point to the API's public URL + /v0
+      PUBLIC_API_BASE: http://localhost:8080/v0
+
+volumes:
+  cabynet:
