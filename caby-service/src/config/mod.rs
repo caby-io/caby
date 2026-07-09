@@ -12,7 +12,7 @@ use crate::{
 };
 use anyhow::{anyhow, Context};
 use arc_swap::ArcSwap;
-use chacha20poly1305::{aead::OsRng, ChaCha20Poly1305, Key, KeyInit};
+use chacha20poly1305::{aead::Generate, Key};
 use serde::Deserialize;
 use std::{collections::HashMap, env::var, path::PathBuf, sync::Arc};
 
@@ -274,7 +274,7 @@ impl ConfigBuilder {
                 "missing directory meta filename (CABY_DIRECTORY_META_FILENAME)"
             ))?,
             // todo: get from file
-            token_encryption_key: ChaCha20Poly1305::generate_key(&mut OsRng),
+            token_encryption_key: Key::generate(),
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
