@@ -111,7 +111,8 @@
 							<img src={media_url} alt={current_entry.name} />
 						{:else if kind === 'video'}
 							<!-- svelte-ignore a11y_media_has_caption -->
-							<video src={media_url} controls {autoplay} bind:muted onplay={onMediaPlay}></video>
+							<video src={media_url} controls playsinline {autoplay} bind:muted onplay={onMediaPlay}
+							></video>
 						{:else if kind === 'audio'}
 							<audio src={media_url} controls {autoplay} bind:muted onplay={onMediaPlay}></audio>
 						{/if}
@@ -135,13 +136,18 @@
 		color: var(--clr-text-0);
 		outline: none;
 
+		&::backdrop {
+			background: #000;
+		}
+
 		> .content {
 			width: 100%;
 			height: 100%;
 		}
 
 		header {
-			padding: 0.75rem 1rem;
+			padding: calc(0.75rem + var(--safe-top)) calc(1rem + var(--safe-right)) 0.75rem
+				calc(1rem + var(--safe-left));
 			gap: 0.75rem;
 			color: var(--clr-text-1);
 
@@ -177,6 +183,7 @@
 		main.stage {
 			min-height: 0;
 			padding: 1rem;
+			padding-bottom: calc(1rem + var(--safe-bottom));
 			touch-action: none;
 
 			img,

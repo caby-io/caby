@@ -81,7 +81,7 @@
 	.top-nav {
 		height: var(--top-nav-height);
 		// background: red;
-		padding: 0 1em;
+		padding: var(--safe-top) max(1em, var(--safe-right)) 0 max(1em, var(--safe-left));
 		background-color: var(--clr-background-1);
 		// color: var(--clr-primary);
 
