@@ -19,7 +19,9 @@
   <a href="https://discord.gg/Z2JkSs2Hzy"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
-![Caby file browser](.github/assets/screenshot-main.png)
+<p align="center">
+  <img src=".github/assets/preview.gif" alt="Caby file browser" width="860">
+</p>
 
 ## ✨ Features
 
