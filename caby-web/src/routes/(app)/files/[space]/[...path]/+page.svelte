@@ -152,14 +152,12 @@
 	// Media Preview
 
 	let preview_entries = $derived(file_entries.filter((e) => e.entry_fields.can_preview));
-	let preview_open = $state(false);
-	let preview_start_index = $state(0);
+	let preview: MediaPreviewDialog;
 
 	const handlePreview = (entry: Entry) => {
 		const index = preview_entries.indexOf(entry);
 		if (index < 0) return;
-		preview_start_index = index;
-		preview_open = true;
+		preview.openDialog(index);
 	};
 
 	const handleDeselect = () => {
@@ -566,11 +564,7 @@
 	{handleDeleteEntries}
 	{handleRenameEntry}
 />
-<MediaPreviewDialog
-	bind:open={preview_open}
-	entries={preview_entries}
-	start_index={preview_start_index}
-/>
+<MediaPreviewDialog bind:this={preview} entries={preview_entries} />
 
 <style lang="scss">
 	@use '$lib/styles/breakpoints' as bp;

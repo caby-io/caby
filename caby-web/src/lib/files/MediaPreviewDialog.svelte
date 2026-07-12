@@ -5,17 +5,10 @@
 	import { swipe } from '$lib/actions/swipe';
 	import type { Entry } from './entry';
 
-	let {
-		open = $bindable(),
-		entries,
-		start_index
-	}: {
-		open: boolean;
-		entries: Entry[];
-		start_index: number;
-	} = $props();
+	let { entries }: { entries: Entry[] } = $props();
 
 	let dialog: HTMLDialogElement;
+	let dialog_open = $state(false);
 	let current_index = $state(0);
 	let current_entry = $derived(entries[current_index]);
 	let kind = $derived(current_entry?.entry_fields.kind);
@@ -23,14 +16,30 @@
 	let has_prev = $derived(current_index > 0);
 	let has_next = $derived(current_index < entries.length - 1);
 
-	$effect(() => {
-		if (open && dialog && !dialog.open) {
-			current_index = start_index;
-			dialog.showModal();
-		} else if (!open && dialog?.open) {
-			dialog.close();
-		}
-	});
+	// Video/Audio controls
+	let autoplay = $state(false);
+	let muted = $state(true);
+
+	const onDialogOpen = () => {
+		const opened_kind = current_entry?.entry_fields.kind;
+		autoplay = opened_kind === 'audio' || opened_kind === 'video';
+		muted = opened_kind !== 'audio';
+		dialog_open = true;
+	};
+
+	const onDialogClose = () => {
+		dialog_open = false;
+	};
+
+	export function openDialog(index: number) {
+		current_index = index;
+		onDialogOpen();
+		dialog.showModal();
+	}
+
+	const onMediaPlay = () => {
+		autoplay = true;
+	};
 
 	// Preload neighbor media
 	let preload_urls = $derived(
@@ -40,16 +49,13 @@
 			.map((e) => e.entry_fields.media_url!)
 	);
 
+	// Generate URLs with tokens to be able to fetch content
 	$effect(() => {
 		preload_urls.forEach((url) => {
 			const img = new Image();
 			img.src = url;
 		});
 	});
-
-	const syncOpenOnClose = () => {
-		open = false;
-	};
 
 	const prev = () => {
 		if (has_prev) current_index--;
@@ -77,8 +83,8 @@
 
 <svelte:window onkeydown={onKeyDown} />
 
-<dialog bind:this={dialog} class="preview-dialog border-0" onclose={syncOpenOnClose}>
-	{#if current_entry}
+<dialog bind:this={dialog} class="preview-dialog border-0" onclose={onDialogClose}>
+	{#if dialog_open && current_entry}
 		<div class="content fx fx--col">
 			<header class="fx fx--ac">
 				<span class="name fx-grow" title={current_entry.name}>{current_entry.name}</span>
@@ -105,9 +111,10 @@
 							<img src={media_url} alt={current_entry.name} />
 						{:else if kind === 'video'}
 							<!-- svelte-ignore a11y_media_has_caption -->
-							<video src={media_url} controls autoplay></video>
+							<video src={media_url} controls playsinline {autoplay} bind:muted onplay={onMediaPlay}
+							></video>
 						{:else if kind === 'audio'}
-							<audio src={media_url} controls autoplay></audio>
+							<audio src={media_url} controls {autoplay} bind:muted onplay={onMediaPlay}></audio>
 						{/if}
 					{/key}
 				{/if}
@@ -127,6 +134,11 @@
 		padding: 0;
 		background: rgba(0, 0, 0, 0.92);
 		color: var(--clr-text-0);
+		outline: none;
+
+		&::backdrop {
+			background: #000;
+		}
 
 		> .content {
 			width: 100%;
@@ -134,7 +146,8 @@
 		}
 
 		header {
-			padding: 0.75rem 1rem;
+			padding: calc(0.75rem + var(--safe-top)) calc(1rem + var(--safe-right)) 0.75rem
+				calc(1rem + var(--safe-left));
 			gap: 0.75rem;
 			color: var(--clr-text-1);
 
@@ -170,6 +183,7 @@
 		main.stage {
 			min-height: 0;
 			padding: 1rem;
+			padding-bottom: calc(1rem + var(--safe-bottom));
 			touch-action: none;
 
 			img,
