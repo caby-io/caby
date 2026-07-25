@@ -13,7 +13,7 @@ use crate::{
     auth::oidc::{oidc_auth_code_flow::AuthCodeFlow, oidc_user::provision_user, OidcClient},
     config::Config,
     jsend::JSendBuilder,
-    user::User,
+    user::Account,
 };
 
 #[derive(Deserialize)]
@@ -89,7 +89,7 @@ pub async fn handle_oidc_callback(
         }
     };
 
-    let user: User = match cfg.find_user(claims.subject().as_str()) {
+    let user: Account = match cfg.find_user(claims.subject().as_str()) {
         Some(uc) => (&uc).into(),
         None => match provision_user(&cfg, claims).await {
             Ok(u) => u,

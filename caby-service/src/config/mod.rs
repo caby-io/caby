@@ -7,7 +7,7 @@ use crate::{
         validate_config::is_valid_meta_filename,
     },
     space::Space,
-    user::{SpaceAccess, User},
+    user::{Account, SpaceAccess},
     Result,
 };
 use anyhow::{anyhow, Context};
@@ -63,9 +63,9 @@ pub struct UserConfig {
     pub spaces: Vec<UserSpaceConfig>,
 }
 
-impl From<&UserConfig> for User {
+impl From<&UserConfig> for Account {
     fn from(val: &UserConfig) -> Self {
-        User {
+        Account {
             name: val.name.clone(),
             path: val.path.clone(),
             email: val.email.clone(),

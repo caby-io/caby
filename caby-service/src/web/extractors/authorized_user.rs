@@ -11,10 +11,10 @@ use tokio::fs;
 use tracing::warn;
 
 use crate::{
-    auth::{AuthorizedUser, Token},
+    auth::{AuthUser, Token},
     config::Config,
     jsend::JSendBuilder,
-    user::User,
+    user::Account,
     web::headers::HEADER_CABY_USER_NAME,
 };
 
@@ -27,7 +27,7 @@ async fn find_session(
     cfg: &Config,
     token: &str,
     user_name: Option<&str>,
-) -> crate::Result<(Token, User)> {
+) -> crate::Result<(Token, Account)> {
     let cfg_rtm = cfg.runtime.load();
 
     if let Some(name) = user_name {
@@ -74,7 +74,7 @@ async fn find_session(
     Err(anyhow!("token not found"))
 }
 
-impl<S> FromRequestParts<S> for AuthorizedUser
+impl<S> FromRequestParts<S> for AuthUser
 where
     Config: FromRef<S>,
     S: Send + Sync,
@@ -134,6 +134,6 @@ where
                 .into_response());
         }
 
-        Ok(AuthorizedUser { token, user })
+        Ok(AuthUser { token, user })
     }
 }

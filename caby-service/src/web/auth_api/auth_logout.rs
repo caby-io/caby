@@ -6,14 +6,14 @@ use serde::Serialize;
 use tokio::fs;
 use tracing::error;
 
-use crate::{auth::AuthorizedUser, config::Config, jsend};
+use crate::{auth::AuthUser, config::Config, jsend};
 
 #[derive(Serialize)]
 pub struct LogoutResponse<'a> {
     user: &'a str,
 }
 
-pub async fn handle_logout(State(cfg): State<Config>, authorized_user: AuthorizedUser) -> Response {
+pub async fn handle_logout(State(cfg): State<Config>, authorized_user: AuthUser) -> Response {
     let resp = jsend::JSendBuilder::new();
 
     let session_path = authorized_user

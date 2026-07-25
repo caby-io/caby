@@ -1,4 +1,4 @@
-use crate::{auth::AuthorizedUser, config::Config, files, jsend, space::Space};
+use crate::{auth::AuthUser, config::Config, files, jsend, space::Space};
 use axum::{
     extract::{Json, State},
     response::{IntoResponse, Response},
@@ -23,7 +23,7 @@ struct DeleteEntriesResponse {
 pub async fn handle_delete_files(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    user: AuthUser,
     Json(req): Json<DeleteEntriesRequest>,
 ) -> Response {
     let mut deleted = vec![];

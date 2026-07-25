@@ -9,7 +9,7 @@ use tokio::fs;
 use crate::{
     auth::oidc::oidc_user_names::{calculate_name, ADJECTIVES, ANIMALS},
     config::{Config, Runtime, UserConfig},
-    user::User,
+    user::Account,
     Result,
 };
 
@@ -92,7 +92,7 @@ pub async fn load_provisioned_users(users_path: &Path) -> Result<HashMap<String,
     Ok(out)
 }
 
-pub async fn provision_user(cfg: &Config, claims: &CoreIdTokenClaims) -> Result<User> {
+pub async fn provision_user(cfg: &Config, claims: &CoreIdTokenClaims) -> Result<Account> {
     let subject = claims.subject().to_string();
     let issuer = claims.issuer().to_string();
     let email = claims.email().map(|e| e.to_string());

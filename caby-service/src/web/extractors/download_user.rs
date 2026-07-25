@@ -9,7 +9,7 @@ use tokio::fs;
 use tracing::warn;
 
 use crate::{
-    config::Config, jsend::JSendBuilder, user::User,
+    config::Config, jsend::JSendBuilder, user::Account,
     web::extractors::authorized_user::UnauthorizedResponse,
 };
 
@@ -21,7 +21,7 @@ struct TokenQuery {
 // todo: move to another module
 pub struct DownloadUser {
     pub token: String,
-    pub user: User,
+    pub user: Account,
 }
 
 // todo: we need to encode data into the token to speed up this lookup

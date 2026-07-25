@@ -10,7 +10,7 @@ use tokio::fs::{self, try_exists, write};
 use crate::{auth::Token, Result};
 
 pub enum UserType {
-    Human,
+    Person,
     Agent,
 }
 
@@ -21,7 +21,7 @@ pub struct SpaceAccess {
 }
 
 #[derive(Clone)]
-pub struct User {
+pub struct Account {
     // config values
     pub name: String,
     pub path: PathBuf,
@@ -41,7 +41,7 @@ pub fn try_hash_password(password: &str) -> Result<String> {
         .map(|p| p.to_string())
 }
 
-impl User {
+impl Account {
     // If the user's directory exists and has a `password` file then the user is activated
     pub async fn is_activated(&self) -> Result<bool> {
         let user_dir_exists = match try_exists(&self.path).await {

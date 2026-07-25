@@ -5,7 +5,7 @@ use axum::{
 use serde::{Deserialize, Serialize};
 use tracing::{error, warn};
 
-use crate::{auth::Token, config::Config, jsend, user::User};
+use crate::{auth::Token, config::Config, jsend, user::Account};
 
 #[derive(Deserialize)]
 pub struct LoginRequest {
@@ -42,7 +42,7 @@ pub async fn handle_login(
         }
     };
 
-    let user: User = user_config.into();
+    let user: Account = user_config.into();
 
     // Handle unactivated users
     let is_activated = match user.is_activated().await {
