@@ -25,6 +25,7 @@ mod ctx;
 mod download;
 mod error;
 mod files;
+mod guest;
 mod housekeeping;
 mod img_thumbs;
 mod jsend;
