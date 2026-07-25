@@ -2,19 +2,20 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use axum::{
-    extract::{FromRef, FromRequestParts},
+    extract::{FromRef, FromRequestParts, Query},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tokio::fs;
 use tracing::warn;
 
 use crate::{
-    auth::{AuthorizedUser, Token},
+    auth::{AuthUser, Token, User},
     config::Config,
+    guest::{token, Guest},
     jsend::JSendBuilder,
-    user::User,
+    user::Account,
     web::headers::HEADER_CABY_USER_NAME,
 };
 
@@ -23,11 +24,25 @@ pub struct UnauthorizedResponse<'a> {
     pub reason: &'a str,
 }
 
+#[derive(Deserialize)]
+struct GuestTokenQuery {
+    token: Option<String>,
+}
+
+fn unauthorized() -> Response {
+    JSendBuilder::new()
+        .status_code(StatusCode::UNAUTHORIZED)
+        .fail(UnauthorizedResponse {
+            reason: "unauthorized",
+        })
+        .into_response()
+}
+
 async fn find_session(
     cfg: &Config,
     token: &str,
     user_name: Option<&str>,
-) -> crate::Result<(Token, User)> {
+) -> crate::Result<(Token, Account)> {
     let cfg_rtm = cfg.runtime.load();
 
     if let Some(name) = user_name {
@@ -74,7 +89,7 @@ async fn find_session(
     Err(anyhow!("token not found"))
 }
 
-impl<S> FromRequestParts<S> for AuthorizedUser
+impl<S> FromRequestParts<S> for AuthUser
 where
     Config: FromRef<S>,
     S: Send + Sync,
@@ -84,56 +99,59 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let cfg = Config::from_ref(state);
 
-        let auth_header = parts
+        let bearer = parts
             .headers
             .get(axum::http::header::AUTHORIZATION)
             .and_then(|header| header.to_str().ok())
-            .ok_or_else(|| {
-                JSendBuilder::new()
-                    .status_code(StatusCode::UNAUTHORIZED)
-                    .fail(UnauthorizedResponse {
-                        reason: "unauthorized",
-                    })
-                    .into_response()
-            })?;
+            .and_then(|header| header.strip_prefix("Bearer "));
 
-        let token_str = auth_header.strip_prefix("Bearer ").ok_or(
-            JSendBuilder::new()
-                .status_code(StatusCode::UNAUTHORIZED)
-                .fail(UnauthorizedResponse {
-                    reason: "unauthorized",
-                })
-                .into_response(),
-        )?;
+        if let Some(token_str) = bearer {
+            let user_name = parts
+                .headers
+                .get(&HEADER_CABY_USER_NAME)
+                .and_then(|h| h.to_str().ok());
 
-        let user = parts
-            .headers
-            .get(&HEADER_CABY_USER_NAME)
-            .and_then(|h| h.to_str().ok());
+            let (session, account) =
+                find_session(&cfg, token_str, user_name)
+                    .await
+                    .map_err(|err| {
+                        warn!("could not authorize user token: {:#}", err);
+                        unauthorized()
+                    })?;
 
-        let (token, user) = match find_session(&cfg, token_str, user).await {
-            Ok(t) => t,
-            Err(err) => {
-                warn!("could not authorize user token: {:#}", err);
-                return Err(JSendBuilder::new()
-                    .status_code(StatusCode::UNAUTHORIZED)
-                    .fail(UnauthorizedResponse {
-                        reason: "unauthorized",
-                    })
-                    .into_response());
+            if session.is_expired() {
+                warn!("user authenticated with an expired token: {}", account.name);
+                return Err(unauthorized());
             }
-        };
 
-        if token.is_expired() {
-            warn!("user authenticated with an expired token: {}", user.name);
-            return Err(JSendBuilder::new()
-                .status_code(StatusCode::UNAUTHORIZED)
-                .fail(UnauthorizedResponse {
-                    reason: "unauthorized",
-                })
-                .into_response());
+            return Ok(AuthUser {
+                token: token_str.to_owned(),
+                user: User::Account(account),
+            });
         }
 
-        Ok(AuthorizedUser { token, user })
+        let guest_token = Query::<GuestTokenQuery>::from_request_parts(parts, state)
+            .await
+            .ok()
+            .and_then(|Query(query)| query.token);
+
+        if let Some(guest_token) = guest_token {
+            let decoded =
+                token::decode_token(&cfg.token_encryption_key, &guest_token).map_err(|err| {
+                    warn!("could not decode guest token: {:#}", err);
+                    unauthorized()
+                })?;
+
+            if decoded.is_expired() {
+                return Err(unauthorized());
+            }
+
+            return Ok(AuthUser {
+                token: guest_token,
+                user: User::Guest(Guest::from(&decoded)),
+            });
+        }
+
+        Err(unauthorized())
     }
 }

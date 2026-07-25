@@ -2,6 +2,7 @@ use std::{collections::BTreeSet, path::PathBuf};
 
 use axum::{
     extract::{Json, State},
+    http::StatusCode,
     response::{IntoResponse, Response},
 };
 use chrono::{DateTime, Utc};
@@ -11,7 +12,7 @@ use tokio::fs;
 use tracing::warn;
 
 use crate::{
-    auth::AuthorizedUser,
+    auth::AuthUser,
     config::Config,
     jsend::JSendBuilder,
     share::{Share, ShareAccess, ShareAuth, ShareLimits, SharePermission},
@@ -63,9 +64,16 @@ impl TryFrom<CreateLane> for ShareAccess {
 pub async fn handle_create_share(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    user: AuthUser,
     Json(req): Json<CreateShareRequest>,
 ) -> Response {
+    let Some(account) = user.as_account() else {
+        return JSendBuilder::new()
+            .status_code(StatusCode::FORBIDDEN)
+            .fail("only account users can create shares")
+            .into_response();
+    };
+
     if let Some(expires_at) = req.expires_at {
         if expires_at <= Utc::now() {
             return JSendBuilder::new()
@@ -120,7 +128,7 @@ pub async fn handle_create_share(
     };
 
     let share = Share::new(
-        &user.user.name,
+        &account.name,
         &space.name,
         &root_entry,
         member_access,

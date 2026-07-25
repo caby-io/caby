@@ -16,7 +16,7 @@ use tracing::{error, warn};
 use crate::{
     config::Config,
     jsend::{self, JSendBuilder},
-    user::{try_hash_password, User},
+    user::{try_hash_password, Account},
     Result,
 };
 
@@ -52,7 +52,7 @@ pub async fn handle_token_lookup(
     };
 
     // check if the user is already activated
-    let user: User = user_config.into();
+    let user: Account = user_config.into();
     let is_activated = match user.is_activated().await {
         Ok(a) => a,
         Err(err) => {
@@ -77,7 +77,7 @@ pub async fn handle_token_lookup(
 }
 
 // todo: move to user package
-pub async fn try_check_activation_attempts(user: &User) -> Result<i64> {
+pub async fn try_check_activation_attempts(user: &Account) -> Result<i64> {
     let activation_attempts_path = &user.path.join("activation_attempts");
     let activation_attempts_exists = try_exists(activation_attempts_path)
         .await
@@ -96,7 +96,7 @@ pub async fn try_check_activation_attempts(user: &User) -> Result<i64> {
         .map_err(|err| anyhow!("could not parse activation_attempts as i64: {}", err))
 }
 
-pub async fn try_set_activation_attempts(user: &User, attempts: i64) -> Result<()> {
+pub async fn try_set_activation_attempts(user: &Account, attempts: i64) -> Result<()> {
     if let Err(err) = fs::write(user.path.join("activation_attempts"), attempts.to_string()).await {
         return Err(anyhow!(err).context("could not write to activation_attempts file"));
     }
@@ -133,7 +133,7 @@ pub async fn handle_user_token_activation(
     };
 
     // check if the user is already activated
-    let user: User = user_config.into();
+    let user: Account = user_config.into();
     let is_activated = match user.is_activated().await {
         Ok(a) => a,
         Err(err) => {

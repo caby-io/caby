@@ -1,4 +1,4 @@
-use crate::{auth::AuthorizedUser, config::Config, files, jsend::JSendBuilder, space::Space};
+use crate::{auth::AuthUser, config::Config, files, jsend::JSendBuilder, space::Space};
 use axum::{
     extract::{Json, State},
     response::{IntoResponse, Response},
@@ -39,7 +39,7 @@ impl MoveError {
 pub async fn handle_move_files(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    user: AuthUser,
     Json(req): Json<MoveEntriesRequest>,
 ) -> Response {
     let mut moved = vec![];

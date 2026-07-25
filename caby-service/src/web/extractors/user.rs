@@ -5,9 +5,9 @@ use axum::{
     RequestPartsExt,
 };
 
-use crate::{config::Config, jsend::JSendBuilder, user::User, web::users_api::UserPathParams};
+use crate::{config::Config, jsend::JSendBuilder, user::Account, web::users_api::UserPathParams};
 
-impl<S> FromRequestParts<S> for User
+impl<S> FromRequestParts<S> for Account
 where
     Config: FromRef<S>,
     S: Send + Sync,

@@ -1,5 +1,5 @@
 use crate::{
-    auth::AuthorizedUser,
+    auth::AuthUser,
     config::Config,
     download,
     jsend::JSendBuilder,
@@ -10,7 +10,7 @@ use anyhow::anyhow;
 use axum::{
     body::Body,
     extract::{Json, Path, State},
-    http::header,
+    http::{header, StatusCode},
     response::{IntoResponse, Response},
 };
 use path_clean::PathClean;
@@ -33,9 +33,16 @@ struct RegisterDownloadResponse {
 pub async fn handle_register_download(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    user: AuthUser,
     Json(req): Json<RegisterDownloadRequest>,
 ) -> Response {
+    let Some(account) = user.as_account() else {
+        return JSendBuilder::new()
+            .status_code(StatusCode::FORBIDDEN)
+            .fail("only account users can register downloads")
+            .into_response();
+    };
+
     let mut cleaned_files = Vec::with_capacity(req.files.len());
     for file in &req.files {
         let rel_path = PathBuf::from(file).clean();
@@ -55,11 +62,11 @@ pub async fn handle_register_download(
         }
     };
 
-    let download_file = user.user.path.join(format!("download_{}", token.value));
+    let download_file = account.path.join(format!("download_{}", token.value));
     if let Err(err) = fs::write(&download_file, token.to_file_string()).await {
         warn!(
             "could not write download file for user {}: {:#}",
-            user.user.name, err
+            account.name, err
         );
         return JSendBuilder::new().internal_error().into_response();
     }
