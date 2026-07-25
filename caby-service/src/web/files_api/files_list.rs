@@ -1,5 +1,5 @@
 use crate::{
-    auth::AuthorizedUser,
+    auth::AuthUser,
     config::Config,
     files::{build_entries, Entry},
     jsend::JSendBuilder,
@@ -30,7 +30,7 @@ struct ListFilesResponse {
 pub async fn handle_list_files(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    user: AuthUser,
     path_params: Path<FilesPathParams>,
 ) -> Response {
     let resp = JSendBuilder::new();

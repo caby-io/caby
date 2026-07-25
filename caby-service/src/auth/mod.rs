@@ -6,7 +6,7 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngExt;
 use serde::Serialize;
 
-use crate::{user::User, Result};
+use crate::{user::Account, Result};
 
 pub mod oidc;
 
@@ -71,7 +71,7 @@ impl Token {
 }
 
 // todo: might need to expand this to accomodate agents and other things
-pub struct AuthorizedUser {
+pub struct AuthUser {
     pub token: Token,
-    pub user: User,
+    pub user: Account,
 }

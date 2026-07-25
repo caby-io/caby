@@ -1,5 +1,5 @@
 use crate::{
-    auth::AuthorizedUser,
+    auth::AuthUser,
     config::Config,
     download,
     jsend::JSendBuilder,
@@ -33,7 +33,7 @@ struct RegisterDownloadResponse {
 pub async fn handle_register_download(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthorizedUser,
+    user: AuthUser,
     Json(req): Json<RegisterDownloadRequest>,
 ) -> Response {
     let mut cleaned_files = Vec::with_capacity(req.files.len());
