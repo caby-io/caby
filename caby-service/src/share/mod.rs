@@ -14,7 +14,7 @@ use tokio::fs;
 
 use crate::{
     space::{Space, SpaceDir},
-    user::try_hash_password,
+    user::{try_hash_password, Permission},
     Result,
 };
 
@@ -25,16 +25,6 @@ pub enum ShareAuth {
     Password { hash: String },
 }
 
-#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-#[serde(rename_all = "snake_case")]
-pub enum SharePermission {
-    View,
-    Download,
-    Upload,
-    CreateDir,
-    Delete,
-}
-
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ShareLimits {
     pub max_file_bytes: Option<u64>,
@@ -43,9 +33,9 @@ pub struct ShareLimits {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct ShareAccess {
+pub struct ShareFlow {
     pub auth: ShareAuth,
-    pub permissions: BTreeSet<SharePermission>,
+    pub permissions: BTreeSet<Permission>,
     pub limits: Option<ShareLimits>,
 }
 
@@ -55,8 +45,8 @@ pub struct Share {
     pub owner: String,
     pub space: String,
     pub root_entry: String,
-    pub member_access: Option<ShareAccess>,
-    pub public_access: Option<ShareAccess>,
+    pub member_flow: Option<ShareFlow>,
+    pub guest_flow: Option<ShareFlow>,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
@@ -91,8 +81,8 @@ impl Share {
         owner: &str,
         space: &str,
         root_entry: &str,
-        member_access: Option<ShareAccess>,
-        public_access: Option<ShareAccess>,
+        member_flow: Option<ShareFlow>,
+        guest_flow: Option<ShareFlow>,
         expires_at: Option<DateTime<Utc>>,
     ) -> Self {
         let mut id_bytes = [0u8; 32];
@@ -103,8 +93,8 @@ impl Share {
             owner: owner.to_owned(),
             space: space.to_owned(),
             root_entry: root_entry.to_owned(),
-            member_access,
-            public_access,
+            member_flow,
+            guest_flow,
             created_at: Utc::now(),
             expires_at,
         }
@@ -168,15 +158,8 @@ mod tests {
     use super::*;
     use chrono::Duration;
 
-    fn sample(member_access: Option<ShareAccess>, public_access: Option<ShareAccess>) -> Share {
-        Share::new(
-            "suhaib",
-            "home",
-            "photos",
-            member_access,
-            public_access,
-            None,
-        )
+    fn sample(member_flow: Option<ShareFlow>, guest_flow: Option<ShareFlow>) -> Share {
+        Share::new("suhaib", "home", "photos", member_flow, guest_flow, None)
     }
 
     fn temp_space() -> Space {
@@ -217,9 +200,9 @@ mod tests {
             &space.name,
             "photos",
             None,
-            Some(ShareAccess {
+            Some(ShareFlow {
                 auth: ShareAuth::Open,
-                permissions: BTreeSet::from([SharePermission::View, SharePermission::Download]),
+                permissions: BTreeSet::from([Permission::View, Permission::Download]),
                 limits: Some(ShareLimits {
                     max_file_bytes: Some(1024),
                     max_bytes_per_day: None,

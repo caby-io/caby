@@ -5,6 +5,7 @@ use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHasher, PasswordVerifier,
 };
+use serde::{Deserialize, Serialize};
 use tokio::fs::{self, try_exists, write};
 
 use crate::{auth::Token, Result};
@@ -14,9 +15,19 @@ pub enum UserType {
     Agent,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum Permission {
+    View,
+    Download,
+    Write,
+    Delete,
+}
+
 #[derive(Clone)]
 pub struct SpaceAccess {
     pub name: String,
+    // todo: action:path grant strings (e.g. "view:*", "*:*", "write:/some/path"); model undesigned
     pub permissions: Vec<String>,
 }
 

@@ -15,23 +15,24 @@ use crate::{
     auth::AuthUser,
     config::Config,
     jsend::JSendBuilder,
-    share::{Share, ShareAccess, ShareAuth, ShareLimits, SharePermission},
+    share::{Share, ShareAuth, ShareFlow, ShareLimits},
     space::{Space, SpaceDir},
+    user::Permission,
     Result,
 };
 
 #[derive(Deserialize)]
 pub struct CreateShareRequest {
     pub root_entry: String,
-    pub member_access: Option<CreateLane>,
-    pub public_access: Option<CreateLane>,
+    pub member_flow: Option<CreateFlow>,
+    pub guest_flow: Option<CreateFlow>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Deserialize)]
-pub struct CreateLane {
+pub struct CreateFlow {
     pub password: Option<String>,
-    pub permissions: BTreeSet<SharePermission>,
+    pub permissions: BTreeSet<Permission>,
     pub limits: Option<ShareLimits>,
 }
 
@@ -44,19 +45,18 @@ struct CreateShareResponse {
     expires_at: Option<DateTime<Utc>>,
 }
 
-// Converts into ShareAccess and hashes password if inputted
-impl TryFrom<CreateLane> for ShareAccess {
+impl TryFrom<CreateFlow> for ShareFlow {
     type Error = crate::Error;
 
-    fn try_from(lane: CreateLane) -> Result<Self> {
-        let auth = match lane.password {
+    fn try_from(flow: CreateFlow) -> Result<Self> {
+        let auth = match flow.password {
             Some(ref plaintext) => ShareAuth::password(plaintext)?,
             None => ShareAuth::Open,
         };
-        Ok(ShareAccess {
+        Ok(ShareFlow {
             auth,
-            permissions: lane.permissions,
-            limits: lane.limits,
+            permissions: flow.permissions,
+            limits: flow.limits,
         })
     }
 }
@@ -82,11 +82,11 @@ pub async fn handle_create_share(
         }
     }
 
-    for lane in [req.member_access.as_ref(), req.public_access.as_ref()]
+    for flow in [req.member_flow.as_ref(), req.guest_flow.as_ref()]
         .into_iter()
         .flatten()
     {
-        if lane.permissions.is_empty() {
+        if flow.permissions.is_empty() {
             return JSendBuilder::new()
                 .fail("each audience must grant at least one permission")
                 .into_response();
@@ -116,13 +116,13 @@ pub async fn handle_create_share(
     }
     let root_entry = cleaned_root.to_string_lossy().into_owned();
 
-    let (member_access, public_access) = match (
-        req.member_access.map(ShareAccess::try_from).transpose(),
-        req.public_access.map(ShareAccess::try_from).transpose(),
+    let (member_flow, guest_flow) = match (
+        req.member_flow.map(ShareFlow::try_from).transpose(),
+        req.guest_flow.map(ShareFlow::try_from).transpose(),
     ) {
-        (Ok(member), Ok(public)) => (member, public),
+        (Ok(member), Ok(guest)) => (member, guest),
         _ => {
-            warn!("could not hash share lane password");
+            warn!("could not hash share flow password");
             return JSendBuilder::new().internal_error().into_response();
         }
     };
@@ -131,8 +131,8 @@ pub async fn handle_create_share(
         &account.name,
         &space.name,
         &root_entry,
-        member_access,
-        public_access,
+        member_flow,
+        guest_flow,
         req.expires_at,
     );
     if let Err(err) = share.save(&space).await {
