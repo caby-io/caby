@@ -1,6 +1,9 @@
 use crate::{
-    auth::AuthUser, config::Config, error::Result, jsend::JSendBuilder, space::Space,
-    web::files_api::files_list::FilesPathParams,
+    config::Config,
+    error::Result,
+    jsend::JSendBuilder,
+    space::Space,
+    web::{extractors::RequireAccount, files_api::files_list::FilesPathParams},
 };
 use axum::{
     extract::{Path, State},
@@ -33,7 +36,7 @@ pub struct PutEntryRequest {
 pub async fn handle_put_files(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthUser,
+    _: RequireAccount,
     path_params: Path<FilesPathParams>,
     Json(payload): Json<PutEntryRequest>,
 ) -> Response {

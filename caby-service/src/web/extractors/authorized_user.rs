@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use axum::{
-    extract::{FromRef, FromRequestParts, Query},
+    extract::{FromRef, FromRequestParts, OptionalFromRequestParts, Query},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
 };
@@ -89,6 +89,68 @@ async fn find_session(
     Err(anyhow!("token not found"))
 }
 
+async fn resolve<S>(parts: &mut Parts, state: &S) -> Result<Option<AuthUser>, Response>
+where
+    Config: FromRef<S>,
+    S: Send + Sync,
+{
+    let cfg = Config::from_ref(state);
+
+    let bearer = parts
+        .headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|header| header.to_str().ok())
+        .and_then(|header| header.strip_prefix("Bearer "));
+
+    if let Some(token_str) = bearer {
+        let user_name = parts
+            .headers
+            .get(&HEADER_CABY_USER_NAME)
+            .and_then(|h| h.to_str().ok());
+
+        let (session, account) = find_session(&cfg, token_str, user_name)
+            .await
+            .map_err(|err| {
+                warn!("could not authorize user token: {:#}", err);
+                unauthorized()
+            })?;
+
+        if session.is_expired() {
+            warn!("user authenticated with an expired token: {}", account.name);
+            return Err(unauthorized());
+        }
+
+        return Ok(Some(AuthUser {
+            token: token_str.to_owned(),
+            user: User::Account(account),
+        }));
+    }
+
+    let guest_token = Query::<GuestTokenQuery>::from_request_parts(parts, state)
+        .await
+        .ok()
+        .and_then(|Query(query)| query.token);
+
+    if let Some(guest_token) = guest_token {
+        let decoded =
+            token::decode_token(&cfg.token_encryption_key, &guest_token).map_err(|err| {
+                warn!("could not decode guest token: {:#}", err);
+                unauthorized()
+            })?;
+
+        if decoded.is_expired() {
+            return Err(unauthorized());
+        }
+
+        return Ok(Some(AuthUser {
+            token: guest_token,
+            user: User::Guest(Guest::from(&decoded)),
+        }));
+    }
+
+    Ok(None)
+}
+
 impl<S> FromRequestParts<S> for AuthUser
 where
     Config: FromRef<S>,
@@ -97,61 +159,47 @@ where
     type Rejection = Response;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let cfg = Config::from_ref(state);
-
-        let bearer = parts
-            .headers
-            .get(axum::http::header::AUTHORIZATION)
-            .and_then(|header| header.to_str().ok())
-            .and_then(|header| header.strip_prefix("Bearer "));
-
-        if let Some(token_str) = bearer {
-            let user_name = parts
-                .headers
-                .get(&HEADER_CABY_USER_NAME)
-                .and_then(|h| h.to_str().ok());
-
-            let (session, account) =
-                find_session(&cfg, token_str, user_name)
-                    .await
-                    .map_err(|err| {
-                        warn!("could not authorize user token: {:#}", err);
-                        unauthorized()
-                    })?;
-
-            if session.is_expired() {
-                warn!("user authenticated with an expired token: {}", account.name);
-                return Err(unauthorized());
-            }
-
-            return Ok(AuthUser {
-                token: token_str.to_owned(),
-                user: User::Account(account),
-            });
+        match resolve(parts, state).await? {
+            Some(auth) => Ok(auth),
+            None => Err(unauthorized()),
         }
+    }
+}
 
-        let guest_token = Query::<GuestTokenQuery>::from_request_parts(parts, state)
-            .await
-            .ok()
-            .and_then(|Query(query)| query.token);
+impl<S> OptionalFromRequestParts<S> for AuthUser
+where
+    Config: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = Response;
 
-        if let Some(guest_token) = guest_token {
-            let decoded =
-                token::decode_token(&cfg.token_encryption_key, &guest_token).map_err(|err| {
-                    warn!("could not decode guest token: {:#}", err);
-                    unauthorized()
-                })?;
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &S,
+    ) -> Result<Option<Self>, Self::Rejection> {
+        resolve(parts, state).await
+    }
+}
 
-            if decoded.is_expired() {
-                return Err(unauthorized());
-            }
+pub struct RequireAccount;
 
-            return Ok(AuthUser {
-                token: guest_token,
-                user: User::Guest(Guest::from(&decoded)),
-            });
+impl<S> FromRequestParts<S> for RequireAccount
+where
+    Config: FromRef<S>,
+    S: Send + Sync,
+{
+    type Rejection = Response;
+
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        match resolve(parts, state).await? {
+            Some(auth) if auth.as_account().is_some() => Ok(RequireAccount),
+            Some(_) => Err(JSendBuilder::new()
+                .status_code(StatusCode::FORBIDDEN)
+                .fail(UnauthorizedResponse {
+                    reason: "account required",
+                })
+                .into_response()),
+            None => Err(unauthorized()),
         }
-
-        Err(unauthorized())
     }
 }
