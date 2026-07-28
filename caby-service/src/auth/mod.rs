@@ -6,7 +6,12 @@ use chrono::{DateTime, Duration, Utc};
 use rand::RngExt;
 use serde::Serialize;
 
-use crate::{guest::Guest, user::Account, Result};
+use crate::{
+    guest::Guest,
+    share::Share,
+    user::{Account, Permission},
+    Result,
+};
 
 pub mod oidc;
 
@@ -86,5 +91,46 @@ impl AuthUser {
             User::Account(account) => Some(account),
             User::Guest(_) => None,
         }
+    }
+
+    pub fn is_authorized_share(&self, share: &Share, permission: Permission) -> bool {
+        match &self.user {
+            User::Account(account) => {
+                let is_space_member = account.space_access.iter().any(|s| s.name == share.space);
+                if is_space_member {
+                    share
+                        .member_flow
+                        .as_ref()
+                        .is_some_and(|flow| flow.grants(permission))
+                } else if share.is_member(&account.name) {
+                    share
+                        .guest_flow
+                        .as_ref()
+                        .is_some_and(|flow| flow.grants(permission))
+                } else {
+                    guest_authorized(share, permission, None)
+                }
+            }
+            User::Guest(guest) => {
+                let fingerprint = guest
+                    .access_for(&share.space, &share.id)
+                    .and_then(|access| access.password_fingerprint);
+                guest_authorized(share, permission, fingerprint)
+            }
+        }
+    }
+}
+
+fn guest_authorized(share: &Share, permission: Permission, fingerprint: Option<u64>) -> bool {
+    share
+        .guest_flow
+        .as_ref()
+        .is_some_and(|flow| flow.grants(permission) && flow.auth.satisfied_by(fingerprint))
+}
+
+pub fn authorize_share(auth: Option<&AuthUser>, share: &Share, permission: Permission) -> bool {
+    match auth {
+        Some(user) => user.is_authorized_share(share, permission),
+        None => guest_authorized(share, permission, None),
     }
 }

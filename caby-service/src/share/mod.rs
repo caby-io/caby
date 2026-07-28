@@ -8,15 +8,21 @@ use anyhow::{anyhow, Context};
 use argon2::{Argon2, PasswordVerifier};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use chrono::{DateTime, Utc};
+use path_clean::PathClean;
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
+use xxhash_rust::xxh64::xxh64;
 
 use crate::{
     space::{Space, SpaceDir},
     user::{try_hash_password, Permission},
     Result,
 };
+
+pub fn fingerprint(hash: &str) -> u64 {
+    xxh64(hash.as_bytes(), 0)
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -47,6 +53,8 @@ pub struct Share {
     pub root_entry: String,
     pub member_flow: Option<ShareFlow>,
     pub guest_flow: Option<ShareFlow>,
+    #[serde(default)]
+    pub members: Vec<String>,
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
@@ -74,6 +82,21 @@ impl ShareAuth {
             }
         }
     }
+
+    pub fn satisfied_by(&self, fingerprint_claim: Option<u64>) -> bool {
+        match self {
+            Self::Open => true,
+            Self::Password { hash } => {
+                fingerprint_claim.is_some_and(|claim| claim == fingerprint(hash))
+            }
+        }
+    }
+}
+
+impl ShareFlow {
+    pub fn grants(&self, permission: Permission) -> bool {
+        self.permissions.contains(&permission)
+    }
 }
 
 impl Share {
@@ -95,6 +118,7 @@ impl Share {
             root_entry: root_entry.to_owned(),
             member_flow,
             guest_flow,
+            members: Vec::new(),
             created_at: Utc::now(),
             expires_at,
         }
@@ -105,6 +129,23 @@ impl Share {
             Some(at) => Utc::now() > at,
             None => false,
         }
+    }
+
+    pub fn is_member(&self, account_name: &str) -> bool {
+        self.members.iter().any(|name| name == account_name)
+    }
+
+    pub fn scope_path(&self, space: &Space, rel: &Path) -> Result<PathBuf> {
+        let root = PathBuf::from(&self.root_entry).clean();
+        let scoped = root.join(rel.clean()).clean();
+
+        let live = space.join(SpaceDir::LIVE, &scoped)?;
+        let root_live = space.live().join(&root);
+        if !live.starts_with(&root_live) {
+            return Err(anyhow!("path escapes share root"));
+        }
+
+        Ok(scoped)
     }
 
     pub async fn save(&self, space: &Space) -> Result<()> {

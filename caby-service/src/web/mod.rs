@@ -94,6 +94,18 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
         )
         .nest(
             "/shares",
-            Router::new().route("/{space}", post(shares_api::handle_create_share)),
+            Router::new()
+                .route("/{space}", post(shares_api::handle_create_share))
+                .route("/{space}/{id}", get(shares_api::handle_get_share))
+                .route("/{space}/{id}/auth", post(shares_api::handle_auth_share))
+                .route("/{space}/{id}/list", get(shares_api::handle_list_share))
+                .route(
+                    "/{space}/{id}/list/{*path}",
+                    get(shares_api::handle_list_share),
+                )
+                .route(
+                    "/{space}/{id}/download/{*path}",
+                    get(shares_api::handle_download_share),
+                ),
         )
 }
