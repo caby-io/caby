@@ -7,36 +7,24 @@ use chacha20poly1305::{
 };
 use chrono::{DateTime, Duration, Utc};
 
-use crate::{
-    guest::{Guest, ShareAccess},
-    Result,
-};
+use crate::{guest::Guest, Result};
 
 pub const DEFAULT_GUEST_TOKEN_LIFETIME_DAYS: i64 = 7;
-
-#[derive(Encode, Decode, PartialEq, Debug)]
-pub struct GuestGrant {
-    pub space: String,
-    pub share_id: String,
-    pub pw_fingerprint: u64,
-}
 
 #[derive(Encode, Decode, PartialEq, Debug)]
 pub struct GuestToken {
     pub guest_id: String,
     pub issued_at_unix: i64,
     pub expires_at_unix: i64,
-    pub grants: Vec<GuestGrant>,
 }
 
 impl GuestToken {
-    pub fn new(guest_id: &str, grants: Vec<GuestGrant>, lifetime: Duration) -> Self {
+    pub fn new(guest_id: &str, lifetime: Duration) -> Self {
         let now = Utc::now();
         Self {
             guest_id: guest_id.to_owned(),
             issued_at_unix: now.timestamp(),
             expires_at_unix: (now + lifetime).timestamp(),
-            grants,
         }
     }
 
@@ -60,16 +48,6 @@ impl From<&GuestToken> for Guest {
         Guest {
             id: token.guest_id.clone(),
             created_at: token.issued_at(),
-            share_access: token
-                .grants
-                .iter()
-                .map(|grant| ShareAccess {
-                    space: grant.space.clone(),
-                    id: grant.share_id.clone(),
-                    password_fingerprint: Some(grant.pw_fingerprint),
-                    created_at: token.issued_at(),
-                })
-                .collect(),
         }
     }
 }
@@ -117,11 +95,6 @@ mod tests {
     fn sample() -> GuestToken {
         GuestToken::new(
             "guest-abc",
-            vec![GuestGrant {
-                space: "home".to_owned(),
-                share_id: "share-abc".to_owned(),
-                pw_fingerprint: 0x1234_5678_9abc_def0,
-            }],
             Duration::days(DEFAULT_GUEST_TOKEN_LIFETIME_DAYS),
         )
     }
@@ -158,21 +131,14 @@ mod tests {
         let fresh = sample();
         assert!(!fresh.is_expired());
 
-        let stale = GuestToken::new("guest-abc", vec![], Duration::days(-1));
+        let stale = GuestToken::new("guest-abc", Duration::days(-1));
         assert!(stale.is_expired());
     }
 
     #[test]
-    fn decodes_into_guest_with_grants() {
+    fn decodes_into_guest() {
         let token = sample();
         let guest: Guest = (&token).into();
         assert_eq!(guest.id, "guest-abc");
-        assert_eq!(guest.share_access.len(), 1);
-        assert_eq!(guest.share_access[0].space, "home");
-        assert_eq!(guest.share_access[0].id, "share-abc");
-        assert_eq!(
-            guest.share_access[0].password_fingerprint,
-            Some(0x1234_5678_9abc_def0)
-        );
     }
 }

@@ -29,29 +29,31 @@ pub async fn handle_download_share(
     auth: Option<AuthUser>,
     Path(params): Path<DownloadParams>,
 ) -> Response {
+    let resp = JSendBuilder::new();
+
     let share = match Share::load(&space, &params.id).await {
         Ok(Some(share)) => share,
         Ok(None) => {
-            return JSendBuilder::new()
+            return resp
                 .status_code(StatusCode::NOT_FOUND)
                 .fail("share not found")
                 .into_response()
         }
         Err(err) => {
             warn!("could not load share {}: {:#}", params.id, err);
-            return JSendBuilder::new().internal_error().into_response();
+            return resp.internal_error().into_response();
         }
     };
 
     if share.is_expired() {
-        return JSendBuilder::new()
+        return resp
             .status_code(StatusCode::GONE)
             .fail("share has expired")
             .into_response();
     }
 
     if !authorize_share(auth.as_ref(), &share, Permission::Download) {
-        return JSendBuilder::new()
+        return resp
             .status_code(StatusCode::FORBIDDEN)
             .fail("not authorized for this share")
             .into_response();
@@ -60,24 +62,22 @@ pub async fn handle_download_share(
     let rel = PathBuf::from(params.path);
     let scoped = match share.scope_path(&space, &rel) {
         Ok(scoped) => scoped,
-        Err(_) => return JSendBuilder::new().fail("invalid path").into_response(),
+        Err(_) => return resp.fail("invalid path").into_response(),
     };
 
     let live = match space.join(SpaceDir::LIVE, &scoped) {
         Ok(live) => live,
-        Err(_) => return JSendBuilder::new().fail("invalid path").into_response(),
+        Err(_) => return resp.fail("invalid path").into_response(),
     };
 
     if !live.is_file() {
-        return JSendBuilder::new()
-            .fail("only files supported")
-            .into_response();
+        return resp.fail("only files supported").into_response();
     }
 
     let file = match tokio::fs::File::open(&live).await {
         Ok(file) => file,
         Err(err) => {
-            return JSendBuilder::new()
+            return resp
                 .fail(format!("file not found: {}", err))
                 .into_response()
         }

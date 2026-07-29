@@ -37,29 +37,31 @@ pub async fn handle_list_share(
     auth: Option<AuthUser>,
     Path(params): Path<ListParams>,
 ) -> Response {
+    let resp = JSendBuilder::new();
+
     let share = match Share::load(&space, &params.id).await {
         Ok(Some(share)) => share,
         Ok(None) => {
-            return JSendBuilder::new()
+            return resp
                 .status_code(StatusCode::NOT_FOUND)
                 .fail("share not found")
                 .into_response()
         }
         Err(err) => {
             warn!("could not load share {}: {:#}", params.id, err);
-            return JSendBuilder::new().internal_error().into_response();
+            return resp.internal_error().into_response();
         }
     };
 
     if share.is_expired() {
-        return JSendBuilder::new()
+        return resp
             .status_code(StatusCode::GONE)
             .fail("share has expired")
             .into_response();
     }
 
     if !authorize_share(auth.as_ref(), &share, Permission::View) {
-        return JSendBuilder::new()
+        return resp
             .status_code(StatusCode::FORBIDDEN)
             .fail("not authorized for this share")
             .into_response();
@@ -68,7 +70,7 @@ pub async fn handle_list_share(
     let rel = params.path.map_or(PathBuf::from(""), PathBuf::from);
     let scoped = match share.scope_path(&space, &rel) {
         Ok(scoped) => scoped,
-        Err(_) => return JSendBuilder::new().fail("invalid path").into_response(),
+        Err(_) => return resp.fail("invalid path").into_response(),
     };
 
     let mut entries = match build_entries(&cfg, &space, &scoped).await {
@@ -78,7 +80,7 @@ pub async fn handle_list_share(
                 "could not list share {} at {:?}: {:#}",
                 share.id, scoped, err
             );
-            return JSendBuilder::new().internal_error().into_response();
+            return resp.internal_error().into_response();
         }
     };
 
@@ -93,11 +95,10 @@ pub async fn handle_list_share(
         .parent()
         .map(|parent| parent.to_string_lossy().into_owned());
 
-    JSendBuilder::new()
-        .success(ListShareResponse {
-            path: rel.to_string_lossy().into_owned(),
-            parent_dir,
-            entries,
-        })
-        .into_response()
+    resp.success(ListShareResponse {
+        path: rel.to_string_lossy().into_owned(),
+        parent_dir,
+        entries,
+    })
+    .into_response()
 }

@@ -1,5 +1,5 @@
 use std::{
-    collections::BTreeSet,
+    collections::{BTreeMap, BTreeSet},
     io::ErrorKind,
     path::{Path, PathBuf},
 };
@@ -12,17 +12,13 @@ use path_clean::PathClean;
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use xxhash_rust::xxh64::xxh64;
 
 use crate::{
+    guest::Guest,
     space::{Space, SpaceDir},
-    user::{try_hash_password, Permission},
+    user::{try_hash_password, Account, Permission},
     Result,
 };
-
-pub fn fingerprint(hash: &str) -> u64 {
-    xxh64(hash.as_bytes(), 0)
-}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -39,22 +35,36 @@ pub struct ShareLimits {
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
-pub struct ShareFlow {
+pub struct ShareAccessFlow {
     pub auth: ShareAuth,
     pub permissions: BTreeSet<Permission>,
     pub limits: Option<ShareLimits>,
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+pub struct Grant {
+    pub principal_id: String,
+    pub permissions: BTreeSet<Permission>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Share {
     pub id: String,
-    pub owner: String,
+    pub owner_id: String,
     pub space: String,
     pub root_entry: String,
-    pub member_flow: Option<ShareFlow>,
-    pub guest_flow: Option<ShareFlow>,
+
     #[serde(default)]
-    pub members: Vec<String>,
+    pub account_allowlist: BTreeMap<String, Grant>,
+    #[serde(default)]
+    pub guests_allowlist: BTreeMap<String, Grant>,
+
+    #[serde(default)]
+    pub account_flows: Vec<ShareAccessFlow>,
+    #[serde(default)]
+    pub guest_flows: Vec<ShareAccessFlow>,
+
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
 }
@@ -82,30 +92,25 @@ impl ShareAuth {
             }
         }
     }
-
-    pub fn satisfied_by(&self, fingerprint_claim: Option<u64>) -> bool {
-        match self {
-            Self::Open => true,
-            Self::Password { hash } => {
-                fingerprint_claim.is_some_and(|claim| claim == fingerprint(hash))
-            }
-        }
-    }
 }
 
-impl ShareFlow {
+impl ShareAccessFlow {
     pub fn grants(&self, permission: Permission) -> bool {
         self.permissions.contains(&permission)
+    }
+
+    pub fn open_grants(&self, permission: Permission) -> bool {
+        matches!(self.auth, ShareAuth::Open) && self.grants(permission)
     }
 }
 
 impl Share {
     pub fn new(
-        owner: &str,
+        owner_id: &str,
         space: &str,
         root_entry: &str,
-        member_flow: Option<ShareFlow>,
-        guest_flow: Option<ShareFlow>,
+        account_flows: Vec<ShareAccessFlow>,
+        guest_flows: Vec<ShareAccessFlow>,
         expires_at: Option<DateTime<Utc>>,
     ) -> Self {
         let mut id_bytes = [0u8; 32];
@@ -113,12 +118,13 @@ impl Share {
 
         Self {
             id: URL_SAFE_NO_PAD.encode(id_bytes),
-            owner: owner.to_owned(),
+            owner_id: owner_id.to_owned(),
             space: space.to_owned(),
             root_entry: root_entry.to_owned(),
-            member_flow,
-            guest_flow,
-            members: Vec::new(),
+            account_allowlist: BTreeMap::new(),
+            guests_allowlist: BTreeMap::new(),
+            account_flows,
+            guest_flows,
             created_at: Utc::now(),
             expires_at,
         }
@@ -131,8 +137,33 @@ impl Share {
         }
     }
 
-    pub fn is_member(&self, account_name: &str) -> bool {
-        self.members.iter().any(|name| name == account_name)
+    pub fn can_account(&self, account: &Account, permission: Permission) -> bool {
+        if let Some(grant) = self.account_allowlist.get(&account.name) {
+            if grant.permissions.contains(&permission) {
+                return true;
+            }
+        }
+
+        // check if there's open access for accounts
+        self.account_flows
+            .iter()
+            .any(|flow| flow.open_grants(permission))
+    }
+
+    pub fn can_any_guest(&self, permission: Permission) -> bool {
+        self.guest_flows
+            .iter()
+            .any(|flow| flow.open_grants(permission))
+    }
+
+    pub fn can_guest(&self, guest: &Guest, permission: Permission) -> bool {
+        if let Some(grant) = self.guests_allowlist.get(&guest.id) {
+            if grant.permissions.contains(&permission) {
+                return true;
+            }
+        }
+
+        self.can_any_guest(permission)
     }
 
     pub fn scope_path(&self, space: &Space, rel: &Path) -> Result<PathBuf> {
@@ -199,8 +230,8 @@ mod tests {
     use super::*;
     use chrono::Duration;
 
-    fn sample(member_flow: Option<ShareFlow>, guest_flow: Option<ShareFlow>) -> Share {
-        Share::new("suhaib", "home", "photos", member_flow, guest_flow, None)
+    fn sample(account_flows: Vec<ShareAccessFlow>, guest_flows: Vec<ShareAccessFlow>) -> Share {
+        Share::new("suhaib", "home", "photos", account_flows, guest_flows, None)
     }
 
     fn temp_space() -> Space {
@@ -217,15 +248,15 @@ mod tests {
 
     #[test]
     fn new_generates_unique_non_empty_ids() {
-        let a = sample(None, None);
-        let b = sample(None, None);
+        let a = sample(vec![], vec![]);
+        let b = sample(vec![], vec![]);
         assert!(!a.id.is_empty());
         assert_ne!(a.id, b.id);
     }
 
     #[test]
     fn is_expired_reflects_expiry() {
-        let mut share = sample(None, None);
+        let mut share = sample(vec![], vec![]);
         assert!(!share.is_expired());
         share.expires_at = Some(Utc::now() - Duration::minutes(1));
         assert!(share.is_expired());
@@ -240,8 +271,8 @@ mod tests {
             "suhaib",
             &space.name,
             "photos",
-            None,
-            Some(ShareFlow {
+            vec![],
+            vec![ShareAccessFlow {
                 auth: ShareAuth::Open,
                 permissions: BTreeSet::from([Permission::View, Permission::Download]),
                 limits: Some(ShareLimits {
@@ -249,7 +280,7 @@ mod tests {
                     max_bytes_per_day: None,
                     max_files_per_day: Some(10),
                 }),
-            }),
+            }],
             None,
         );
 
@@ -271,7 +302,7 @@ mod tests {
     #[tokio::test]
     async fn delete_removes_and_is_idempotent() {
         let space = temp_space();
-        let share = sample(None, None);
+        let share = sample(vec![], vec![]);
         share.save(&space).await.unwrap();
 
         Share::delete(&space, &share.id).await.unwrap();
