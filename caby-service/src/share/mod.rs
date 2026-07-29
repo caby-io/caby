@@ -314,4 +314,103 @@ mod tests {
 
         cleanup(&space);
     }
+
+    fn open_flow(perms: &[Permission]) -> ShareAccessFlow {
+        ShareAccessFlow {
+            auth: ShareAuth::Open,
+            permissions: perms.iter().copied().collect(),
+            limits: None,
+        }
+    }
+
+    fn password_flow(perms: &[Permission]) -> ShareAccessFlow {
+        ShareAccessFlow {
+            auth: ShareAuth::Password {
+                hash: "hash".to_owned(),
+            },
+            permissions: perms.iter().copied().collect(),
+            limits: None,
+        }
+    }
+
+    fn account(name: &str) -> Account {
+        Account {
+            name: name.to_owned(),
+            path: PathBuf::from("/tmp"),
+            email: None,
+            activation_token: None,
+            space_access: vec![],
+        }
+    }
+
+    fn grant(id: &str, perms: &[Permission]) -> Grant {
+        Grant {
+            principal_id: id.to_owned(),
+            permissions: perms.iter().copied().collect(),
+            created_at: Utc::now(),
+        }
+    }
+
+    #[test]
+    fn open_grants_requires_open_auth_and_permission() {
+        assert!(open_flow(&[Permission::View]).open_grants(Permission::View));
+        assert!(!open_flow(&[Permission::View]).open_grants(Permission::Download));
+        assert!(!password_flow(&[Permission::View]).open_grants(Permission::View));
+    }
+
+    #[test]
+    fn can_any_guest_only_from_open_guest_flows() {
+        let open = sample(vec![], vec![open_flow(&[Permission::View])]);
+        assert!(open.can_any_guest(Permission::View));
+        assert!(!open.can_any_guest(Permission::Download));
+
+        let locked = sample(vec![], vec![password_flow(&[Permission::View])]);
+        assert!(!locked.can_any_guest(Permission::View));
+    }
+
+    #[test]
+    fn can_guest_via_open_flow() {
+        let share = sample(vec![], vec![open_flow(&[Permission::View])]);
+        assert!(share.can_guest(&Guest::new(), Permission::View));
+        assert!(!share.can_guest(&Guest::new(), Permission::Download));
+    }
+
+    #[test]
+    fn can_guest_via_allowlist() {
+        let guest = Guest::new();
+        let mut share = sample(vec![], vec![]);
+        assert!(!share.can_guest(&guest, Permission::Download));
+
+        share
+            .guests_allowlist
+            .insert(guest.id.clone(), grant(&guest.id, &[Permission::Download]));
+        assert!(share.can_guest(&guest, Permission::Download));
+        assert!(!share.can_guest(&guest, Permission::Delete));
+        assert!(!share.can_guest(&Guest::new(), Permission::Download));
+    }
+
+    #[test]
+    fn can_account_via_open_account_flow() {
+        let share = sample(vec![open_flow(&[Permission::Write])], vec![]);
+        assert!(share.can_account(&account("suhaib"), Permission::Write));
+        assert!(!share.can_account(&account("suhaib"), Permission::Delete));
+    }
+
+    #[test]
+    fn can_account_falls_through_to_open_guest_access() {
+        let share = sample(vec![], vec![open_flow(&[Permission::View])]);
+        assert!(share.can_account(&account("suhaib"), Permission::View));
+    }
+
+    #[test]
+    fn can_account_via_allowlist() {
+        let mut share = sample(vec![], vec![]);
+        assert!(!share.can_account(&account("suhaib"), Permission::Delete));
+
+        share
+            .account_allowlist
+            .insert("suhaib".to_owned(), grant("suhaib", &[Permission::Delete]));
+        assert!(share.can_account(&account("suhaib"), Permission::Delete));
+        assert!(!share.can_account(&account("other"), Permission::Delete));
+    }
 }
