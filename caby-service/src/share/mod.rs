@@ -148,6 +148,7 @@ impl Share {
         self.account_flows
             .iter()
             .any(|flow| flow.open_grants(permission))
+            || self.can_any_guest(permission)
     }
 
     pub fn can_any_guest(&self, permission: Permission) -> bool {
