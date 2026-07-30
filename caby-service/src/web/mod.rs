@@ -100,6 +100,10 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 .route("/{space}", post(shares_api::handle_create_share))
                 .route("/{space}/{id}", get(shares_api::handle_get_share))
                 .route(
+                    "/{space}/{id}/admin",
+                    get(shares_api::handle_admin_get_share),
+                )
+                .route(
                     "/{space}/{id}/auth/password",
                     post(shares_api::handle_password_auth_share),
                 )
@@ -112,12 +116,5 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                     "/{space}/{id}/download/{*path}",
                     get(shares_api::handle_download_share),
                 ),
-        )
-        .nest(
-            "/admin",
-            Router::new().nest(
-                "/shares",
-                Router::new().route("/{space}/{id}", get(shares_api::handle_admin_get_share)),
-            ),
         )
 }
