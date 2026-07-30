@@ -1,7 +1,7 @@
 use std::{collections::BTreeSet, path::PathBuf};
 
 use axum::{
-    extract::{Json, State},
+    extract::Json,
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -13,7 +13,6 @@ use tracing::warn;
 
 use crate::{
     auth::AuthUser,
-    config::Config,
     jsend::JSendBuilder,
     share::{Share, ShareAccessFlow, ShareAuth, ShareLimits},
     space::{Space, SpaceDir},
@@ -24,8 +23,10 @@ use crate::{
 #[derive(Deserialize)]
 pub struct CreateShareRequest {
     pub root_entry: String,
-    pub all_accounts: Option<CreateFlow>,
-    pub all_guests: Option<CreateFlow>,
+    #[serde(default)]
+    pub account_flows: Vec<CreateFlow>,
+    #[serde(default)]
+    pub guest_flows: Vec<CreateFlow>,
     pub expires_at: Option<DateTime<Utc>>,
 }
 
@@ -62,14 +63,13 @@ impl TryFrom<CreateFlow> for ShareAccessFlow {
 }
 
 pub async fn handle_create_share(
-    State(cfg): State<Config>,
     space: Space,
-    user: AuthUser,
+    auth: AuthUser,
     Json(req): Json<CreateShareRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
 
-    let Some(account) = user.as_account() else {
+    let Some(account) = auth.as_account() else {
         return resp
             .status_code(StatusCode::FORBIDDEN)
             .fail("only account users can create shares")
@@ -82,13 +82,10 @@ pub async fn handle_create_share(
         }
     }
 
-    for flow in [req.all_accounts.as_ref(), req.all_guests.as_ref()]
-        .into_iter()
-        .flatten()
-    {
+    for flow in req.account_flows.iter().chain(req.guest_flows.iter()) {
         if flow.permissions.is_empty() {
             return resp
-                .fail("each audience must grant at least one permission")
+                .fail("each flow must grant at least one permission")
                 .into_response();
         }
     }
@@ -115,13 +112,16 @@ pub async fn handle_create_share(
     let root_entry = cleaned_root.to_string_lossy().into_owned();
 
     let (account_flows, guest_flows) = match (
-        req.all_accounts.map(ShareAccessFlow::try_from).transpose(),
-        req.all_guests.map(ShareAccessFlow::try_from).transpose(),
+        req.account_flows
+            .into_iter()
+            .map(ShareAccessFlow::try_from)
+            .collect::<Result<Vec<_>>>(),
+        req.guest_flows
+            .into_iter()
+            .map(ShareAccessFlow::try_from)
+            .collect::<Result<Vec<_>>>(),
     ) {
-        (Ok(accounts), Ok(guests)) => (
-            accounts.into_iter().collect::<Vec<_>>(),
-            guests.into_iter().collect::<Vec<_>>(),
-        ),
+        (Ok(accounts), Ok(guests)) => (accounts, guests),
         _ => {
             warn!("could not hash share flow password");
             return resp.internal_error().into_response();

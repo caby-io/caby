@@ -197,6 +197,10 @@ impl Share {
     }
 
     pub fn can_account(&self, account: &Account, permission: Permission) -> bool {
+        if self.can_admin(account) {
+            return true;
+        }
+
         if let Some(grant) = self.account_allowlist.get(&account.name) {
             if grant.permissions.contains(&permission) {
                 return true;
@@ -470,24 +474,31 @@ mod tests {
     #[test]
     fn can_account_via_open_account_flow() {
         let share = sample(vec![open_flow(&[Permission::Write])], vec![]);
-        assert!(share.can_account(&account("suhaib"), Permission::Write));
-        assert!(!share.can_account(&account("suhaib"), Permission::Delete));
+        assert!(share.can_account(&account("member"), Permission::Write));
+        assert!(!share.can_account(&account("member"), Permission::Delete));
     }
 
     #[test]
     fn can_account_falls_through_to_open_guest_access() {
         let share = sample(vec![], vec![open_flow(&[Permission::View])]);
-        assert!(share.can_account(&account("suhaib"), Permission::View));
+        assert!(share.can_account(&account("member"), Permission::View));
     }
 
     #[test]
     fn can_account_via_allowlist() {
         let mut share = sample(vec![], vec![]);
-        assert!(!share.can_account(&account("suhaib"), Permission::Delete));
+        assert!(!share.can_account(&account("member"), Permission::Delete));
 
         share
             .account_allowlist
-            .insert("suhaib".to_owned(), grant(&[Permission::Delete]));
+            .insert("member".to_owned(), grant(&[Permission::Delete]));
+        assert!(share.can_account(&account("member"), Permission::Delete));
+        assert!(!share.can_account(&account("other"), Permission::Delete));
+    }
+
+    #[test]
+    fn owner_bypasses_flows_and_allowlist() {
+        let share = sample(vec![], vec![]);
         assert!(share.can_account(&account("suhaib"), Permission::Delete));
         assert!(!share.can_account(&account("other"), Permission::Delete));
     }

@@ -6,7 +6,6 @@ use chacha20poly1305::{
     ChaCha20Poly1305, Key, KeyInit, Nonce,
 };
 use chrono::{DateTime, Duration, Utc};
-use serde::Serialize;
 
 use crate::{guest::Guest, Result};
 
