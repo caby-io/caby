@@ -1,9 +1,11 @@
+pub mod shares_admin;
 pub mod shares_auth;
 pub mod shares_create;
 pub mod shares_download;
 pub mod shares_get;
 pub mod shares_list;
 
+pub use shares_admin::handle_admin_get_share;
 pub use shares_auth::handle_authn_share;
 pub use shares_create::handle_create_share;
 pub use shares_download::handle_download_share;

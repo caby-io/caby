@@ -1,4 +1,4 @@
-use std::{collections::BTreeSet, path::Path as StdPath};
+use std::path::Path as StdPath;
 
 use axum::{
     extract::Path,
@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::{
+    auth::AuthUser,
     jsend::JSendBuilder,
-    share::{Share, ShareAccessFlow, ShareAuth},
+    share::{Share, ShareAuth},
     space::Space,
-    user::Permission,
 };
 
 #[derive(Deserialize)]
@@ -21,18 +21,9 @@ pub struct ShareIdParam {
 }
 
 #[derive(Serialize)]
-struct FlowInfo {
-    requires_password: bool,
-    permissions: BTreeSet<Permission>,
-}
-
-impl From<&ShareAccessFlow> for FlowInfo {
-    fn from(flow: &ShareAccessFlow) -> Self {
-        FlowInfo {
-            requires_password: matches!(flow.auth, ShareAuth::Password { .. }),
-            permissions: flow.permissions.clone(),
-        }
-    }
+struct AuthOptions {
+    open: bool,
+    password: bool,
 }
 
 #[derive(Serialize)]
@@ -40,12 +31,14 @@ struct GetShareResponse {
     id: String,
     space: String,
     root_name: String,
-    expired: bool,
-    account_flows: Vec<FlowInfo>,
-    guest_flows: Vec<FlowInfo>,
+    auth: AuthOptions,
 }
 
-pub async fn handle_get_share(space: Space, Path(params): Path<ShareIdParam>) -> Response {
+pub async fn handle_get_share(
+    space: Space,
+    auth: Option<AuthUser>,
+    Path(params): Path<ShareIdParam>,
+) -> Response {
     let resp = JSendBuilder::new();
 
     let share = match Share::load(&space, &params.id).await {
@@ -62,9 +55,35 @@ pub async fn handle_get_share(space: Space, Path(params): Path<ShareIdParam>) ->
         }
     };
 
-    let expired = share.is_expired();
-    let account_flows: Vec<FlowInfo> = share.account_flows.iter().map(FlowInfo::from).collect();
-    let guest_flows: Vec<FlowInfo> = share.guest_flows.iter().map(FlowInfo::from).collect();
+    if share.is_expired() {
+        return resp
+            .status_code(StatusCode::GONE)
+            .fail("share has expired")
+            .into_response();
+    }
+
+    // We only care about the minimum info for what UI to present to the user
+    let mut auth_options = AuthOptions {
+        open: false,
+        password: false,
+    };
+
+    for flow in share.guest_flows.iter() {
+        match flow.auth {
+            ShareAuth::Open => auth_options.open = true,
+            ShareAuth::Password { .. } => auth_options.password = true,
+        }
+    }
+
+    if auth.as_ref().is_some_and(AuthUser::is_account) {
+        for flow in share.account_flows.iter() {
+            match flow.auth {
+                ShareAuth::Open => auth_options.open = true,
+                ShareAuth::Password { .. } => auth_options.password = true,
+            }
+        }
+    }
+
     let root_name = StdPath::new(&share.root_entry)
         .file_name()
         .map(|name| name.to_string_lossy().into_owned())
@@ -74,9 +93,7 @@ pub async fn handle_get_share(space: Space, Path(params): Path<ShareIdParam>) ->
         id: share.id,
         space: share.space,
         root_name,
-        expired,
-        account_flows,
-        guest_flows,
+        auth: auth_options,
     })
     .into_response()
 }

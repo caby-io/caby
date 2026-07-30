@@ -226,6 +226,10 @@ impl Share {
         self.can_any_guest(permission)
     }
 
+    pub fn can_admin(&self, account: &Account) -> bool {
+        account.name == self.owner_id
+    }
+
     pub fn scope_path(&self, space: &Space, rel: &Path) -> Result<PathBuf> {
         let root = PathBuf::from(&self.root_entry).clean();
         let scoped = root.join(rel.clean()).clean();
@@ -473,5 +477,12 @@ mod tests {
             .insert("suhaib".to_owned(), grant("suhaib", &[Permission::Delete]));
         assert!(share.can_account(&account("suhaib"), Permission::Delete));
         assert!(!share.can_account(&account("other"), Permission::Delete));
+    }
+
+    #[test]
+    fn can_admin_only_for_owner() {
+        let share = sample(vec![], vec![]);
+        assert!(share.can_admin(&account("suhaib")));
+        assert!(!share.can_admin(&account("other")));
     }
 }

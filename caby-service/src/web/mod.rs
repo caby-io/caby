@@ -110,4 +110,11 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                     get(shares_api::handle_download_share),
                 ),
         )
+        .nest(
+            "/admin",
+            Router::new().nest(
+                "/shares",
+                Router::new().route("/{space}/{id}", get(shares_api::handle_admin_get_share)),
+            ),
+        )
 }
