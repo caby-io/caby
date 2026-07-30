@@ -6,7 +6,7 @@ pub mod shares_get;
 pub mod shares_list;
 
 pub use shares_admin::handle_admin_get_share;
-pub use shares_auth::handle_authn_share;
+pub use shares_auth::handle_password_auth_share;
 pub use shares_create::handle_create_share;
 pub use shares_download::handle_download_share;
 pub use shares_get::handle_get_share;

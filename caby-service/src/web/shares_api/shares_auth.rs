@@ -1,46 +1,37 @@
 use std::collections::BTreeSet;
 
 use axum::{
-    extract::{Json, Path, State},
+    extract::{Json, Path},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use chrono::{DateTime, Duration, Utc};
 use serde::{Deserialize, Serialize};
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser,
-    config::Config,
-    guest::{
-        token::{self, GuestToken, DEFAULT_GUEST_TOKEN_LIFETIME_DAYS},
-        Guest,
-    },
+    auth::{AuthUser, User},
     jsend::JSendBuilder,
-    share::{Grant, Share, ShareAuth},
+    share::{Share, ShareAccessFlow, ShareAuth},
     space::Space,
     user::Permission,
     web::shares_api::shares_get::ShareIdParam,
 };
 
 #[derive(Deserialize)]
-pub struct AuthShareRequest {
+pub struct PasswordAuthShareRequest {
     password: Option<String>,
 }
 
 #[derive(Serialize)]
 struct AuthShareResponse {
-    token: Option<String>,
     permissions: BTreeSet<Permission>,
-    expires_at: Option<DateTime<Utc>>,
 }
 
-pub async fn handle_authn_share(
-    State(cfg): State<Config>,
+pub async fn handle_password_auth_share(
     space: Space,
-    auth: Option<AuthUser>,
+    auth: AuthUser,
     Path(params): Path<ShareIdParam>,
-    Json(req): Json<AuthShareRequest>,
+    Json(req): Json<PasswordAuthShareRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
 
@@ -65,22 +56,28 @@ pub async fn handle_authn_share(
             .into_response();
     }
 
-    // todo: create a filtered list of flows for the user
-
     let password = req.password.unwrap_or_default();
     let permissions = {
-        let has_password_flow = share
-            .guest_flows
+        let applicable: Vec<&ShareAccessFlow> = match &auth.user {
+            User::Account(_) => share
+                .account_flows
+                .iter()
+                .chain(share.guest_flows.iter())
+                .collect(),
+            User::Guest(_) => share.guest_flows.iter().collect(),
+        };
+
+        let has_password_flow = applicable
             .iter()
             .any(|flow| matches!(flow.auth, ShareAuth::Password { .. }));
         if !has_password_flow {
             return resp
                 .status_code(StatusCode::FORBIDDEN)
-                .fail("share has no password-protected guest access")
+                .fail("share has no password-protected access")
                 .into_response();
         }
 
-        match share.guest_flows.iter().find(|flow| {
+        match applicable.iter().find(|flow| {
             matches!(flow.auth, ShareAuth::Password { .. })
                 && flow.auth.try_verify(&password).unwrap_or(false)
         }) {
@@ -94,57 +91,13 @@ pub async fn handle_authn_share(
         }
     };
 
-    if let Some(account) = auth.as_ref().and_then(|user| user.as_account()) {
-        share.account_allowlist.insert(
-            account.name.clone(),
-            Grant {
-                principal_id: account.name.clone(),
-                permissions: permissions.clone(),
-                created_at: Utc::now(),
-            },
-        );
-        if let Err(err) = share.save(&space).await {
-            warn!("could not record share member for {}: {:#}", share.id, err);
-            return resp.internal_error().into_response();
-        }
+    share.grant(&auth.user, permissions.clone());
 
-        return resp
-            .success(AuthShareResponse {
-                token: None,
-                permissions,
-                expires_at: None,
-            })
-            .into_response();
-    }
-
-    let guest = Guest::new();
-    share.guests_allowlist.insert(
-        guest.id.clone(),
-        Grant {
-            principal_id: guest.id.clone(),
-            permissions: permissions.clone(),
-            created_at: Utc::now(),
-        },
-    );
     if let Err(err) = share.save(&space).await {
-        warn!("could not record share guest for {}: {:#}", share.id, err);
+        warn!("could not record share grant for {}: {:#}", share.id, err);
         return resp.internal_error().into_response();
     }
 
-    let guest_token = GuestToken::new(&guest.id, Duration::days(DEFAULT_GUEST_TOKEN_LIFETIME_DAYS));
-    let expires_at = guest_token.expires_at();
-    let encoded = match token::encode_token(&cfg.token_encryption_key, &guest_token) {
-        Ok(encoded) => encoded,
-        Err(err) => {
-            warn!("could not encode guest token for {}: {:#}", share.id, err);
-            return resp.internal_error().into_response();
-        }
-    };
-
-    resp.success(AuthShareResponse {
-        token: Some(encoded),
-        permissions,
-        expires_at: Some(expires_at),
-    })
-    .into_response()
+    resp.success(AuthShareResponse { permissions })
+        .into_response()
 }

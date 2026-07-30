@@ -14,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use tokio::fs;
 
 use crate::{
+    auth::User,
     guest::Guest,
     space::{Space, SpaceDir},
     user::{try_hash_password, Account, Permission},
@@ -228,6 +229,21 @@ impl Share {
 
     pub fn can_admin(&self, account: &Account) -> bool {
         account.name == self.owner_id
+    }
+
+    pub fn grant(&mut self, user: &User, permissions: BTreeSet<Permission>) {
+        let (allowlist, id) = match user {
+            User::Account(account) => (&mut self.account_allowlist, account.name.clone()),
+            User::Guest(guest) => (&mut self.guests_allowlist, guest.id.clone()),
+        };
+        allowlist.insert(
+            id.clone(),
+            Grant {
+                principal_id: id,
+                permissions,
+                created_at: Utc::now(),
+            },
+        );
     }
 
     pub fn scope_path(&self, space: &Space, rel: &Path) -> Result<PathBuf> {
@@ -484,5 +500,22 @@ mod tests {
         let share = sample(vec![], vec![]);
         assert!(share.can_admin(&account("suhaib")));
         assert!(!share.can_admin(&account("other")));
+    }
+
+    #[test]
+    fn grant_routes_by_principal_kind() {
+        let mut share = sample(vec![], vec![]);
+
+        let guest = Guest::new();
+        let guest_id = guest.id.clone();
+        share.grant(&User::Guest(guest), BTreeSet::from([Permission::View]));
+        assert!(share.guests_allowlist.contains_key(&guest_id));
+        assert!(share.account_allowlist.is_empty());
+
+        share.grant(
+            &User::Account(account("suhaib")),
+            BTreeSet::from([Permission::Delete]),
+        );
+        assert!(share.account_allowlist.contains_key("suhaib"));
     }
 }
