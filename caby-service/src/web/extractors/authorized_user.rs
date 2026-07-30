@@ -192,7 +192,7 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         match resolve(parts, state).await? {
-            Some(auth) if auth.as_account().is_some() => Ok(RequireAccount),
+            Some(auth) if auth.is_account() => Ok(RequireAccount),
             Some(_) => Err(JSendBuilder::new()
                 .status_code(StatusCode::FORBIDDEN)
                 .fail(UnauthorizedResponse {

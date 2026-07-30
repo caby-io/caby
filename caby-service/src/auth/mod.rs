@@ -93,6 +93,14 @@ impl AuthUser {
         }
     }
 
+    pub fn is_account(&self) -> bool {
+        matches!(&self.user, User::Account(_))
+    }
+
+    pub fn is_guest(&self) -> bool {
+        matches!(&self.user, User::Guest(_))
+    }
+
     pub fn can_on_share(&self, share: &Share, permission: Permission) -> bool {
         match &self.user {
             User::Account(account) => share.can_account(account, permission),
