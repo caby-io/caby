@@ -45,7 +45,7 @@ struct AdminShareResponse {
     account_flows: Vec<FlowDetail>,
     guest_flows: Vec<FlowDetail>,
     account_allowlist: BTreeMap<String, Grant>,
-    guests_allowlist: BTreeMap<String, Grant>,
+    guest_allowlist: BTreeMap<String, Grant>,
     created_at: DateTime<Utc>,
     expires_at: Option<DateTime<Utc>>,
 }
@@ -64,8 +64,8 @@ impl From<&Share> for AdminShareResponse {
                 .iter()
                 .map(|(id, grant)| (id.clone(), grant.clone()))
                 .collect(),
-            guests_allowlist: share
-                .guests_allowlist
+            guest_allowlist: share
+                .guest_allowlist
                 .iter()
                 .map(|(id, grant)| (id.clone(), grant.clone()))
                 .collect(),

@@ -56,7 +56,7 @@ pub struct Share {
     pub root_entry: String,
 
     pub account_allowlist: HashMap<String, Grant>,
-    pub guests_allowlist: HashMap<String, Grant>,
+    pub guest_allowlist: HashMap<String, Grant>,
 
     pub account_flows: Vec<ShareAccessFlow>,
     pub guest_flows: Vec<ShareAccessFlow>,
@@ -75,7 +75,7 @@ struct ShareConfigFile {
     #[serde(default)]
     account_allowlist: BTreeMap<String, Grant>,
     #[serde(default)]
-    guests_allowlist: BTreeMap<String, Grant>,
+    guest_allowlist: BTreeMap<String, Grant>,
 
     #[serde(default)]
     account_flows: Vec<ShareAccessFlow>,
@@ -94,7 +94,7 @@ impl From<ShareConfigFile> for Share {
             space: stored.space,
             root_entry: stored.root_entry,
             account_allowlist: stored.account_allowlist.into_iter().collect(),
-            guests_allowlist: stored.guests_allowlist.into_iter().collect(),
+            guest_allowlist: stored.guest_allowlist.into_iter().collect(),
             account_flows: stored.account_flows,
             guest_flows: stored.guest_flows,
             created_at: stored.created_at,
@@ -115,8 +115,8 @@ impl From<&Share> for ShareConfigFile {
                 .iter()
                 .map(|(id, grant)| (id.clone(), grant.clone()))
                 .collect(),
-            guests_allowlist: share
-                .guests_allowlist
+            guest_allowlist: share
+                .guest_allowlist
                 .iter()
                 .map(|(id, grant)| (id.clone(), grant.clone()))
                 .collect(),
@@ -181,7 +181,7 @@ impl Share {
             space: space.to_owned(),
             root_entry: root_entry.to_owned(),
             account_allowlist: HashMap::new(),
-            guests_allowlist: HashMap::new(),
+            guest_allowlist: HashMap::new(),
             account_flows,
             guest_flows,
             created_at: Utc::now(),
@@ -217,7 +217,7 @@ impl Share {
     }
 
     pub fn can_guest(&self, guest: &Guest, permission: Permission) -> bool {
-        if let Some(grant) = self.guests_allowlist.get(&guest.id) {
+        if let Some(grant) = self.guest_allowlist.get(&guest.id) {
             if grant.permissions.contains(&permission) {
                 return true;
             }
@@ -233,7 +233,7 @@ impl Share {
     pub fn grant(&mut self, user: &User, permissions: BTreeSet<Permission>) {
         let (allowlist, id) = match user {
             User::Account(account) => (&mut self.account_allowlist, account.name.clone()),
-            User::Guest(guest) => (&mut self.guests_allowlist, guest.id.clone()),
+            User::Guest(guest) => (&mut self.guest_allowlist, guest.id.clone()),
         };
         allowlist.insert(
             id,
@@ -460,7 +460,7 @@ mod tests {
         assert!(!share.can_guest(&guest, Permission::Download));
 
         share
-            .guests_allowlist
+            .guest_allowlist
             .insert(guest.id.clone(), grant(&[Permission::Download]));
         assert!(share.can_guest(&guest, Permission::Download));
         assert!(!share.can_guest(&guest, Permission::Delete));
@@ -506,7 +506,7 @@ mod tests {
         let guest = Guest::new();
         let guest_id = guest.id.clone();
         share.grant(&User::Guest(guest), BTreeSet::from([Permission::View]));
-        assert!(share.guests_allowlist.contains_key(&guest_id));
+        assert!(share.guest_allowlist.contains_key(&guest_id));
         assert!(share.account_allowlist.is_empty());
 
         share.grant(
