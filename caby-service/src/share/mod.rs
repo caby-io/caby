@@ -44,7 +44,6 @@ pub struct ShareAccessFlow {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Grant {
-    pub principal_id: String,
     pub permissions: BTreeSet<Permission>,
     pub created_at: DateTime<Utc>,
 }
@@ -237,9 +236,8 @@ impl Share {
             User::Guest(guest) => (&mut self.guests_allowlist, guest.id.clone()),
         };
         allowlist.insert(
-            id.clone(),
+            id,
             Grant {
-                principal_id: id,
                 permissions,
                 created_at: Utc::now(),
             },
@@ -424,9 +422,8 @@ mod tests {
         }
     }
 
-    fn grant(id: &str, perms: &[Permission]) -> Grant {
+    fn grant(perms: &[Permission]) -> Grant {
         Grant {
-            principal_id: id.to_owned(),
             permissions: perms.iter().copied().collect(),
             created_at: Utc::now(),
         }
@@ -464,7 +461,7 @@ mod tests {
 
         share
             .guests_allowlist
-            .insert(guest.id.clone(), grant(&guest.id, &[Permission::Download]));
+            .insert(guest.id.clone(), grant(&[Permission::Download]));
         assert!(share.can_guest(&guest, Permission::Download));
         assert!(!share.can_guest(&guest, Permission::Delete));
         assert!(!share.can_guest(&Guest::new(), Permission::Download));
@@ -490,7 +487,7 @@ mod tests {
 
         share
             .account_allowlist
-            .insert("suhaib".to_owned(), grant("suhaib", &[Permission::Delete]));
+            .insert("suhaib".to_owned(), grant(&[Permission::Delete]));
         assert!(share.can_account(&account("suhaib"), Permission::Delete));
         assert!(!share.can_account(&account("other"), Permission::Delete));
     }
