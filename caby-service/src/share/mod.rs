@@ -1,5 +1,5 @@
 use std::{
-    collections::{BTreeMap, BTreeSet},
+    collections::{BTreeMap, BTreeSet, HashMap},
     io::ErrorKind,
     path::{Path, PathBuf},
 };
@@ -48,25 +48,84 @@ pub struct Grant {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct Share {
     pub id: String,
     pub owner_id: String,
     pub space: String,
     pub root_entry: String,
 
-    #[serde(default)]
-    pub account_allowlist: BTreeMap<String, Grant>,
-    #[serde(default)]
-    pub guests_allowlist: BTreeMap<String, Grant>,
+    pub account_allowlist: HashMap<String, Grant>,
+    pub guests_allowlist: HashMap<String, Grant>,
 
-    #[serde(default)]
     pub account_flows: Vec<ShareAccessFlow>,
-    #[serde(default)]
     pub guest_flows: Vec<ShareAccessFlow>,
 
     pub created_at: DateTime<Utc>,
     pub expires_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct ShareConfigFile {
+    id: String,
+    owner_id: String,
+    space: String,
+    root_entry: String,
+
+    #[serde(default)]
+    account_allowlist: BTreeMap<String, Grant>,
+    #[serde(default)]
+    guests_allowlist: BTreeMap<String, Grant>,
+
+    #[serde(default)]
+    account_flows: Vec<ShareAccessFlow>,
+    #[serde(default)]
+    guest_flows: Vec<ShareAccessFlow>,
+
+    created_at: DateTime<Utc>,
+    expires_at: Option<DateTime<Utc>>,
+}
+
+impl From<ShareConfigFile> for Share {
+    fn from(stored: ShareConfigFile) -> Self {
+        Share {
+            id: stored.id,
+            owner_id: stored.owner_id,
+            space: stored.space,
+            root_entry: stored.root_entry,
+            account_allowlist: stored.account_allowlist.into_iter().collect(),
+            guests_allowlist: stored.guests_allowlist.into_iter().collect(),
+            account_flows: stored.account_flows,
+            guest_flows: stored.guest_flows,
+            created_at: stored.created_at,
+            expires_at: stored.expires_at,
+        }
+    }
+}
+
+impl From<&Share> for ShareConfigFile {
+    fn from(share: &Share) -> Self {
+        ShareConfigFile {
+            id: share.id.clone(),
+            owner_id: share.owner_id.clone(),
+            space: share.space.clone(),
+            root_entry: share.root_entry.clone(),
+            account_allowlist: share
+                .account_allowlist
+                .iter()
+                .map(|(id, grant)| (id.clone(), grant.clone()))
+                .collect(),
+            guests_allowlist: share
+                .guests_allowlist
+                .iter()
+                .map(|(id, grant)| (id.clone(), grant.clone()))
+                .collect(),
+            account_flows: share.account_flows.clone(),
+            guest_flows: share.guest_flows.clone(),
+            created_at: share.created_at,
+            expires_at: share.expires_at,
+        }
+    }
 }
 
 fn share_path(space: &Space, id: &str) -> Result<PathBuf> {
@@ -121,8 +180,8 @@ impl Share {
             owner_id: owner_id.to_owned(),
             space: space.to_owned(),
             root_entry: root_entry.to_owned(),
-            account_allowlist: BTreeMap::new(),
-            guests_allowlist: BTreeMap::new(),
+            account_allowlist: HashMap::new(),
+            guests_allowlist: HashMap::new(),
             account_flows,
             guest_flows,
             created_at: Utc::now(),
@@ -188,7 +247,9 @@ impl Share {
                 .with_context(|| format!("could not create shares dir {:?}", parent))?;
         }
 
-        let serialized = serde_json::to_string_pretty(self).context("could not serialize share")?;
+        let stored = ShareConfigFile::from(self);
+        let serialized =
+            serde_json::to_string_pretty(&stored).context("could not serialize share")?;
         fs::write(&path, serialized)
             .await
             .with_context(|| format!("could not write share file {:?}", path))?;
@@ -208,10 +269,10 @@ impl Share {
         let content = fs::read_to_string(&path)
             .await
             .with_context(|| format!("could not read share file {:?}", path))?;
-        let share: Share = serde_json::from_str(&content)
+        let stored: ShareConfigFile = serde_json::from_str(&content)
             .with_context(|| format!("could not parse share file {:?}", path))?;
 
-        Ok(Some(share))
+        Ok(Some(Share::from(stored)))
     }
 
     pub async fn delete(space: &Space, id: &str) -> Result<()> {
