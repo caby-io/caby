@@ -12,6 +12,7 @@ use path_clean::PathClean;
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
+use tracing::warn;
 
 use crate::{
     auth::User,
@@ -130,6 +131,46 @@ impl From<&Share> for ShareConfigFile {
 
 fn share_path(space: &Space, id: &str) -> Result<PathBuf> {
     space.join(SpaceDir::SHARES, Path::new(&format!("{id}.json")))
+}
+
+async fn load_share_file(path: &Path) -> Result<Share> {
+    let content = fs::read_to_string(path)
+        .await
+        .with_context(|| format!("could not read share file {:?}", path))?;
+    let stored: ShareConfigFile = serde_json::from_str(&content)
+        .with_context(|| format!("could not parse share file {:?}", path))?;
+
+    Ok(Share::from(stored))
+}
+
+pub async fn list_in_space(space: &Space) -> Result<Vec<Share>> {
+    let dir = space.shares();
+    let mut read_dir = match fs::read_dir(&dir).await {
+        Ok(read_dir) => read_dir,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(err) => {
+            return Err(anyhow!(err).context(format!("could not read shares dir {:?}", dir)))
+        }
+    };
+
+    let mut shares = Vec::new();
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .with_context(|| format!("could not read shares dir {:?}", dir))?
+    {
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+
+        match load_share_file(&path).await {
+            Ok(share) => shares.push(share),
+            Err(err) => warn!("skipping unreadable share file {:?}: {:#}", path, err),
+        }
+    }
+
+    Ok(shares)
 }
 
 impl ShareAuth {
@@ -288,13 +329,7 @@ impl Share {
             return Ok(None);
         }
 
-        let content = fs::read_to_string(&path)
-            .await
-            .with_context(|| format!("could not read share file {:?}", path))?;
-        let stored: ShareConfigFile = serde_json::from_str(&content)
-            .with_context(|| format!("could not parse share file {:?}", path))?;
-
-        Ok(Some(Share::from(stored)))
+        Ok(Some(load_share_file(&path).await?))
     }
 
     pub async fn delete(space: &Space, id: &str) -> Result<()> {
@@ -380,6 +415,32 @@ mod tests {
         let space = temp_space();
         let loaded = Share::load(&space, "does-not-exist").await.unwrap();
         assert_eq!(loaded, None);
+        cleanup(&space);
+    }
+
+    #[tokio::test]
+    async fn list_in_space_missing_dir_is_empty() {
+        let space = temp_space();
+        let listed = list_in_space(&space).await.unwrap();
+        assert!(listed.is_empty());
+        cleanup(&space);
+    }
+
+    #[tokio::test]
+    async fn list_in_space_returns_all_saved_shares() {
+        let space = temp_space();
+        Share::new("suhaib", &space.name, "photos", vec![], vec![], None)
+            .save(&space)
+            .await
+            .unwrap();
+        Share::new("other", &space.name, "docs", vec![], vec![], None)
+            .save(&space)
+            .await
+            .unwrap();
+
+        let listed = list_in_space(&space).await.unwrap();
+        assert_eq!(listed.len(), 2);
+
         cleanup(&space);
     }
 
