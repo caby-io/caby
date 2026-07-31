@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tracing::warn;
 
 use crate::{
@@ -13,12 +13,8 @@ use crate::{
     jsend::JSendBuilder,
     share::{Share, ShareAuth},
     space::Space,
+    web::shares_api::ShareIdParam,
 };
-
-#[derive(Deserialize)]
-pub struct ShareIdParam {
-    pub id: String,
-}
 
 #[derive(Serialize)]
 struct AuthOptions {

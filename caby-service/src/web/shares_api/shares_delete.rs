@@ -7,8 +7,7 @@ use serde::Serialize;
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser, jsend::JSendBuilder, share::Share, space::Space,
-    web::shares_api::shares_get::ShareIdParam,
+    auth::AuthUser, jsend::JSendBuilder, share::Share, space::Space, web::shares_api::ShareIdParam,
 };
 
 #[derive(Serialize)]

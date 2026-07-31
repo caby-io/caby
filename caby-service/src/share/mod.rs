@@ -419,7 +419,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_in_space_missing_dir_is_empty() {
+    async fn get_shares_in_space_missing_dir_is_empty() {
         let space = temp_space();
         let listed = get_shares_in_space(&space).await.unwrap();
         assert!(listed.is_empty());
@@ -427,7 +427,7 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn list_in_space_returns_all_saved_shares() {
+    async fn get_shares_in_space_returns_all_saved_shares() {
         let space = temp_space();
         Share::new("suhaib", &space.name, "photos", vec![], vec![], None)
             .save(&space)

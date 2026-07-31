@@ -15,7 +15,7 @@ use crate::{
     share::{Grant, Share, ShareAccessFlow, ShareAuth, ShareLimits},
     space::Space,
     user::Permission,
-    web::shares_api::shares_get::ShareIdParam,
+    web::shares_api::ShareIdParam,
 };
 
 #[derive(Serialize)]

@@ -109,10 +109,13 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                     "/{space}/{id}/auth/password",
                     post(shares_api::handle_password_auth_share),
                 )
-                .route("/{space}/{id}/list", get(shares_api::handle_list_share))
+                .route(
+                    "/{space}/{id}/list",
+                    get(shares_api::handle_list_share_files),
+                )
                 .route(
                     "/{space}/{id}/list/{*path}",
-                    get(shares_api::handle_list_share),
+                    get(shares_api::handle_list_share_files),
                 )
                 .route(
                     "/{space}/{id}/download/{*path}",
