@@ -9,7 +9,7 @@ use tracing::warn;
 use crate::{
     auth::AuthUser,
     jsend::JSendBuilder,
-    share::{list_in_space, Share},
+    share::{get_shares_in_space, Share},
     space::Space,
 };
 
@@ -49,7 +49,7 @@ pub async fn handle_list_shares(space: Space, auth: AuthUser) -> Response {
             .into_response();
     };
 
-    let shares = match list_in_space(&space).await {
+    let shares = match get_shares_in_space(&space).await {
         Ok(shares) => shares,
         Err(err) => {
             warn!("could not list shares in {}: {:#}", space.name, err);

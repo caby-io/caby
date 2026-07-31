@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, patch, post, put},
+    routing::{delete, get, patch, post, put},
     Router,
 };
 
@@ -100,6 +100,7 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 .route("/{space}", post(shares_api::handle_create_share))
                 .route("/{space}", get(shares_api::handle_list_shares))
                 .route("/{space}/{id}", get(shares_api::handle_get_share))
+                .route("/{space}/{id}", delete(shares_api::handle_delete_share))
                 .route(
                     "/{space}/{id}/admin",
                     get(shares_api::handle_admin_get_share),

@@ -143,7 +143,7 @@ async fn load_share_file(path: &Path) -> Result<Share> {
     Ok(Share::from(stored))
 }
 
-pub async fn list_in_space(space: &Space) -> Result<Vec<Share>> {
+pub async fn get_shares_in_space(space: &Space) -> Result<Vec<Share>> {
     let dir = space.shares();
     let mut read_dir = match fs::read_dir(&dir).await {
         Ok(read_dir) => read_dir,
@@ -421,7 +421,7 @@ mod tests {
     #[tokio::test]
     async fn list_in_space_missing_dir_is_empty() {
         let space = temp_space();
-        let listed = list_in_space(&space).await.unwrap();
+        let listed = get_shares_in_space(&space).await.unwrap();
         assert!(listed.is_empty());
         cleanup(&space);
     }
@@ -438,7 +438,7 @@ mod tests {
             .await
             .unwrap();
 
-        let listed = list_in_space(&space).await.unwrap();
+        let listed = get_shares_in_space(&space).await.unwrap();
         assert_eq!(listed.len(), 2);
 
         cleanup(&space);
