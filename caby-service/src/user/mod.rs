@@ -91,13 +91,8 @@ impl Account {
 
         // write the session file
         write(
-            self.path.join(format!("session_{}", token.value.clone())),
-            format!(
-                "{}\n{}\n{}",
-                token.value.clone(),
-                token.issued_at.to_rfc3339(),
-                token.expires_at.to_rfc3339()
-            ),
+            self.path.join(format!("session_{}", token.value)),
+            token.to_file_string(),
         )
         .await
         .map_err(|err| anyhow!(err).context("could not write session file"))?;

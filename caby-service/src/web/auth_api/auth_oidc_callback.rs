@@ -114,7 +114,7 @@ pub async fn handle_oidc_callback(
     let fragment = form_urlencoded::Serializer::new(String::new())
         .append_pair("login_token", &token.value)
         .append_pair("user", &user.name)
-        .append_pair("expires_at", &token.expires_at.to_rfc3339())
+        .append_pair("expires_at", &token.expires_at.to_string())
         .finish();
 
     Redirect::temporary(&format!("{}#{}", post_login_redirect, fragment)).into_response()

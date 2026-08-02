@@ -1,7 +1,7 @@
 use std::{collections::HashMap, path::Path, sync::Arc};
 
 use anyhow::{anyhow, Context};
-use chrono::Utc;
+use jiff::Timestamp;
 use openidconnect::core::CoreIdTokenClaims;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
@@ -145,7 +145,7 @@ pub async fn provision_user(cfg: &Config, claims: &CoreIdTokenClaims) -> Result<
         issuer,
         subject: subject.clone(),
         email: email.clone(),
-        created_at: Utc::now().to_rfc3339(),
+        created_at: Timestamp::now().to_string(),
     };
 
     let serialized =
