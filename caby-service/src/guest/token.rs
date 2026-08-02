@@ -1,8 +1,8 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use bitcode::{Decode, Encode};
 use chacha20poly1305::{aead::Aead, ChaCha20Poly1305, Key, KeyInit, Nonce};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 
 use crate::{guest::Guest, Result};
 
@@ -14,22 +14,28 @@ pub struct GuestToken {
 }
 
 impl GuestToken {
-    fn issued_at(&self) -> DateTime<Utc> {
-        DateTime::from_timestamp(self.issued_at_unix, 0)
-            .expect("issued_at_unix out of valid DateTime range")
+    fn issued_at(&self) -> Result<Timestamp> {
+        Timestamp::from_second(self.issued_at_unix).with_context(|| {
+            format!(
+                "guest token issued_at_unix out of valid range: {}",
+                self.issued_at_unix
+            )
+        })
     }
 
     pub fn is_expired(&self) -> bool {
-        Utc::now().timestamp() > self.expires_at_unix
+        Timestamp::now().as_second() > self.expires_at_unix
     }
 }
 
-impl From<&GuestToken> for Guest {
-    fn from(token: &GuestToken) -> Self {
-        Guest {
+impl TryFrom<&GuestToken> for Guest {
+    type Error = crate::Error;
+
+    fn try_from(token: &GuestToken) -> Result<Self> {
+        Ok(Guest {
             id: token.guest_id.clone(),
-            created_at: token.issued_at(),
-        }
+            created_at: token.issued_at()?,
+        })
     }
 }
 

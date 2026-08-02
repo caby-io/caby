@@ -1,18 +1,21 @@
 use anyhow::{anyhow, Context};
-use chrono::{DateTime, Duration, Utc};
-use std::path::{Path, PathBuf};
+use jiff::Timestamp;
+use std::{
+    path::{Path, PathBuf},
+    time::Duration,
+};
 use tokio::fs;
 
 use crate::{auth::oidc::OIDC_DIR, Result};
 
-const AUTH_CODE_FLOW_TTL_MINUTES: i64 = 5;
+const AUTH_CODE_FLOW_TTL: Duration = Duration::from_mins(5);
 const AUTH_CODE_FLOW_FILE_PREFIX: &str = "flow_";
 const STATE_MAX_LEN: usize = 200;
 
 pub struct AuthCodeFlow {
     pub pkce_verifier: String,
     pub nonce: String,
-    pub expires_at: DateTime<Utc>,
+    pub expires_at: Timestamp,
 }
 
 fn validate_state(state: &str) -> Result<()> {
@@ -47,8 +50,10 @@ impl AuthCodeFlow {
         nonce: &str,
     ) -> Result<()> {
         validate_state(state)?;
-        let expires_at = Utc::now() + Duration::minutes(AUTH_CODE_FLOW_TTL_MINUTES);
-        let content = format!("{}\n{}\n{}", pkce_verifier, nonce, expires_at.to_rfc3339());
+        let expires_at = Timestamp::now()
+            .checked_add(AUTH_CODE_FLOW_TTL)
+            .context("OIDC flow expiry is out of valid range")?;
+        let content = format!("{}\n{}\n{}", pkce_verifier, nonce, expires_at);
         let path = auth_code_flow_path(home_path, state);
         fs::write(&path, content)
             .await
@@ -84,11 +89,11 @@ impl AuthCodeFlow {
             .next()
             .ok_or_else(|| anyhow!("OIDC flow missing expires_at line"))?;
 
-        let expires_at = DateTime::parse_from_rfc3339(expires_at_str)
-            .map_err(|err| anyhow!(err).context("could not parse OIDC flow expires_at"))?
-            .with_timezone(&Utc);
+        let expires_at: Timestamp = expires_at_str
+            .parse()
+            .context("could not parse OIDC flow expires_at")?;
 
-        if Utc::now() > expires_at {
+        if Timestamp::now() > expires_at {
             return Err(anyhow!("OIDC flow expired"));
         }
 
@@ -106,7 +111,7 @@ impl AuthCodeFlow {
             .with_context(|| format!("could not read OIDC dir at {:?}", dir_path))?;
 
         let mut removed: u32 = 0;
-        let now = Utc::now();
+        let now = Timestamp::now();
 
         while let Ok(Some(entry)) = dir.next_entry().await {
             let file_name = entry.file_name();
@@ -125,10 +130,10 @@ impl AuthCodeFlow {
             let Some(expires_at_str) = content.lines().nth(2) else {
                 continue;
             };
-            let Ok(parsed) = DateTime::parse_from_rfc3339(expires_at_str) else {
+            let Ok(expires_at) = expires_at_str.parse::<Timestamp>() else {
                 continue;
             };
-            if now <= parsed.with_timezone(&Utc) {
+            if now <= expires_at {
                 continue;
             }
 
