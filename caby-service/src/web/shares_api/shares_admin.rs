@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::Serialize;
 use tracing::warn;
 
@@ -46,8 +46,8 @@ struct AdminShareResponse {
     guest_flows: Vec<FlowDetail>,
     account_allowlist: BTreeMap<String, Grant>,
     guest_allowlist: BTreeMap<String, Grant>,
-    created_at: DateTime<Utc>,
-    expires_at: Option<DateTime<Utc>>,
+    created_at: Timestamp,
+    expires_at: Option<Timestamp>,
 }
 
 impl From<&Share> for AdminShareResponse {

@@ -7,7 +7,7 @@ use std::{
 use anyhow::{anyhow, Context};
 use argon2::{Argon2, PasswordVerifier};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use path_clean::PathClean;
 use rand::RngExt;
 use serde::{Deserialize, Serialize};
@@ -46,7 +46,7 @@ pub struct ShareAccessFlow {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct Grant {
     pub permissions: BTreeSet<Permission>,
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
 }
 
 #[derive(Clone, PartialEq, Debug)]
@@ -62,8 +62,8 @@ pub struct Share {
     pub account_flows: Vec<ShareAccessFlow>,
     pub guest_flows: Vec<ShareAccessFlow>,
 
-    pub created_at: DateTime<Utc>,
-    pub expires_at: Option<DateTime<Utc>>,
+    pub created_at: Timestamp,
+    pub expires_at: Option<Timestamp>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -83,8 +83,8 @@ struct ShareConfigFile {
     #[serde(default)]
     guest_flows: Vec<ShareAccessFlow>,
 
-    created_at: DateTime<Utc>,
-    expires_at: Option<DateTime<Utc>>,
+    created_at: Timestamp,
+    expires_at: Option<Timestamp>,
 }
 
 impl From<ShareConfigFile> for Share {
@@ -211,7 +211,7 @@ impl Share {
         root_entry: &str,
         account_flows: Vec<ShareAccessFlow>,
         guest_flows: Vec<ShareAccessFlow>,
-        expires_at: Option<DateTime<Utc>>,
+        expires_at: Option<Timestamp>,
     ) -> Self {
         let mut id_bytes = [0u8; 32];
         rand::rng().fill(&mut id_bytes);
@@ -225,14 +225,14 @@ impl Share {
             guest_allowlist: HashMap::new(),
             account_flows,
             guest_flows,
-            created_at: Utc::now(),
+            created_at: Timestamp::now(),
             expires_at,
         }
     }
 
     pub fn is_expired(&self) -> bool {
         match self.expires_at {
-            Some(at) => Utc::now() > at,
+            Some(at) => Timestamp::now() > at,
             None => false,
         }
     }
@@ -284,7 +284,7 @@ impl Share {
             id,
             Grant {
                 permissions,
-                created_at: Utc::now(),
+                created_at: Timestamp::now(),
             },
         );
     }
@@ -347,7 +347,7 @@ impl Share {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use chrono::Duration;
+    use jiff::SignedDuration;
 
     fn sample(account_flows: Vec<ShareAccessFlow>, guest_flows: Vec<ShareAccessFlow>) -> Share {
         Share::new("suhaib", "home", "photos", account_flows, guest_flows, None)
@@ -377,9 +377,9 @@ mod tests {
     fn is_expired_reflects_expiry() {
         let mut share = sample(vec![], vec![]);
         assert!(!share.is_expired());
-        share.expires_at = Some(Utc::now() - Duration::minutes(1));
+        share.expires_at = Some(Timestamp::now() - SignedDuration::from_mins(1));
         assert!(share.is_expired());
-        share.expires_at = Some(Utc::now() + Duration::minutes(1));
+        share.expires_at = Some(Timestamp::now() + SignedDuration::from_mins(1));
         assert!(!share.is_expired());
     }
 
@@ -490,7 +490,7 @@ mod tests {
     fn grant(perms: &[Permission]) -> Grant {
         Grant {
             permissions: perms.iter().copied().collect(),
-            created_at: Utc::now(),
+            created_at: Timestamp::now(),
         }
     }
 

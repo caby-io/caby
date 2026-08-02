@@ -5,7 +5,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
@@ -27,7 +27,7 @@ pub struct CreateShareRequest {
     pub account_flows: Vec<CreateFlow>,
     #[serde(default)]
     pub guest_flows: Vec<CreateFlow>,
-    pub expires_at: Option<DateTime<Utc>>,
+    pub expires_at: Option<Timestamp>,
 }
 
 #[derive(Deserialize)]
@@ -42,8 +42,8 @@ struct CreateShareResponse {
     id: String,
     space: String,
     root_entry: String,
-    created_at: DateTime<Utc>,
-    expires_at: Option<DateTime<Utc>>,
+    created_at: Timestamp,
+    expires_at: Option<Timestamp>,
 }
 
 impl TryFrom<CreateFlow> for ShareAccessFlow {
@@ -77,7 +77,7 @@ pub async fn handle_create_share(
     };
 
     if let Some(expires_at) = req.expires_at {
-        if expires_at <= Utc::now() {
+        if expires_at <= Timestamp::now() {
             return resp.fail("must not expire in the past").into_response();
         }
     }

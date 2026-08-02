@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use rand::RngExt;
 
 pub mod token;
@@ -7,7 +7,7 @@ pub mod token;
 #[derive(Clone, Debug)]
 pub struct Guest {
     pub id: String,
-    pub created_at: DateTime<Utc>,
+    pub created_at: Timestamp,
 }
 
 impl Guest {
@@ -17,7 +17,7 @@ impl Guest {
 
         Self {
             id: URL_SAFE_NO_PAD.encode(id_bytes),
-            created_at: Utc::now(),
+            created_at: Timestamp::now(),
         }
     }
 }

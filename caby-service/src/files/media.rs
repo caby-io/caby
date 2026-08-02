@@ -7,11 +7,13 @@ use chacha20poly1305::{
     aead::{Aead, Generate},
     ChaCha20Poly1305, KeyInit, Nonce,
 };
-use chrono::{DateTime, Duration, Utc};
+use jiff::Timestamp;
+use tracing::error;
 
 use crate::{config::Config, Result};
 
 const TOKEN_LIFETIME_MINS: i64 = 60;
+const TOKEN_LIFETIME_SECS: i64 = TOKEN_LIFETIME_MINS * 60;
 
 pub type MediaTokenStr = String;
 
@@ -24,9 +26,15 @@ pub struct MediaToken {
 
 impl MediaToken {
     pub fn is_expired(&self) -> bool {
-        let issued = DateTime::from_timestamp(self.issued_at_unix, 0)
-            .expect("issued_at_unix out of valid DateTime range");
-        Utc::now() > issued + Duration::minutes(TOKEN_LIFETIME_MINS)
+        let Some(expires_at_unix) = self.issued_at_unix.checked_add(TOKEN_LIFETIME_SECS) else {
+            error!(
+                "media token issued_at_unix out of valid range: {}",
+                self.issued_at_unix
+            );
+            return true;
+        };
+
+        Timestamp::now().as_second() > expires_at_unix
     }
 }
 
@@ -34,7 +42,7 @@ pub fn generate_token(cfg: &Config, space: &str, dir: &str) -> Result<MediaToken
     let payload = MediaToken {
         space: space.to_owned(),
         dir: dir.to_owned(),
-        issued_at_unix: Utc::now().timestamp(),
+        issued_at_unix: Timestamp::now().as_second(),
     };
 
     let cipher = ChaCha20Poly1305::new(&cfg.token_encryption_key);
@@ -102,5 +110,34 @@ impl<'a> MediaUrlFactory<'a> {
 
     pub fn preview_url_for(&self, rel: &Path) -> String {
         self.endpoint_url("preview", rel)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn token(issued_at_unix: i64) -> MediaToken {
+        MediaToken {
+            space: "photos".to_owned(),
+            dir: "holiday".to_owned(),
+            issued_at_unix,
+        }
+    }
+
+    #[test]
+    fn fresh_token_is_not_expired() {
+        assert!(!token(Timestamp::now().as_second()).is_expired());
+    }
+
+    #[test]
+    fn stale_token_is_expired() {
+        let issued_at_unix = Timestamp::now().as_second() - TOKEN_LIFETIME_SECS - 1;
+        assert!(token(issued_at_unix).is_expired());
+    }
+
+    #[test]
+    fn out_of_range_issued_at_fails_closed() {
+        assert!(token(i64::MAX).is_expired());
     }
 }

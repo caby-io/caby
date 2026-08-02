@@ -21,8 +21,8 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
-use chrono::Utc;
 use futures_util::TryStreamExt;
+use jiff::Timestamp;
 use path_clean::PathClean;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -102,7 +102,7 @@ pub async fn handle_register_upload(
 
     let token_payload = UploadTokenPayload {
         id: id.to_string(),
-        issued_at_unix: Utc::now().timestamp(),
+        issued_at_unix: Timestamp::now().as_second(),
         base_path: req.base_path,
         chunk_size: MAX_CHUNK_SIZE,
         total_size,

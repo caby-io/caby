@@ -2,7 +2,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Response},
 };
-use chrono::{DateTime, Utc};
+use jiff::Timestamp;
 use serde::Serialize;
 use tracing::warn;
 
@@ -17,8 +17,8 @@ use crate::{
 struct ShareSummary {
     id: String,
     root_entry: String,
-    created_at: DateTime<Utc>,
-    expires_at: Option<DateTime<Utc>>,
+    created_at: Timestamp,
+    expires_at: Option<Timestamp>,
     expired: bool,
 }
 

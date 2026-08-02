@@ -8,7 +8,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use tokio::fs;
-use tracing::warn;
+use tracing::{error, warn};
 
 use crate::{
     auth::{AuthUser, Token, User},
@@ -142,9 +142,14 @@ where
             return Err(unauthorized());
         }
 
+        let guest = Guest::try_from(&decoded).map_err(|err| {
+            error!("could not build guest from token: {:#}", err);
+            unauthorized()
+        })?;
+
         return Ok(Some(AuthUser {
             token: guest_token,
-            user: User::Guest(Guest::from(&decoded)),
+            user: User::Guest(guest),
         }));
     }
 

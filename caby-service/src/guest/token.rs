@@ -1,15 +1,19 @@
-use anyhow::anyhow;
+use std::time::Duration;
+
+use anyhow::{anyhow, Context};
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use bitcode::{Decode, Encode};
 use chacha20poly1305::{
     aead::{Aead, Generate},
     ChaCha20Poly1305, Key, KeyInit, Nonce,
 };
-use chrono::{DateTime, Duration, Utc};
+use jiff::Timestamp;
 
 use crate::{guest::Guest, Result};
 
-pub const DEFAULT_GUEST_TOKEN_LIFETIME_DAYS: i64 = 7;
+const DEFAULT_GUEST_TOKEN_LIFETIME_DAYS: u64 = 7;
+pub const DEFAULT_GUEST_TOKEN_LIFETIME: Duration =
+    Duration::from_mins(DEFAULT_GUEST_TOKEN_LIFETIME_DAYS * 24 * 60);
 
 #[derive(Encode, Decode, PartialEq, Debug)]
 pub struct GuestToken {
@@ -19,36 +23,50 @@ pub struct GuestToken {
 }
 
 impl GuestToken {
-    pub fn new(guest_id: &str, lifetime: Duration) -> Self {
-        let now = Utc::now();
-        Self {
+    pub fn new(guest_id: &str, lifetime: Duration) -> Result<Self> {
+        let now = Timestamp::now();
+        let expires_at = now
+            .checked_add(lifetime)
+            .context("guest token expiry is out of valid range")?;
+
+        Ok(Self {
             guest_id: guest_id.to_owned(),
-            issued_at_unix: now.timestamp(),
-            expires_at_unix: (now + lifetime).timestamp(),
-        }
+            issued_at_unix: now.as_second(),
+            expires_at_unix: expires_at.as_second(),
+        })
     }
 
-    fn issued_at(&self) -> DateTime<Utc> {
-        DateTime::from_timestamp(self.issued_at_unix, 0)
-            .expect("issued_at_unix out of valid DateTime range")
+    fn issued_at(&self) -> Result<Timestamp> {
+        Timestamp::from_second(self.issued_at_unix).with_context(|| {
+            format!(
+                "guest token issued_at_unix out of valid range: {}",
+                self.issued_at_unix
+            )
+        })
     }
 
-    pub fn expires_at(&self) -> DateTime<Utc> {
-        DateTime::from_timestamp(self.expires_at_unix, 0)
-            .expect("expires_at_unix out of valid DateTime range")
+    pub fn expires_at(&self) -> Result<Timestamp> {
+        Timestamp::from_second(self.expires_at_unix).with_context(|| {
+            format!(
+                "guest token expires_at_unix out of valid range: {}",
+                self.expires_at_unix
+            )
+        })
     }
 
     pub fn is_expired(&self) -> bool {
-        Utc::now().timestamp() > self.expires_at_unix
+        Timestamp::now().as_second() > self.expires_at_unix
     }
 }
 
-impl From<&GuestToken> for Guest {
-    fn from(token: &GuestToken) -> Self {
-        Guest {
+impl TryFrom<&GuestToken> for Guest {
+    type Error = crate::Error;
+
+    fn try_from(token: &GuestToken) -> Result<Self> {
+        Ok(Guest {
             id: token.guest_id.clone(),
-            created_at: token.issued_at(),
-        }
+            created_at: token.issued_at()?,
+        })
     }
 }
 
@@ -93,10 +111,7 @@ mod tests {
     use super::*;
 
     fn sample() -> GuestToken {
-        GuestToken::new(
-            "guest-abc",
-            Duration::days(DEFAULT_GUEST_TOKEN_LIFETIME_DAYS),
-        )
+        GuestToken::new("guest-abc", DEFAULT_GUEST_TOKEN_LIFETIME).unwrap()
     }
 
     #[test]
@@ -131,14 +146,19 @@ mod tests {
         let fresh = sample();
         assert!(!fresh.is_expired());
 
-        let stale = GuestToken::new("guest-abc", Duration::days(-1));
+        let now = Timestamp::now().as_second();
+        let stale = GuestToken {
+            guest_id: "guest-abc".to_owned(),
+            issued_at_unix: now - 10,
+            expires_at_unix: now - 1,
+        };
         assert!(stale.is_expired());
     }
 
     #[test]
     fn decodes_into_guest() {
         let token = sample();
-        let guest: Guest = (&token).into();
+        let guest = Guest::try_from(&token).unwrap();
         assert_eq!(guest.id, "guest-abc");
     }
 }

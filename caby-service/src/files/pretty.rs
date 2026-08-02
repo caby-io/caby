@@ -1,5 +1,6 @@
-#![feature(duration_constructors)]
 use std::time::SystemTime;
+
+use tracing::warn;
 
 const DURATION_MINUTE: u64 = 60;
 const DURATION_HOUR: u64 = 3600;
@@ -12,8 +13,13 @@ pub fn date(time: &Option<SystemTime>) -> String {
         return "Unknown".to_owned();
     };
 
-    // TODO: Handle this error
-    let duration = SystemTime::now().duration_since(*time).unwrap().as_secs();
+    let duration = match SystemTime::now().duration_since(*time) {
+        Ok(duration) => duration.as_secs(),
+        Err(err) => {
+            warn!("file timestamp is in the future by {:?}", err.duration());
+            return "Just now".to_owned();
+        }
+    };
 
     if duration < DURATION_MINUTE {
         return "Just now".to_string();
