@@ -16,18 +16,21 @@ use config::Config;
 use tokio::{net::TcpListener, task, time};
 use tower::Layer;
 use tower_http::{cors::CorsLayer, normalize_path::NormalizePathLayer, trace::TraceLayer};
-use tracing::info;
+use tracing::{error, info};
 
 mod auth;
 mod bootstrap;
 mod config;
+mod controller;
 mod ctx;
 mod download;
 mod error;
+mod event;
 mod files;
 mod guest;
 mod housekeeping;
 mod img_thumbs;
+mod job;
 mod jsend;
 mod share;
 mod space;
@@ -77,6 +80,7 @@ async fn main() -> Result<()> {
         .allow_credentials(true);
 
     let state = state::AppState::new(cfg).await?;
+    let controller = state.controller.clone();
 
     let app = Router::new()
         .nest("/v0", web::api_router(&state))
@@ -98,6 +102,14 @@ async fn main() -> Result<()> {
         .await
         .context("could not bind listener on 0.0.0.0:8080")?;
     axum::serve(listener, ServiceExt::<Request>::into_make_service(app))
+        .with_graceful_shutdown(async move {
+            if let Err(err) = tokio::signal::ctrl_c().await {
+                error!("could not listen for shutdown signal: {}", err);
+                return;
+            }
+            info!("shutting down, waiting for in-flight jobs");
+            controller.shutdown().await;
+        })
         .await
         .context("server crashed")?;
 

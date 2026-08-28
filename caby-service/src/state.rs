@@ -1,12 +1,16 @@
 use axum::extract::FromRef;
 use std::sync::Arc;
 
-use crate::{auth::oidc::OidcClient, config::Config, Result};
+use crate::{
+    auth::oidc::OidcClient, config::Config, controller::Controller, event::Sender, Result,
+};
 
 #[derive(Clone)]
 pub struct AppState {
     pub config: Config,
     pub oidc_client: Option<Arc<OidcClient>>,
+    pub controller: Arc<Controller>,
+    pub events_tx: Sender,
 }
 
 impl AppState {
@@ -15,9 +19,12 @@ impl AppState {
             Some(oidc_cfg) => Some(Arc::new(OidcClient::new(oidc_cfg).await?)),
             None => None,
         };
+        let (controller, events_tx) = Controller::new(config.clone());
         Ok(Self {
             config,
             oidc_client,
+            controller,
+            events_tx,
         })
     }
 }
@@ -32,5 +39,17 @@ impl FromRef<AppState> for Config {
 impl FromRef<AppState> for Option<Arc<OidcClient>> {
     fn from_ref(state: &AppState) -> Self {
         state.oidc_client.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<Controller> {
+    fn from_ref(state: &AppState) -> Self {
+        state.controller.clone()
+    }
+}
+
+impl FromRef<AppState> for Sender {
+    fn from_ref(state: &AppState) -> Self {
+        state.events_tx.clone()
     }
 }

@@ -22,6 +22,8 @@ use crate::{
     Result,
 };
 
+pub const CABY_SHARE_STATE_FILE: &str = "share.json";
+
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ShareAuth {
@@ -67,7 +69,7 @@ pub struct Share {
 }
 
 #[derive(Serialize, Deserialize)]
-struct ShareConfigFile {
+struct ShareStateFile {
     id: String,
     owner_id: String,
     space: String,
@@ -87,8 +89,8 @@ struct ShareConfigFile {
     expires_at: Option<Timestamp>,
 }
 
-impl From<ShareConfigFile> for Share {
-    fn from(stored: ShareConfigFile) -> Self {
+impl From<ShareStateFile> for Share {
+    fn from(stored: ShareStateFile) -> Self {
         Share {
             id: stored.id,
             owner_id: stored.owner_id,
@@ -104,9 +106,9 @@ impl From<ShareConfigFile> for Share {
     }
 }
 
-impl From<&Share> for ShareConfigFile {
+impl From<&Share> for ShareStateFile {
     fn from(share: &Share) -> Self {
-        ShareConfigFile {
+        ShareStateFile {
             id: share.id.clone(),
             owner_id: share.owner_id.clone(),
             space: share.space.clone(),
@@ -137,7 +139,7 @@ async fn load_share_file(path: &Path) -> Result<Share> {
     let content = fs::read_to_string(path)
         .await
         .with_context(|| format!("could not read share file {:?}", path))?;
-    let stored: ShareConfigFile = serde_json::from_str(&content)
+    let stored: ShareStateFile = serde_json::from_str(&content)
         .with_context(|| format!("could not parse share file {:?}", path))?;
 
     Ok(Share::from(stored))
@@ -310,7 +312,7 @@ impl Share {
                 .with_context(|| format!("could not create shares dir {:?}", parent))?;
         }
 
-        let stored = ShareConfigFile::from(self);
+        let stored = ShareStateFile::from(self);
         let serialized =
             serde_json::to_string_pretty(&stored).context("could not serialize share")?;
         fs::write(&path, serialized)
