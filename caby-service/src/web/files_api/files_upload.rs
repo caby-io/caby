@@ -1,6 +1,6 @@
 use crate::{
     config::Config,
-    files::merge_dir,
+    files::{merge_dir, ops::FileConflictStrategy},
     jsend::JSendBuilder,
     space::Space,
     upload::{
@@ -42,7 +42,7 @@ use tracing::error;
 pub struct RegisterUploadRequest {
     pub base_path: String,
     pub entries: Vec<UploadEntry>,
-    pub conflict_strategy: ConflictStrategy,
+    pub conflict_strategy: FileConflictStrategy,
 }
 
 #[derive(Serialize)]

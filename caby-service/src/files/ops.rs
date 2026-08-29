@@ -1,13 +1,129 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Context};
+use serde::Deserialize;
 use tokio::{fs, io};
 use tracing::warn;
 
 use crate::{
-    error::Result,
+    error::{Error, Result},
     space::{Space, SpaceDir},
 };
+
+pub fn is_name_too_long(err: &Error) -> bool {
+    err.downcast_ref::<io::Error>().is_some_and(is_too_long)
+}
+
+fn is_too_long(err: &io::Error) -> bool {
+    err.kind() == io::ErrorKind::InvalidFilename
+}
+
+#[derive(Deserialize, Debug)]
+#[serde(rename_all = "lowercase")]
+pub enum FileConflictStrategy {
+    Override,
+    Skip,
+    Deconflict,
+}
+
+#[derive(Deserialize, Debug, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum DirConflictStrategy {
+    #[default]
+    Merge,
+    Skip,
+    Deconflict,
+}
+
+pub enum WriteOutcome {
+    Created(PathBuf),
+    Overwritten(PathBuf),
+    Deconflicted(PathBuf),
+    Skipped(PathBuf),
+}
+
+pub async fn write_file(
+    space: &Space,
+    rel: &Path,
+    content: &str,
+    strategy: FileConflictStrategy,
+) -> Result<WriteOutcome> {
+    let live = space.join(SpaceDir::LIVE, rel)?;
+
+    if !fs::try_exists(&live).await? {
+        fs::write(&live, content).await?;
+        return Ok(WriteOutcome::Created(rel.to_path_buf()));
+    }
+
+    match strategy {
+        FileConflictStrategy::Override => {
+            fs::write(&live, content).await?;
+            Ok(WriteOutcome::Overwritten(rel.to_path_buf()))
+        }
+        FileConflictStrategy::Skip => Ok(WriteOutcome::Skipped(rel.to_path_buf())),
+        FileConflictStrategy::Deconflict => {
+            let deconflicted = deconflict(space, rel).await?;
+            let live = space.join(SpaceDir::LIVE, &deconflicted)?;
+            fs::write(&live, content).await?;
+            Ok(WriteOutcome::Deconflicted(deconflicted))
+        }
+    }
+}
+
+pub async fn create_dir(
+    space: &Space,
+    rel: &Path,
+    strategy: DirConflictStrategy,
+) -> Result<PathBuf> {
+    let live = space.join(SpaceDir::LIVE, rel)?;
+
+    if !fs::try_exists(&live).await? {
+        fs::create_dir(&live).await?;
+        return Ok(rel.to_path_buf());
+    }
+
+    match strategy {
+        // a freshly-created dir is empty, so merge and skip are both idempotent no-ops
+        DirConflictStrategy::Merge | DirConflictStrategy::Skip => Ok(rel.to_path_buf()),
+        DirConflictStrategy::Deconflict => {
+            let deconflicted = deconflict(space, rel).await?;
+            fs::create_dir(space.join(SpaceDir::LIVE, &deconflicted)?).await?;
+            Ok(deconflicted)
+        }
+    }
+}
+
+async fn deconflict(space: &Space, rel: &Path) -> Result<PathBuf> {
+    let parent = rel.parent().unwrap_or(Path::new(""));
+    let stem = rel
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .ok_or_else(|| anyhow!("invalid file name {:?}", rel))?;
+    let ext = rel.extension().and_then(|ext| ext.to_str());
+
+    let mut stem = stem.to_string();
+    for n in 2..1000 {
+        loop {
+            let name = match ext {
+                Some(ext) => format!("{stem} ({n}).{ext}"),
+                None => format!("{stem} ({n})"),
+            };
+            let candidate = parent.join(name);
+            match fs::try_exists(space.join(SpaceDir::LIVE, &candidate)?).await {
+                Ok(true) => break,
+                Ok(false) => return Ok(candidate),
+                Err(err) if is_too_long(&err) => {
+                    if stem.pop().is_none() {
+                        return Err(anyhow!("could not shorten {:?} to a valid name", rel));
+                    }
+                }
+                Err(err) => return Err(err.into()),
+            }
+        }
+    }
+
+    Err(anyhow!("could not find an available name for {:?}", rel))
+}
 
 // Remove/Delete
 

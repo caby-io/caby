@@ -108,19 +108,49 @@ export const getDownloadURL = async (
 	return `${url}?token=${encodeURIComponent(resp.data.token.value)}`;
 };
 
-export const putEntry = async (
+export enum FileConflictStrategy {
+	OVERRIDE = 'override',
+	SKIP = 'skip',
+	DECONFLICT = 'deconflict'
+}
+
+export enum DirConflictStrategy {
+	MERGE = 'merge',
+	SKIP = 'skip',
+	DECONFLICT = 'deconflict'
+}
+
+export const putDirectory = async (
 	client: ApiClient,
 	space: string,
 	path: string,
-	entry_type: PutEntryType,
 	name: string,
-	content?: any
+	conflict_strategy: DirConflictStrategy = DirConflictStrategy.MERGE
 ) => {
 	const req = ApiRequestBuilder.put(`files/${space}/${path}`)
 		.withJsonBody({
-			entry_type,
+			entry_type: PutEntryType.DIRECTORY,
 			name,
-			...(content && { content })
+			conflict_strategy
+		})
+		.intoRequest();
+	return await client.exec(req);
+};
+
+export const putFile = async (
+	client: ApiClient,
+	space: string,
+	path: string,
+	name: string,
+	content: string,
+	conflict_strategy: FileConflictStrategy
+) => {
+	const req = ApiRequestBuilder.put(`files/${space}/${path}`)
+		.withJsonBody({
+			entry_type: PutEntryType.FILE,
+			name,
+			content,
+			conflict_strategy
 		})
 		.intoRequest();
 	return await client.exec(req);
@@ -133,13 +163,6 @@ export type UploadEntry = {
 	xxh_digest: string;
 };
 
-export enum ConflictStrategy {
-	OVERRIDE = 'override',
-	SKIP = 'skip',
-	PROMPT = 'prompt',
-	DECONFLICT = 'deconflict'
-}
-
 // todo: response type
 // todo: for now we've disabled redirects on all upload operations but consider only doing this for
 export const registerUpload = async (
@@ -147,7 +170,7 @@ export const registerUpload = async (
 	space: string,
 	path: string,
 	entries: Array<UploadEntry>,
-	conflict_strategy: ConflictStrategy = ConflictStrategy.OVERRIDE
+	conflict_strategy: FileConflictStrategy = FileConflictStrategy.OVERRIDE
 ) => {
 	const req = ApiRequestBuilder.post(`files/upload/${space}`)
 		.noRedirect()

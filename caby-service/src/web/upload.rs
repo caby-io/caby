@@ -33,12 +33,3 @@ impl From<UploadEntry> for UploadManifestEntry {
         }
     }
 }
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "lowercase")]
-pub enum ConflictStrategy {
-    Override,
-    Skip,
-    Prompt,
-    Deconflict,
-}
