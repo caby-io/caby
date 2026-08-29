@@ -155,7 +155,7 @@ impl Controller {
                 .registry
                 .lock()
                 .unwrap_or_else(|err| err.into_inner())
-                .take_pending();
+                .take_next();
 
             match pending {
                 Pending::Ready(job) => return Some(JobLease::new(self.clone(), job)),

@@ -52,7 +52,7 @@ impl Registry {
         true
     }
 
-    pub fn take_pending(&mut self) -> Pending {
+    pub fn take_next(&mut self) -> Pending {
         let now = Timestamp::now();
 
         let held: Vec<LockKey> = self
@@ -147,7 +147,7 @@ mod tests {
     }
 
     fn take(registry: &mut Registry) -> Job {
-        match registry.take_pending() {
+        match registry.take_next() {
             Pending::Ready(job) => job,
             Pending::Backoff(delay) => panic!("expected a ready job, backing off {delay:?}"),
             Pending::Empty => panic!("expected a ready job, registry empty"),
@@ -173,7 +173,7 @@ mod tests {
         let running = take(&mut registry);
 
         registry.insert(reconcile("a.caby.yaml"), Priority::Background);
-        assert!(matches!(registry.take_pending(), Pending::Empty));
+        assert!(matches!(registry.take_next(), Pending::Empty));
 
         registry.complete(&running.id);
         let job = take(&mut registry);
@@ -201,7 +201,7 @@ mod tests {
 
         assert!(matches!(registry.requeue(&job.id), Released::Retrying(_)));
 
-        match registry.take_pending() {
+        match registry.take_next() {
             Pending::Backoff(delay) => assert!(delay > Duration::ZERO),
             _ => panic!("expected the retry to be held back"),
         }
@@ -229,7 +229,7 @@ mod tests {
 
         let job = take(&mut registry);
         assert!(matches!(registry.requeue(&job.id), Released::GaveUp));
-        assert!(matches!(registry.take_pending(), Pending::Empty));
+        assert!(matches!(registry.take_next(), Pending::Empty));
     }
 
     #[test]
@@ -240,7 +240,7 @@ mod tests {
         let job = take(&mut registry);
         registry.requeue(&job.id);
 
-        assert!(matches!(registry.take_pending(), Pending::Backoff(_)));
+        assert!(matches!(registry.take_next(), Pending::Backoff(_)));
 
         assert!(!registry.insert(reconcile("a.caby.yaml"), Priority::Interactive));
         let ready = take(&mut registry);
