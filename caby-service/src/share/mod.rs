@@ -441,7 +441,7 @@ pub async fn load_state(space: &Space, spec_path: &Path) -> Result<Option<Share>
     Ok(Some(load_share_file(&path).await?))
 }
 
-async fn remove_state(space: &Space, spec_path: &Path) -> Result<()> {
+pub async fn remove_state(space: &Space, spec_path: &Path) -> Result<()> {
     let path = state_path(space, spec_path)?;
     match fs::remove_file(&path).await {
         Ok(()) => Ok(()),

@@ -5,8 +5,18 @@ use jiff::Timestamp;
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Input {
     // Shares
-    ScanShares { space: String },
-    ReconcileShare { space: String, path: PathBuf },
+    ScanShares {
+        space: String,
+    },
+    ReconcileShare {
+        space: String,
+        path: PathBuf,
+    },
+    MoveShare {
+        space: String,
+        from: PathBuf,
+        to: PathBuf,
+    },
 }
 
 impl Input {
@@ -17,6 +27,16 @@ impl Input {
                 space: space.clone(),
                 path: path.clone(),
             }],
+            Self::MoveShare { space, from, to } => vec![
+                LockKey::Path {
+                    space: space.clone(),
+                    path: from.clone(),
+                },
+                LockKey::Path {
+                    space: space.clone(),
+                    path: to.clone(),
+                },
+            ],
         }
     }
 
@@ -24,6 +44,7 @@ impl Input {
         match self {
             Self::ScanShares { .. } => Duration::from_secs(600),
             Self::ReconcileShare { .. } => Duration::from_secs(60),
+            Self::MoveShare { .. } => Duration::from_secs(60),
         }
     }
 }

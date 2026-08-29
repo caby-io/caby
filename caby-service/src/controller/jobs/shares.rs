@@ -13,7 +13,7 @@ use crate::{
     },
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     job::Input,
-    share::{load_state, Share, ShareSpec},
+    share::{load_state, remove_state, Share, ShareSpec},
     space::{Space, SpaceDir},
     Result,
 };
@@ -39,8 +39,23 @@ fn handle_event(event: &Event) -> Vec<(Priority, Input)> {
             inputs.extend(reconcile(Priority::Interactive, &event.path));
         }
         FileMoved { from } => {
-            inputs.extend(reconcile(Priority::Interactive, &event.path));
-            inputs.extend(reconcile(Priority::Background, from));
+            let to = &event.path;
+            match (
+                has_ext(from, CABY_SHARE_SPEC_EXT),
+                has_ext(to, CABY_SHARE_SPEC_EXT),
+            ) {
+                (true, true) => inputs.push((
+                    Priority::Interactive,
+                    Input::MoveShare {
+                        space: event.space.clone(),
+                        from: from.clone(),
+                        to: to.to_path_buf(),
+                    },
+                )),
+                (false, true) => inputs.extend(reconcile(Priority::Interactive, to)),
+                (true, false) => inputs.extend(reconcile(Priority::Background, from)),
+                (false, false) => {}
+            }
         }
         FileRemoved => {
             inputs.extend(reconcile(Priority::Background, &event.path));
@@ -80,7 +95,7 @@ pub async fn try_reconcile_share(cfg: &Config, space_name: &str, path: &Path) ->
         Ok(content) => content,
         // share spec doesn't exist, attempt an opportunistic cleanup of the state/route
         Err(err) if err.kind() == ErrorKind::NotFound => {
-            return try_cleanup_share(cfg, &space, path).await
+            return try_cleanup_share(&space, path).await
         }
         Err(err) => {
             return Err(anyhow!(err).context(format!("could not read share spec {:?}", live)))
@@ -95,7 +110,45 @@ pub async fn try_reconcile_share(cfg: &Config, space_name: &str, path: &Path) ->
     Ok(())
 }
 
-pub async fn try_cleanup_share(_cfg: &Config, space: &Space, path: &Path) -> Result<()> {
+pub async fn try_move_share(cfg: &Config, space_name: &str, from: &Path, to: &Path) -> Result<()> {
+    info!(
+        "controller: Starting MoveShare on {}/{} -> {}",
+        space_name,
+        from.display(),
+        to.display()
+    );
+
+    let Some(space) = find_space(cfg, space_name) else {
+        return Err(anyhow!("unknown space {}", space_name));
+    };
+
+    move_share(&space, from, to).await
+}
+
+async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
+    let live = space.join(SpaceDir::LIVE, to)?;
+
+    let content = match fs::read_to_string(&live).await {
+        Ok(content) => content,
+        // the moved-to spec is already gone; clean up whatever the move left behind
+        Err(err) if err.kind() == ErrorKind::NotFound => {
+            return try_cleanup_share(space, from).await
+        }
+        Err(err) => {
+            return Err(anyhow!(err).context(format!("could not read share spec {:?}", live)))
+        }
+    };
+
+    let spec = ShareSpec::try_parse(&content)?;
+    let existing = load_state(space, from).await?;
+    let share = Share::from_spec(&space.name, to, spec, existing)?;
+    share.save(space).await?;
+    remove_state(space, from).await?;
+
+    Ok(())
+}
+
+pub async fn try_cleanup_share(space: &Space, path: &Path) -> Result<()> {
     let Some(share) = load_state(space, path).await? else {
         info!(
             "controller: no share state to clean up for {}/{}",
@@ -106,4 +159,70 @@ pub async fn try_cleanup_share(_cfg: &Config, space: &Space, path: &Path) -> Res
     };
 
     Share::delete(space, &share.id).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn temp_space() -> Space {
+        Space {
+            name: "rocinante".to_owned(),
+            display: "Rocinante".to_owned(),
+            path: std::env::temp_dir().join(format!("caby-move-{}", xid::new())),
+        }
+    }
+
+    async fn seed_share(space: &Space, spec_path: &Path, body: &str) -> Share {
+        let spec = ShareSpec::try_parse(body).unwrap();
+        let share = Share::from_spec(&space.name, spec_path, spec, None).unwrap();
+        share.save(space).await.unwrap();
+        share
+    }
+
+    async fn write_live_spec(space: &Space, spec_path: &Path, body: &str) {
+        let live = space.join(SpaceDir::LIVE, spec_path).unwrap();
+        fs::create_dir_all(live.parent().unwrap()).await.unwrap();
+        fs::write(&live, body).await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn move_carries_the_id_and_drops_the_old_state() {
+        let space = temp_space();
+        let from = Path::new("photos.share.caby");
+        let to = Path::new("albums/trip.share.caby");
+        let body = "guest_flows:\n  - permissions: [view]";
+
+        let original = seed_share(&space, from, body).await;
+        write_live_spec(&space, to, body).await;
+
+        move_share(&space, from, to).await.unwrap();
+
+        let moved = load_state(&space, to).await.unwrap().unwrap();
+        assert_eq!(moved.id, original.id);
+        assert_eq!(moved.spec_path, "albums/trip.share.caby");
+        assert_eq!(moved.root_entry, "albums/trip");
+
+        assert!(load_state(&space, from).await.unwrap().is_none());
+        let via_route = Share::load(&space, &original.id).await.unwrap().unwrap();
+        assert_eq!(via_route.spec_path, "albums/trip.share.caby");
+
+        let _ = std::fs::remove_dir_all(&space.path);
+    }
+
+    #[tokio::test]
+    async fn move_to_a_missing_spec_cleans_up_the_source() {
+        let space = temp_space();
+        let from = Path::new("photos.share.caby");
+        let to = Path::new("gone.share.caby");
+
+        let original = seed_share(&space, from, "guest_flows:\n  - permissions: [view]").await;
+
+        move_share(&space, from, to).await.unwrap();
+
+        assert!(load_state(&space, from).await.unwrap().is_none());
+        assert!(Share::load(&space, &original.id).await.unwrap().is_none());
+
+        let _ = std::fs::remove_dir_all(&space.path);
+    }
 }
