@@ -13,7 +13,7 @@ use crate::{
     },
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     job::Input,
-    share::CABY_SHARE_STATE_FILE,
+    share::{spec_root, Share, ShareSpec, CABY_SHARE_STATE_FILE},
     space::{Space, SpaceDir},
     Result,
 };
@@ -76,8 +76,8 @@ pub async fn try_reconcile_share(cfg: &Config, space_name: &str, path: &Path) ->
 
     let live = space.join(SpaceDir::LIVE, path)?;
 
-    let spec = match fs::read_to_string(&live).await {
-        Ok(spec) => spec,
+    let content = match fs::read_to_string(&live).await {
+        Ok(content) => content,
         // share spec doesn't exist, attempt an opportunistic cleanup of the state/route
         Err(err) if err.kind() == ErrorKind::NotFound => {
             return try_cleanup_share(cfg, &space, path).await
@@ -87,27 +87,33 @@ pub async fn try_reconcile_share(cfg: &Config, space_name: &str, path: &Path) ->
         }
     };
 
-    // todo: sync the state and route to the spec
+    let spec = ShareSpec::try_parse(&content)?;
+    let Some(root) = spec_root(path) else {
+        return Err(anyhow!("not a share spec path: {:?}", path));
+    };
+
+    let existing = Share::load_state(&space, path).await?;
+    let share = Share::from_spec(&space.name, &root.to_string_lossy(), spec, existing)?;
+    share.save_state(&space, path).await?;
+
     Ok(())
 }
 
-pub async fn try_cleanup_share(cfg: &Config, space: &Space, path: &Path) -> Result<()> {
+pub async fn try_cleanup_share(_cfg: &Config, space: &Space, path: &Path) -> Result<()> {
     let state_path = space.join(SpaceDir::META, &path.join(CABY_SHARE_STATE_FILE))?;
 
-    let state = match fs::read(&state_path).await {
-        Ok(s) => s,
+    match fs::remove_file(&state_path).await {
+        Ok(()) => Ok(()),
         Err(err) if err.kind() == ErrorKind::NotFound => {
             info!(
-                "controller: could not find share state for {}/{}",
+                "controller: no share state to clean up for {}/{}",
                 space.name,
                 path.display()
             );
-            return Ok(());
+            Ok(())
         }
         Err(err) => {
-            return Err(anyhow!(err).context(format!("could not read share state {:?}", state_path)))
+            Err(anyhow!(err).context(format!("could not remove share state {:?}", state_path)))
         }
-    };
-
-    Ok(())
+    }
 }

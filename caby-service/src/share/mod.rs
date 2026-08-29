@@ -24,7 +24,7 @@ use crate::{
 
 pub mod spec;
 
-pub use spec::{ShareSpec, SpecFlow};
+pub use spec::{spec_root, ShareSpec, SpecFlow};
 
 pub const CABY_SHARE_STATE_FILE: &str = "share.json";
 
@@ -139,6 +139,10 @@ fn share_path(space: &Space, id: &str) -> Result<PathBuf> {
     space.join(SpaceDir::SHARES, Path::new(&format!("{id}.json")))
 }
 
+fn state_path(space: &Space, spec_path: &Path) -> Result<PathBuf> {
+    space.join(SpaceDir::META, &spec_path.join(CABY_SHARE_STATE_FILE))
+}
+
 async fn load_share_file(path: &Path) -> Result<Share> {
     let content = fs::read_to_string(path)
         .await
@@ -210,6 +214,22 @@ impl ShareAccessFlow {
     }
 }
 
+impl TryFrom<SpecFlow> for ShareAccessFlow {
+    type Error = crate::Error;
+
+    fn try_from(flow: SpecFlow) -> Result<Self> {
+        let auth = match flow.password {
+            Some(ref plaintext) => ShareAuth::password(plaintext)?,
+            None => ShareAuth::Open,
+        };
+        Ok(ShareAccessFlow {
+            auth,
+            permissions: flow.permissions,
+            limits: flow.limits,
+        })
+    }
+}
+
 impl Share {
     pub fn new(
         owner_id: &str,
@@ -234,6 +254,49 @@ impl Share {
             created_at: Timestamp::now(),
             expires_at,
         }
+    }
+
+    pub fn from_spec(
+        space: &str,
+        root_entry: &str,
+        spec: ShareSpec,
+        existing: Option<Share>,
+    ) -> Result<Self> {
+        let account_flows = spec
+            .account_flows
+            .into_iter()
+            .map(ShareAccessFlow::try_from)
+            .collect::<Result<Vec<_>>>()?;
+        let guest_flows = spec
+            .guest_flows
+            .into_iter()
+            .map(ShareAccessFlow::try_from)
+            .collect::<Result<Vec<_>>>()?;
+
+        let share = match existing {
+            Some(prev) => Share {
+                id: prev.id,
+                owner_id: prev.owner_id,
+                space: space.to_owned(),
+                root_entry: root_entry.to_owned(),
+                account_allowlist: prev.account_allowlist,
+                guest_allowlist: prev.guest_allowlist,
+                account_flows,
+                guest_flows,
+                created_at: prev.created_at,
+                expires_at: spec.expires_at,
+            },
+            None => Share::new(
+                "",
+                space,
+                root_entry,
+                account_flows,
+                guest_flows,
+                spec.expires_at,
+            ),
+        };
+
+        Ok(share)
     }
 
     pub fn is_expired(&self) -> bool {
@@ -308,22 +371,29 @@ impl Share {
         Ok(scoped)
     }
 
-    pub async fn save(&self, space: &Space) -> Result<()> {
-        let path = share_path(space, &self.id)?;
+    async fn write_to(&self, path: &Path) -> Result<()> {
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent)
                 .await
-                .with_context(|| format!("could not create shares dir {:?}", parent))?;
+                .with_context(|| format!("could not create dir {:?}", parent))?;
         }
 
         let stored = ShareStateFile::from(self);
         let serialized =
             serde_json::to_string_pretty(&stored).context("could not serialize share")?;
-        fs::write(&path, serialized)
+        fs::write(path, serialized)
             .await
             .with_context(|| format!("could not write share file {:?}", path))?;
 
         Ok(())
+    }
+
+    pub async fn save(&self, space: &Space) -> Result<()> {
+        self.write_to(&share_path(space, &self.id)?).await
+    }
+
+    pub async fn save_state(&self, space: &Space, spec_path: &Path) -> Result<()> {
+        self.write_to(&state_path(space, spec_path)?).await
     }
 
     pub async fn load(space: &Space, id: &str) -> Result<Option<Share>> {
@@ -331,6 +401,18 @@ impl Share {
         if !fs::try_exists(&path)
             .await
             .with_context(|| format!("could not check share file {:?}", path))?
+        {
+            return Ok(None);
+        }
+
+        Ok(Some(load_share_file(&path).await?))
+    }
+
+    pub async fn load_state(space: &Space, spec_path: &Path) -> Result<Option<Share>> {
+        let path = state_path(space, spec_path)?;
+        if !fs::try_exists(&path)
+            .await
+            .with_context(|| format!("could not check share state {:?}", path))?
         {
             return Ok(None);
         }
@@ -412,6 +494,59 @@ mod tests {
         share.save(&space).await.unwrap();
         let loaded = Share::load(&space, &share.id).await.unwrap();
         assert_eq!(loaded, Some(share));
+
+        cleanup(&space);
+    }
+
+    fn spec(guest_perms: &[Permission]) -> ShareSpec {
+        ShareSpec {
+            account_flows: vec![],
+            guest_flows: vec![SpecFlow {
+                password: None,
+                permissions: guest_perms.iter().copied().collect(),
+                limits: None,
+            }],
+            expires_at: None,
+        }
+    }
+
+    #[test]
+    fn from_spec_mints_an_id_then_carries_it_across_edits() {
+        let first = Share::from_spec("home", "photos", spec(&[Permission::View]), None).unwrap();
+        assert!(!first.id.is_empty());
+        assert_eq!(first.root_entry, "photos");
+        assert!(first.can_any_guest(Permission::View));
+
+        let second = Share::from_spec(
+            "home",
+            "photos",
+            spec(&[Permission::View, Permission::Download]),
+            Some(first.clone()),
+        )
+        .unwrap();
+
+        assert_eq!(second.id, first.id);
+        assert_eq!(second.created_at, first.created_at);
+        assert!(second.can_any_guest(Permission::Download));
+    }
+
+    #[tokio::test]
+    async fn save_load_state_round_trip() {
+        let space = temp_space();
+        let spec_path = std::path::Path::new("photos/trip.share.caby");
+
+        let share =
+            Share::from_spec("home", "photos/trip", spec(&[Permission::View]), None).unwrap();
+        share.save_state(&space, spec_path).await.unwrap();
+
+        let loaded = Share::load_state(&space, spec_path).await.unwrap();
+        assert_eq!(loaded, Some(share));
+        assert!(
+            Share::load_state(&space, std::path::Path::new("other.share.caby"))
+                .await
+                .unwrap()
+                .is_none()
+        );
 
         cleanup(&space);
     }

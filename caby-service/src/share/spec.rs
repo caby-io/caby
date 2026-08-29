@@ -1,10 +1,22 @@
-use std::collections::BTreeSet;
+use std::{
+    collections::BTreeSet,
+    path::{Path, PathBuf},
+};
 
 use anyhow::{anyhow, Context};
 use jiff::{civil, tz::TimeZone, Timestamp};
 use yaml_rust2::{Yaml, YamlLoader};
 
-use crate::{share::ShareLimits, user::Permission, Result};
+use crate::{files::CABY_SHARE_SPEC_EXT, share::ShareLimits, user::Permission, Result};
+
+pub fn spec_root(spec_path: &Path) -> Option<PathBuf> {
+    let name = spec_path.file_name()?.to_str()?;
+    let stem = name.strip_suffix(CABY_SHARE_SPEC_EXT)?.strip_suffix('.')?;
+    if stem.is_empty() {
+        return None;
+    }
+    Some(spec_path.with_file_name(stem))
+}
 
 pub struct ShareSpec {
     pub account_flows: Vec<SpecFlow>,
@@ -264,6 +276,24 @@ expires_at: 2026-12-31T00:00:00Z
             spec.expires_at,
             Some("2026-12-31T07:30:00Z".parse().unwrap())
         );
+    }
+
+    #[test]
+    fn spec_root_strips_the_sidecar_suffix() {
+        assert_eq!(
+            spec_root(Path::new("photos/trip.share.caby")),
+            Some(PathBuf::from("photos/trip"))
+        );
+        assert_eq!(
+            spec_root(Path::new("album.share.caby")),
+            Some(PathBuf::from("album"))
+        );
+    }
+
+    #[test]
+    fn spec_root_rejects_a_bare_suffix() {
+        assert_eq!(spec_root(Path::new(".share.caby")), None);
+        assert_eq!(spec_root(Path::new("notashare.txt")), None);
     }
 
     #[test]
