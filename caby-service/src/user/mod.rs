@@ -24,6 +24,20 @@ pub enum Permission {
     Delete,
 }
 
+impl TryFrom<&str> for Permission {
+    type Error = crate::Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        match value {
+            "view" => Ok(Self::View),
+            "download" => Ok(Self::Download),
+            "write" => Ok(Self::Write),
+            "delete" => Ok(Self::Delete),
+            _ => Err(anyhow!("unknown permission '{}'", value)),
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct SpaceAccess {
     pub name: String,

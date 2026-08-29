@@ -22,6 +22,10 @@ use crate::{
     Result,
 };
 
+pub mod spec;
+
+pub use spec::{ShareSpec, SpecFlow};
+
 pub const CABY_SHARE_STATE_FILE: &str = "share.json";
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
