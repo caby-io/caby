@@ -98,15 +98,15 @@ impl FromStr for Token {
 mod tests {
     use super::*;
 
-    const CHRONO_ERA_FILE: &str = "tok3n\nphotos\na/one.jpg\0b/two.jpg\n2026-01-02T03:04:05.678901234+00:00\n2026-01-02T03:09:05.678901234+00:00";
-    const JIFF_ERA_FILE: &str = "tok3n\nphotos\na/one.jpg\0b/two.jpg\n2026-01-02T03:04:05.678901234Z\n2026-01-02T03:09:05.678901234Z";
+    const CHRONO_ERA_FILE: &str = "tok3n\nrocinante\na/one.jpg\0b/two.jpg\n2026-01-02T03:04:05.678901234+00:00\n2026-01-02T03:09:05.678901234+00:00";
+    const JIFF_ERA_FILE: &str = "tok3n\nrocinante\na/one.jpg\0b/two.jpg\n2026-01-02T03:04:05.678901234Z\n2026-01-02T03:09:05.678901234Z";
 
     #[test]
     fn parses_offset_and_zulu_download_files_identically() {
         let chrono_era = Token::from_str(CHRONO_ERA_FILE).unwrap();
         let jiff_era = Token::from_str(JIFF_ERA_FILE).unwrap();
 
-        assert_eq!(chrono_era.space, "photos");
+        assert_eq!(chrono_era.space, "rocinante");
         assert_eq!(chrono_era.file_paths, vec!["a/one.jpg", "b/two.jpg"]);
         assert_eq!(chrono_era.issued_at, jiff_era.issued_at);
         assert_eq!(chrono_era.expires_at, jiff_era.expires_at);
@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn round_trips_through_file_string() {
         let token = Token::new(
-            "photos",
+            "rocinante",
             vec!["a/one.jpg".to_owned(), "b/two.jpg".to_owned()],
         )
         .unwrap();

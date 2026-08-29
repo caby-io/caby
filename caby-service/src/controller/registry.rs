@@ -141,7 +141,7 @@ mod tests {
 
     fn reconcile(path: &str) -> Input {
         Input::ReconcileShare {
-            space: "home".to_owned(),
+            space: "rocinante".to_owned(),
             path: PathBuf::from(path),
         }
     }

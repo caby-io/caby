@@ -134,7 +134,7 @@ mod tests {
         UploadTokenPayload {
             id: "upl0ad".to_owned(),
             issued_at_unix,
-            base_path: "photos".to_owned(),
+            base_path: "rocinante".to_owned(),
             chunk_size: 1024,
             total_size: 4096,
         }

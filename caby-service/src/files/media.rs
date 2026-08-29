@@ -119,7 +119,7 @@ mod tests {
 
     fn token(issued_at_unix: i64) -> MediaToken {
         MediaToken {
-            space: "photos".to_owned(),
+            space: "rocinante".to_owned(),
             dir: "holiday".to_owned(),
             issued_at_unix,
         }
