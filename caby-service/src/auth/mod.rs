@@ -137,8 +137,9 @@ mod tests {
 
     fn open_account_share() -> Share {
         Share::new(
-            "owner",
-            "home",
+            "holden",
+            "rocinante",
+            "photos.share.caby",
             "photos",
             vec![open_flow(Permission::Write)],
             vec![],
@@ -148,8 +149,9 @@ mod tests {
 
     fn open_guest_share() -> Share {
         Share::new(
-            "owner",
-            "home",
+            "holden",
+            "rocinante",
+            "photos.share.caby",
             "photos",
             vec![],
             vec![open_flow(Permission::View)],
@@ -193,7 +195,7 @@ mod tests {
 
     #[test]
     fn account_principal_routes_to_can_account() {
-        let auth = account_auth("suhaib");
+        let auth = account_auth("naomi");
         assert!(auth.can_on_share(&open_account_share(), Permission::Write));
         assert!(!auth.can_on_share(&open_account_share(), Permission::Delete));
     }

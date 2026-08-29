@@ -13,7 +13,7 @@ use crate::{
     },
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     job::Input,
-    share::{spec_root, Share, ShareSpec, CABY_SHARE_STATE_FILE},
+    share::{load_state, Share, ShareSpec},
     space::{Space, SpaceDir},
     Result,
 };
@@ -88,32 +88,22 @@ pub async fn try_reconcile_share(cfg: &Config, space_name: &str, path: &Path) ->
     };
 
     let spec = ShareSpec::try_parse(&content)?;
-    let Some(root) = spec_root(path) else {
-        return Err(anyhow!("not a share spec path: {:?}", path));
-    };
-
-    let existing = Share::load_state(&space, path).await?;
-    let share = Share::from_spec(&space.name, &root.to_string_lossy(), spec, existing)?;
-    share.save_state(&space, path).await?;
+    let existing = load_state(&space, path).await?;
+    let share = Share::from_spec(&space.name, path, spec, existing)?;
+    share.save(&space).await?;
 
     Ok(())
 }
 
 pub async fn try_cleanup_share(_cfg: &Config, space: &Space, path: &Path) -> Result<()> {
-    let state_path = space.join(SpaceDir::META, &path.join(CABY_SHARE_STATE_FILE))?;
+    let Some(share) = load_state(space, path).await? else {
+        info!(
+            "controller: no share state to clean up for {}/{}",
+            space.name,
+            path.display()
+        );
+        return Ok(());
+    };
 
-    match fs::remove_file(&state_path).await {
-        Ok(()) => Ok(()),
-        Err(err) if err.kind() == ErrorKind::NotFound => {
-            info!(
-                "controller: no share state to clean up for {}/{}",
-                space.name,
-                path.display()
-            );
-            Ok(())
-        }
-        Err(err) => {
-            Err(anyhow!(err).context(format!("could not remove share state {:?}", state_path)))
-        }
-    }
+    Share::delete(space, &share.id).await
 }

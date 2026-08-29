@@ -128,9 +128,11 @@ pub async fn handle_create_share(
         }
     };
 
+    let spec_path = format!("{root_entry}.share.caby");
     let share = Share::new(
         &account.name,
         &space.name,
+        &spec_path,
         &root_entry,
         account_flows,
         guest_flows,

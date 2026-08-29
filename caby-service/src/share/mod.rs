@@ -60,6 +60,7 @@ pub struct Share {
     pub id: String,
     pub owner_id: String,
     pub space: String,
+    pub spec_path: String,
     pub root_entry: String,
 
     pub account_allowlist: HashMap<String, Grant>,
@@ -77,6 +78,7 @@ struct ShareStateFile {
     id: String,
     owner_id: String,
     space: String,
+    spec_path: String,
     root_entry: String,
 
     #[serde(default)]
@@ -99,6 +101,7 @@ impl From<ShareStateFile> for Share {
             id: stored.id,
             owner_id: stored.owner_id,
             space: stored.space,
+            spec_path: stored.spec_path,
             root_entry: stored.root_entry,
             account_allowlist: stored.account_allowlist.into_iter().collect(),
             guest_allowlist: stored.guest_allowlist.into_iter().collect(),
@@ -116,6 +119,7 @@ impl From<&Share> for ShareStateFile {
             id: share.id.clone(),
             owner_id: share.owner_id.clone(),
             space: share.space.clone(),
+            spec_path: share.spec_path.clone(),
             root_entry: share.root_entry.clone(),
             account_allowlist: share
                 .account_allowlist
@@ -135,7 +139,7 @@ impl From<&Share> for ShareStateFile {
     }
 }
 
-fn share_path(space: &Space, id: &str) -> Result<PathBuf> {
+fn route_path(space: &Space, id: &str) -> Result<PathBuf> {
     space.join(SpaceDir::SHARES, Path::new(&format!("{id}.json")))
 }
 
@@ -174,9 +178,14 @@ pub async fn get_shares_in_space(space: &Space) -> Result<Vec<Share>> {
             continue;
         }
 
-        match load_share_file(&path).await {
-            Ok(share) => shares.push(share),
-            Err(err) => warn!("skipping unreadable share file {:?}: {:#}", path, err),
+        let Some(id) = path.file_stem().and_then(|stem| stem.to_str()) else {
+            continue;
+        };
+
+        match Share::load(space, id).await {
+            Ok(Some(share)) => shares.push(share),
+            Ok(None) => warn!("skipping dangling share route {:?}", path),
+            Err(err) => warn!("skipping unreadable share route {:?}: {:#}", path, err),
         }
     }
 
@@ -234,6 +243,7 @@ impl Share {
     pub fn new(
         owner_id: &str,
         space: &str,
+        spec_path: &str,
         root_entry: &str,
         account_flows: Vec<ShareAccessFlow>,
         guest_flows: Vec<ShareAccessFlow>,
@@ -246,6 +256,7 @@ impl Share {
             id: URL_SAFE_NO_PAD.encode(id_bytes),
             owner_id: owner_id.to_owned(),
             space: space.to_owned(),
+            spec_path: spec_path.to_owned(),
             root_entry: root_entry.to_owned(),
             account_allowlist: HashMap::new(),
             guest_allowlist: HashMap::new(),
@@ -258,10 +269,15 @@ impl Share {
 
     pub fn from_spec(
         space: &str,
-        root_entry: &str,
+        spec_path: &Path,
         spec: ShareSpec,
         existing: Option<Share>,
     ) -> Result<Self> {
+        let root = spec_root(spec_path)
+            .ok_or_else(|| anyhow!("not a share spec path: {:?}", spec_path))?;
+        let root_entry = root.to_string_lossy().into_owned();
+        let spec_path = spec_path.to_string_lossy().into_owned();
+
         let account_flows = spec
             .account_flows
             .into_iter()
@@ -278,7 +294,8 @@ impl Share {
                 id: prev.id,
                 owner_id: prev.owner_id,
                 space: space.to_owned(),
-                root_entry: root_entry.to_owned(),
+                spec_path,
+                root_entry,
                 account_allowlist: prev.account_allowlist,
                 guest_allowlist: prev.guest_allowlist,
                 account_flows,
@@ -289,7 +306,8 @@ impl Share {
             None => Share::new(
                 "",
                 space,
-                root_entry,
+                &spec_path,
+                &root_entry,
                 account_flows,
                 guest_flows,
                 spec.expires_at,
@@ -389,46 +407,92 @@ impl Share {
     }
 
     pub async fn save(&self, space: &Space) -> Result<()> {
-        self.write_to(&share_path(space, &self.id)?).await
-    }
-
-    pub async fn save_state(&self, space: &Space, spec_path: &Path) -> Result<()> {
-        self.write_to(&state_path(space, spec_path)?).await
+        let spec_path = Path::new(&self.spec_path);
+        self.write_to(&state_path(space, spec_path)?).await?;
+        write_route(space, &self.id, &self.spec_path).await
     }
 
     pub async fn load(space: &Space, id: &str) -> Result<Option<Share>> {
-        let path = share_path(space, id)?;
-        if !fs::try_exists(&path)
-            .await
-            .with_context(|| format!("could not check share file {:?}", path))?
-        {
+        let Some(spec_path) = read_route(space, id).await? else {
             return Ok(None);
-        }
-
-        Ok(Some(load_share_file(&path).await?))
-    }
-
-    pub async fn load_state(space: &Space, spec_path: &Path) -> Result<Option<Share>> {
-        let path = state_path(space, spec_path)?;
-        if !fs::try_exists(&path)
-            .await
-            .with_context(|| format!("could not check share state {:?}", path))?
-        {
-            return Ok(None);
-        }
-
-        Ok(Some(load_share_file(&path).await?))
+        };
+        load_state(space, Path::new(&spec_path)).await
     }
 
     pub async fn delete(space: &Space, id: &str) -> Result<()> {
-        let path = share_path(space, id)?;
-        match fs::remove_file(&path).await {
-            Ok(()) => Ok(()),
-            Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
-            Err(err) => {
-                Err(anyhow!(err).context(format!("could not delete share file {:?}", path)))
-            }
+        let Some(spec_path) = read_route(space, id).await? else {
+            return Ok(());
+        };
+
+        remove_state(space, Path::new(&spec_path)).await?;
+        remove_route(space, id).await
+    }
+}
+
+pub async fn load_state(space: &Space, spec_path: &Path) -> Result<Option<Share>> {
+    let path = state_path(space, spec_path)?;
+    if !fs::try_exists(&path)
+        .await
+        .with_context(|| format!("could not check share state {:?}", path))?
+    {
+        return Ok(None);
+    }
+
+    Ok(Some(load_share_file(&path).await?))
+}
+
+async fn remove_state(space: &Space, spec_path: &Path) -> Result<()> {
+    let path = state_path(space, spec_path)?;
+    match fs::remove_file(&path).await {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(anyhow!(err).context(format!("could not remove share state {:?}", path))),
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct RouteFile {
+    spec_path: String,
+}
+
+async fn read_route(space: &Space, id: &str) -> Result<Option<String>> {
+    let path = route_path(space, id)?;
+    match fs::read_to_string(&path).await {
+        Ok(content) => {
+            let route: RouteFile = serde_json::from_str(&content)
+                .with_context(|| format!("could not parse share route {:?}", path))?;
+            Ok(Some(route.spec_path))
         }
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
+        Err(err) => Err(anyhow!(err).context(format!("could not read share route {:?}", path))),
+    }
+}
+
+async fn write_route(space: &Space, id: &str, spec_path: &str) -> Result<()> {
+    let path = route_path(space, id)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .await
+            .with_context(|| format!("could not create shares dir {:?}", parent))?;
+    }
+
+    let serialized = serde_json::to_string_pretty(&RouteFile {
+        spec_path: spec_path.to_owned(),
+    })
+    .context("could not serialize share route")?;
+    fs::write(&path, serialized)
+        .await
+        .with_context(|| format!("could not write share route {:?}", path))?;
+
+    Ok(())
+}
+
+async fn remove_route(space: &Space, id: &str) -> Result<()> {
+    let path = route_path(space, id)?;
+    match fs::remove_file(&path).await {
+        Ok(()) => Ok(()),
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
+        Err(err) => Err(anyhow!(err).context(format!("could not remove share route {:?}", path))),
     }
 }
 
@@ -438,13 +502,21 @@ mod tests {
     use jiff::SignedDuration;
 
     fn sample(account_flows: Vec<ShareAccessFlow>, guest_flows: Vec<ShareAccessFlow>) -> Share {
-        Share::new("suhaib", "home", "photos", account_flows, guest_flows, None)
+        Share::new(
+            "holden",
+            "rocinante",
+            "photos.share.caby",
+            "photos",
+            account_flows,
+            guest_flows,
+            None,
+        )
     }
 
     fn temp_space() -> Space {
         Space {
-            name: "home".to_owned(),
-            display: "Home".to_owned(),
+            name: "rocinante".to_owned(),
+            display: "Rocinante".to_owned(),
             path: std::env::temp_dir().join(format!("caby-share-{}", xid::new())),
         }
     }
@@ -475,8 +547,9 @@ mod tests {
     async fn save_load_round_trip() {
         let space = temp_space();
         let share = Share::new(
-            "suhaib",
+            "holden",
             &space.name,
+            "photos.share.caby",
             "photos",
             vec![],
             vec![ShareAccessFlow {
@@ -512,14 +585,17 @@ mod tests {
 
     #[test]
     fn from_spec_mints_an_id_then_carries_it_across_edits() {
-        let first = Share::from_spec("home", "photos", spec(&[Permission::View]), None).unwrap();
+        let spec_path = std::path::Path::new("photos/trip.share.caby");
+        let first =
+            Share::from_spec("rocinante", spec_path, spec(&[Permission::View]), None).unwrap();
         assert!(!first.id.is_empty());
-        assert_eq!(first.root_entry, "photos");
+        assert_eq!(first.root_entry, "photos/trip");
+        assert_eq!(first.spec_path, "photos/trip.share.caby");
         assert!(first.can_any_guest(Permission::View));
 
         let second = Share::from_spec(
-            "home",
-            "photos",
+            "rocinante",
+            spec_path,
             spec(&[Permission::View, Permission::Download]),
             Some(first.clone()),
         )
@@ -531,22 +607,21 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn save_load_state_round_trip() {
+    async fn share_route_round_trip() {
         let space = temp_space();
-        let spec_path = std::path::Path::new("photos/trip.share.caby");
 
-        let share =
-            Share::from_spec("home", "photos/trip", spec(&[Permission::View]), None).unwrap();
-        share.save_state(&space, spec_path).await.unwrap();
+        assert!(read_route(&space, "abc123").await.unwrap().is_none());
 
-        let loaded = Share::load_state(&space, spec_path).await.unwrap();
-        assert_eq!(loaded, Some(share));
-        assert!(
-            Share::load_state(&space, std::path::Path::new("other.share.caby"))
-                .await
-                .unwrap()
-                .is_none()
+        write_route(&space, "abc123", "photos/trip.share.caby")
+            .await
+            .unwrap();
+        assert_eq!(
+            read_route(&space, "abc123").await.unwrap().as_deref(),
+            Some("photos/trip.share.caby")
         );
+
+        remove_route(&space, "abc123").await.unwrap();
+        assert!(read_route(&space, "abc123").await.unwrap().is_none());
 
         cleanup(&space);
     }
@@ -570,14 +645,30 @@ mod tests {
     #[tokio::test]
     async fn get_shares_in_space_returns_all_saved_shares() {
         let space = temp_space();
-        Share::new("suhaib", &space.name, "photos", vec![], vec![], None)
-            .save(&space)
-            .await
-            .unwrap();
-        Share::new("other", &space.name, "docs", vec![], vec![], None)
-            .save(&space)
-            .await
-            .unwrap();
+        Share::new(
+            "holden",
+            &space.name,
+            "photos.share.caby",
+            "photos",
+            vec![],
+            vec![],
+            None,
+        )
+        .save(&space)
+        .await
+        .unwrap();
+        Share::new(
+            "amos",
+            &space.name,
+            "docs.share.caby",
+            "docs",
+            vec![],
+            vec![],
+            None,
+        )
+        .save(&space)
+        .await
+        .unwrap();
 
         let listed = get_shares_in_space(&space).await.unwrap();
         assert_eq!(listed.len(), 2);
@@ -676,40 +767,40 @@ mod tests {
     #[test]
     fn can_account_via_open_account_flow() {
         let share = sample(vec![open_flow(&[Permission::Write])], vec![]);
-        assert!(share.can_account(&account("member"), Permission::Write));
-        assert!(!share.can_account(&account("member"), Permission::Delete));
+        assert!(share.can_account(&account("naomi"), Permission::Write));
+        assert!(!share.can_account(&account("naomi"), Permission::Delete));
     }
 
     #[test]
     fn can_account_falls_through_to_open_guest_access() {
         let share = sample(vec![], vec![open_flow(&[Permission::View])]);
-        assert!(share.can_account(&account("member"), Permission::View));
+        assert!(share.can_account(&account("naomi"), Permission::View));
     }
 
     #[test]
     fn can_account_via_allowlist() {
         let mut share = sample(vec![], vec![]);
-        assert!(!share.can_account(&account("member"), Permission::Delete));
+        assert!(!share.can_account(&account("naomi"), Permission::Delete));
 
         share
             .account_allowlist
-            .insert("member".to_owned(), grant(&[Permission::Delete]));
-        assert!(share.can_account(&account("member"), Permission::Delete));
-        assert!(!share.can_account(&account("other"), Permission::Delete));
+            .insert("naomi".to_owned(), grant(&[Permission::Delete]));
+        assert!(share.can_account(&account("naomi"), Permission::Delete));
+        assert!(!share.can_account(&account("marco"), Permission::Delete));
     }
 
     #[test]
     fn owner_bypasses_flows_and_allowlist() {
         let share = sample(vec![], vec![]);
-        assert!(share.can_account(&account("suhaib"), Permission::Delete));
-        assert!(!share.can_account(&account("other"), Permission::Delete));
+        assert!(share.can_account(&account("holden"), Permission::Delete));
+        assert!(!share.can_account(&account("marco"), Permission::Delete));
     }
 
     #[test]
     fn can_admin_only_for_owner() {
         let share = sample(vec![], vec![]);
-        assert!(share.can_admin(&account("suhaib")));
-        assert!(!share.can_admin(&account("other")));
+        assert!(share.can_admin(&account("holden")));
+        assert!(!share.can_admin(&account("marco")));
     }
 
     #[test]
@@ -723,9 +814,9 @@ mod tests {
         assert!(share.account_allowlist.is_empty());
 
         share.grant(
-            &User::Account(account("suhaib")),
+            &User::Account(account("holden")),
             BTreeSet::from([Permission::Delete]),
         );
-        assert!(share.account_allowlist.contains_key("suhaib"));
+        assert!(share.account_allowlist.contains_key("holden"));
     }
 }
