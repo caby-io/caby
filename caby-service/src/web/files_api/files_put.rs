@@ -42,7 +42,6 @@ pub async fn handle_put_files(
     path_params: Path<FilesPathParams>,
     Json(payload): Json<PutEntryRequest>,
 ) -> Response {
-    let resp = JSendBuilder::new();
     let rel_path = path_params
         .file_path
         .clone()
@@ -52,66 +51,97 @@ pub async fn handle_put_files(
         PutEntryRequest::Directory {
             name,
             conflict_strategy,
-        } => {
-            let rel = rel_path.join(&name);
-            match create_dir(&space, &rel, conflict_strategy).await {
-                Ok(path) => resp
-                    .status_code(StatusCode::CREATED)
-                    .success(path.to_string_lossy().into_owned())
-                    .into_response(),
-                Err(err) if is_name_too_long(&err) => resp
-                    .status_code(StatusCode::BAD_REQUEST)
-                    .fail("name exceeds the maximum length")
-                    .into_response(),
-                Err(err) => {
-                    error!("could not create dir at {:?}: {:#}", rel, err);
-                    resp.fail("could not create directory").into_response()
-                }
-            }
-        }
+        } => put_directory(&space, &rel_path, &name, conflict_strategy).await,
         PutEntryRequest::File {
             name,
             content,
             conflict_strategy,
         } => {
-            let rel = rel_path.join(&name);
-            let content = content.as_deref().unwrap_or_default();
-
-            let outcome = match write_file(&space, &rel, content, conflict_strategy).await {
-                Ok(outcome) => outcome,
-                Err(err) if is_name_too_long(&err) => {
-                    return resp
-                        .status_code(StatusCode::BAD_REQUEST)
-                        .fail("name exceeds the maximum length")
-                        .into_response();
-                }
-                Err(err) => {
-                    error!("could not write file at {:?}: {:#}", rel, err);
-                    return resp.fail("could not write file").into_response();
-                }
-            };
-
-            let (status, path) = match outcome {
-                WriteOutcome::Created(path) | WriteOutcome::Deconflicted(path) => {
-                    emit(
-                        &events_tx,
-                        Event::from_create(space.name.clone(), path.clone()),
-                    );
-                    (StatusCode::CREATED, path)
-                }
-                WriteOutcome::Overwritten(path) => {
-                    emit(
-                        &events_tx,
-                        Event::from_modify(space.name.clone(), path.clone()),
-                    );
-                    (StatusCode::OK, path)
-                }
-                WriteOutcome::Skipped(path) => (StatusCode::OK, path),
-            };
-
-            resp.status_code(status)
-                .success(path.to_string_lossy().into_owned())
-                .into_response()
+            put_file(
+                &space,
+                &events_tx,
+                &rel_path,
+                &name,
+                content.as_deref(),
+                conflict_strategy,
+            )
+            .await
         }
     }
+}
+
+async fn put_directory(
+    space: &Space,
+    rel_path: &std::path::Path,
+    name: &str,
+    conflict_strategy: DirConflictStrategy,
+) -> Response {
+    let resp = JSendBuilder::new();
+    let rel = rel_path.join(name);
+
+    match create_dir(space, &rel, conflict_strategy).await {
+        Ok(path) => resp
+            .status_code(StatusCode::CREATED)
+            .success(path.to_string_lossy().into_owned())
+            .into_response(),
+        Err(err) if is_name_too_long(&err) => resp
+            .status_code(StatusCode::BAD_REQUEST)
+            .fail("name exceeds the maximum length")
+            .into_response(),
+        Err(err) => {
+            error!("could not create dir at {:?}: {:#}", rel, err);
+            resp.fail("could not create directory").into_response()
+        }
+    }
+}
+
+async fn put_file(
+    space: &Space,
+    events_tx: &Sender,
+    rel_path: &std::path::Path,
+    name: &str,
+    content: Option<&str>,
+    conflict_strategy: FileConflictStrategy,
+) -> Response {
+    let resp = JSendBuilder::new();
+    let rel = rel_path.join(name);
+    let content = content.unwrap_or_default();
+
+    let outcome = match write_file(space, &rel, content, conflict_strategy).await {
+        Ok(outcome) => outcome,
+        Err(err) if is_name_too_long(&err) => {
+            return resp
+                .status_code(StatusCode::BAD_REQUEST)
+                .fail("name exceeds the maximum length")
+                .into_response();
+        }
+        Err(err) => {
+            error!("could not write file at {:?}: {:#}", rel, err);
+            return resp.fail("could not write file").into_response();
+        }
+    };
+
+    let resp = match outcome {
+        WriteOutcome::Created(path) | WriteOutcome::Deconflicted(path) => {
+            emit(
+                events_tx,
+                Event::from_create(space.name.clone(), path.clone()),
+            );
+            resp.status_code(StatusCode::CREATED)
+                .success(path.to_string_lossy().into_owned())
+        }
+        WriteOutcome::Overwritten(path) => {
+            emit(
+                events_tx,
+                Event::from_modify(space.name.clone(), path.clone()),
+            );
+            resp.status_code(StatusCode::OK)
+                .success(path.to_string_lossy().into_owned())
+        }
+        WriteOutcome::Skipped(path) => resp
+            .status_code(StatusCode::OK)
+            .success(path.to_string_lossy().into_owned()),
+    };
+
+    resp.into_response()
 }
