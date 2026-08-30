@@ -194,14 +194,13 @@ pub async fn handle_create_share(
         return resp.internal_error().into_response();
     }
 
-    let mut share = match Share::from_spec(&space.name, &spec_path, spec, None) {
+    let share = match Share::from_spec(&space.name, &spec_path, spec, None, Some(&account.name)) {
         Ok(share) => share,
         Err(err) => {
             warn!("could not build share from spec {:?}: {:#}", spec_path, err);
             return resp.internal_error().into_response();
         }
     };
-    share.owner_id = account.name.clone();
 
     if let Err(err) = share.save(&space).await {
         warn!("could not save share {}: {:#}", share.id, err);

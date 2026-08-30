@@ -34,7 +34,7 @@ fn until(at: Timestamp, now: Timestamp) -> Duration {
 }
 
 impl Registry {
-    pub fn insert(&mut self, input: Input, priority: Priority) -> bool {
+    pub fn insert(&mut self, input: Input, priority: Priority, actor: Option<String>) -> bool {
         if let Some(pending) = self
             .jobs
             .values_mut()
@@ -44,10 +44,11 @@ impl Registry {
                 pending.priority = priority;
                 pending.not_before = None;
             }
+            // first writer wins the attribution; keep the pending job's actor
             return false;
         }
 
-        let job = Job::new(input, priority);
+        let job = Job::new(input, priority, actor);
         self.jobs.insert(job.id.clone(), job);
         true
     }
@@ -158,8 +159,8 @@ mod tests {
     fn insert_dedups_pending_and_promotes_priority() {
         let mut registry = Registry::default();
 
-        assert!(registry.insert(reconcile("a.caby.yaml"), Priority::Background));
-        assert!(!registry.insert(reconcile("a.caby.yaml"), Priority::Interactive));
+        assert!(registry.insert(reconcile("a.caby.yaml"), Priority::Background, None));
+        assert!(!registry.insert(reconcile("a.caby.yaml"), Priority::Interactive, None));
 
         let job = take(&mut registry);
         assert_eq!(job.priority, Priority::Interactive);
@@ -169,10 +170,10 @@ mod tests {
     fn running_input_blocks_an_equal_pending_input() {
         let mut registry = Registry::default();
 
-        registry.insert(reconcile("a.caby.yaml"), Priority::Background);
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
         let running = take(&mut registry);
 
-        registry.insert(reconcile("a.caby.yaml"), Priority::Background);
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
         assert!(matches!(registry.take_next(), Pending::Empty));
 
         registry.complete(&running.id);
@@ -184,8 +185,8 @@ mod tests {
     fn different_paths_run_concurrently() {
         let mut registry = Registry::default();
 
-        registry.insert(reconcile("a.caby.yaml"), Priority::Background);
-        registry.insert(reconcile("b.caby.yaml"), Priority::Background);
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
+        registry.insert(reconcile("b.caby.yaml"), Priority::Background, None);
 
         let first = take(&mut registry);
         let second = take(&mut registry);
@@ -196,7 +197,7 @@ mod tests {
     fn requeue_backs_off_then_becomes_ready() {
         let mut registry = Registry::default();
 
-        registry.insert(reconcile("a.caby.yaml"), Priority::Background);
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
         let job = take(&mut registry);
 
         assert!(matches!(registry.requeue(&job.id), Released::Retrying(_)));
@@ -218,7 +219,7 @@ mod tests {
     fn requeue_gives_up_after_max_attempts() {
         let mut registry = Registry::default();
 
-        registry.insert(reconcile("a.caby.yaml"), Priority::Background);
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
 
         for attempt in 1..MAX_ATTEMPTS {
             let job = take(&mut registry);
@@ -236,13 +237,13 @@ mod tests {
     fn interactive_insert_clears_pending_backoff() {
         let mut registry = Registry::default();
 
-        registry.insert(reconcile("a.caby.yaml"), Priority::Background);
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
         let job = take(&mut registry);
         registry.requeue(&job.id);
 
         assert!(matches!(registry.take_next(), Pending::Backoff(_)));
 
-        assert!(!registry.insert(reconcile("a.caby.yaml"), Priority::Interactive));
+        assert!(!registry.insert(reconcile("a.caby.yaml"), Priority::Interactive, None));
         let ready = take(&mut registry);
         assert_eq!(ready.priority, Priority::Interactive);
     }

@@ -78,7 +78,12 @@ fn find_space(cfg: &Config, name: &str) -> Option<Space> {
     cfg.runtime.load().spaces.get(name).map(Space::from)
 }
 
-pub async fn try_reconcile_share(cfg: &Config, space_name: &str, path: &Path) -> Result<()> {
+pub async fn try_reconcile_share(
+    cfg: &Config,
+    space_name: &str,
+    path: &Path,
+    actor: Option<&str>,
+) -> Result<()> {
     info!(
         "controller: Starting ReconcileShare on {}/{}",
         space_name,
@@ -104,7 +109,7 @@ pub async fn try_reconcile_share(cfg: &Config, space_name: &str, path: &Path) ->
 
     let spec = ShareSpec::try_parse(&content)?;
     let existing = load_state(&space, path).await?;
-    let share = Share::from_spec(&space.name, path, spec, existing)?;
+    let share = Share::from_spec(&space.name, path, spec, existing, actor)?;
     share.save(&space).await?;
 
     Ok(())
@@ -144,7 +149,7 @@ async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
         Some(existing) => Some(existing),
         None => load_state(space, from).await?,
     };
-    let share = Share::from_spec(&space.name, to, spec, existing)?;
+    let share = Share::from_spec(&space.name, to, spec, existing, None)?;
     share.save(space).await?;
     remove_state(space, from).await?;
 
@@ -178,7 +183,7 @@ mod tests {
 
     async fn seed_share(space: &Space, spec_path: &Path, body: &str) -> Share {
         let spec = ShareSpec::try_parse(body).unwrap();
-        let share = Share::from_spec(&space.name, spec_path, spec, None).unwrap();
+        let share = Share::from_spec(&space.name, spec_path, spec, None, None).unwrap();
         share.save(space).await.unwrap();
         share
     }

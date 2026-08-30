@@ -135,7 +135,7 @@ impl Controller {
     // Jobs
 
     async fn supervise_job(self: Arc<Self>, mut lease: JobLease, _slot: OwnedSemaphorePermit) {
-        let result = AssertUnwindSafe(jobs::run(&self.cfg, &lease.job().input))
+        let result = AssertUnwindSafe(jobs::run(&self.cfg, lease.job()))
             .catch_unwind()
             .await
             .unwrap_or_else(|panic| Err(anyhow!("job panicked: {}", panic_message(&*panic))));
@@ -225,12 +225,12 @@ impl Controller {
         self.tasks.close();
     }
 
-    pub fn schedule_job(&self, priority: Priority, input: Input) -> bool {
+    pub fn schedule_job(&self, priority: Priority, input: Input, actor: Option<String>) -> bool {
         let queued = self
             .registry
             .lock()
             .unwrap_or_else(|err| err.into_inner())
-            .insert(input, priority);
+            .insert(input, priority, actor);
 
         if queued {
             self.notify.notify_one();
@@ -253,7 +253,7 @@ impl Controller {
             };
 
             for (priority, input) in inputs {
-                self.schedule_job(priority, input);
+                self.schedule_job(priority, input, event.actor.clone());
             }
         }
     }

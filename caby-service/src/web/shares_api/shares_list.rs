@@ -16,6 +16,7 @@ use crate::{
 #[derive(Serialize)]
 struct ShareSummary {
     id: String,
+    owner_id: String,
     root_entry: String,
     created_at: Timestamp,
     expires_at: Option<Timestamp>,
@@ -26,6 +27,7 @@ impl From<&Share> for ShareSummary {
     fn from(share: &Share) -> Self {
         ShareSummary {
             id: share.id.clone(),
+            owner_id: share.owner_id.clone(),
             root_entry: share.root_entry.clone(),
             created_at: share.created_at,
             expires_at: share.expires_at,
@@ -42,12 +44,12 @@ struct ShareListResponse {
 pub async fn handle_list_shares(space: Space, auth: AuthUser) -> Response {
     let resp = JSendBuilder::new();
 
-    let Some(account) = auth.as_account() else {
+    if auth.as_account().is_none() {
         return resp
             .status_code(StatusCode::FORBIDDEN)
             .fail("only accounts can list shares")
             .into_response();
-    };
+    }
 
     let shares = match get_shares_in_space(&space).await {
         Ok(shares) => shares,
@@ -57,11 +59,7 @@ pub async fn handle_list_shares(space: Space, auth: AuthUser) -> Response {
         }
     };
 
-    let shares: Vec<ShareSummary> = shares
-        .iter()
-        .filter(|share| share.owner_id == account.name)
-        .map(ShareSummary::from)
-        .collect();
+    let shares: Vec<ShareSummary> = shares.iter().map(ShareSummary::from).collect();
 
     resp.success(ShareListResponse { shares }).into_response()
 }

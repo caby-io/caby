@@ -319,6 +319,7 @@ impl Share {
         spec_path: &Path,
         spec: ShareSpec,
         existing: Option<Share>,
+        actor: Option<&str>,
     ) -> Result<Self> {
         let root = spec_root(spec_path)
             .ok_or_else(|| anyhow!("not a share spec path: {:?}", spec_path))?;
@@ -351,7 +352,7 @@ impl Share {
                 expires_at: spec.expires_at,
             },
             None => Share::new(
-                "",
+                actor.unwrap_or_default(),
                 space,
                 &spec_path,
                 &root_entry,
@@ -694,9 +695,16 @@ mod tests {
     #[test]
     fn from_spec_mints_an_id_then_carries_it_across_edits() {
         let spec_path = std::path::Path::new("photos/public.share.caby");
-        let first =
-            Share::from_spec("rocinante", spec_path, spec(&[Permission::View]), None).unwrap();
+        let first = Share::from_spec(
+            "rocinante",
+            spec_path,
+            spec(&[Permission::View]),
+            None,
+            Some("holden"),
+        )
+        .unwrap();
         assert!(!first.id.is_empty());
+        assert_eq!(first.owner_id, "holden");
         assert_eq!(first.root_entry, "photos");
         assert_eq!(first.spec_path, "photos/public.share.caby");
         assert!(first.can_any_guest(Permission::View));
@@ -706,11 +714,16 @@ mod tests {
             spec_path,
             spec(&[Permission::View, Permission::Download]),
             Some(first.clone()),
+            Some("naomi"),
         )
         .unwrap();
 
         assert_eq!(second.id, first.id);
         assert_eq!(second.created_at, first.created_at);
+        assert_eq!(
+            second.owner_id, "holden",
+            "owner is carried, not reassigned"
+        );
         assert!(second.can_any_guest(Permission::Download));
     }
 
