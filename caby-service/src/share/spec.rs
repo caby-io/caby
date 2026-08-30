@@ -15,7 +15,12 @@ pub fn spec_root(spec_path: &Path) -> Option<PathBuf> {
     if stem.is_empty() {
         return None;
     }
-    Some(spec_path.with_file_name(stem))
+    Some(
+        spec_path
+            .parent()
+            .map(Path::to_path_buf)
+            .unwrap_or_default(),
+    )
 }
 
 pub struct ShareSpec {
@@ -379,19 +384,21 @@ expires_at: 2026-12-31T00:00:00Z
     }
 
     #[test]
-    fn spec_root_strips_the_sidecar_suffix() {
+    fn spec_root_is_the_containing_dir() {
+        // the spec lives inside the dir it shares; the stem is just an arbitrary name
         assert_eq!(
-            spec_root(Path::new("photos/trip.share.caby")),
-            Some(PathBuf::from("photos/trip"))
+            spec_root(Path::new("photos/public.share.caby")),
+            Some(PathBuf::from("photos"))
         );
+        // a spec at the space root shares the whole space
         assert_eq!(
-            spec_root(Path::new("album.share.caby")),
-            Some(PathBuf::from("album"))
+            spec_root(Path::new("public.share.caby")),
+            Some(PathBuf::from(""))
         );
     }
 
     #[test]
-    fn spec_root_rejects_a_bare_suffix() {
+    fn spec_root_rejects_a_nameless_or_non_spec() {
         assert_eq!(spec_root(Path::new(".share.caby")), None);
         assert_eq!(spec_root(Path::new("notashare.txt")), None);
     }

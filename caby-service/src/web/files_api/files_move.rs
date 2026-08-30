@@ -1,5 +1,9 @@
 use crate::{
-    config::Config, files, jsend::JSendBuilder, space::Space, web::extractors::RequireAccount,
+    event::{emit, Event, Sender},
+    files,
+    jsend::JSendBuilder,
+    space::Space,
+    web::extractors::RequireAccount,
 };
 use axum::{
     extract::{Json, State},
@@ -39,9 +43,9 @@ impl MoveError {
 }
 
 pub async fn handle_move_files(
-    State(cfg): State<Config>,
+    State(events_tx): State<Sender>,
     space: Space,
-    _: RequireAccount,
+    RequireAccount(account): RequireAccount,
     Json(req): Json<MoveEntriesRequest>,
 ) -> Response {
     let mut moved = vec![];
@@ -56,6 +60,11 @@ pub async fn handle_move_files(
             continue;
         }
 
+        emit(
+            &events_tx,
+            Event::from_move(space.name.clone(), src_rpath.clone(), dst_rpath.clone())
+                .by(account.name.as_str()),
+        );
         moved.push((
             src_rpath.to_str().unwrap().to_owned(),
             dst_rpath.to_str().unwrap().to_owned(),

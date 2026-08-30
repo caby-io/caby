@@ -16,6 +16,7 @@ use tracing::warn;
 
 use crate::{
     auth::AuthUser,
+    files::{has_ext, CABY_SHARE_SPEC_EXT},
     jsend::JSendBuilder,
     share::{Share, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
     space::{Space, SpaceDir},
@@ -25,7 +26,9 @@ use crate::{
 
 #[derive(Deserialize)]
 pub struct CreateShareRequest {
-    pub root_entry: String,
+    #[serde(default)]
+    pub dir: String,
+    pub name: String,
     #[serde(default)]
     pub account_flows: Vec<CreateFlow>,
     #[serde(default)]
@@ -100,26 +103,54 @@ pub async fn handle_create_share(
         }
     }
 
-    let cleaned_root = PathBuf::from(&req.root_entry).clean();
-    let live_root = match space.join(SpaceDir::LIVE, &cleaned_root) {
+    if req.name.is_empty()
+        || req.name.contains('/')
+        || req.name.contains('\\')
+        || has_ext(Path::new(&req.name), CABY_SHARE_SPEC_EXT)
+    {
+        return resp
+            .fail("share name must be a single filename without a path or the .share.caby suffix")
+            .into_response();
+    }
+
+    let dir = PathBuf::from(&req.dir).clean();
+    let live_dir = match space.join(SpaceDir::LIVE, &dir) {
         Ok(path) => path,
         Err(err) => {
             return resp
-                .fail(format!("invalid root entry: {}", err))
+                .fail(format!("invalid share directory: {}", err))
                 .into_response();
         }
     };
-    match fs::try_exists(&live_root).await {
-        Ok(true) => {}
-        Ok(false) => {
-            return resp.fail("root entry does not exist").into_response();
+    match fs::metadata(&live_dir).await {
+        Ok(meta) if meta.is_dir() => {}
+        Ok(_) => {
+            return resp
+                .fail("share target must be a directory")
+                .into_response()
         }
-        Err(err) => {
-            warn!("could not check root entry {:?}: {:#}", live_root, err);
-            return resp.internal_error().into_response();
+        Err(_) => {
+            return resp
+                .fail("share target directory does not exist")
+                .into_response()
         }
     }
-    let root_entry = cleaned_root.to_string_lossy().into_owned();
+
+    let spec_path = dir.join(format!("{}.share.caby", req.name)).clean();
+    let spec_live = match space.join(SpaceDir::LIVE, &spec_path) {
+        Ok(path) => path,
+        Err(err) => {
+            return resp
+                .fail(format!("invalid share path: {}", err))
+                .into_response();
+        }
+    };
+    if fs::try_exists(&spec_live).await.unwrap_or(false) {
+        return resp
+            .status_code(StatusCode::CONFLICT)
+            .fail("a share with that name already exists here")
+            .into_response();
+    }
 
     let (account_flows, guest_flows) = match (
         req.account_flows
@@ -144,20 +175,10 @@ pub async fn handle_create_share(
         expires_at: req.expires_at,
     };
 
-    let spec_path = format!("{root_entry}.share.caby");
-    let spec_live = match space.join(SpaceDir::LIVE, Path::new(&spec_path)) {
-        Ok(path) => path,
-        Err(err) => {
-            return resp
-                .fail(format!("invalid share path: {}", err))
-                .into_response();
-        }
-    };
-
     let yaml = match String::try_from(&spec) {
         Ok(yaml) => yaml,
         Err(err) => {
-            warn!("could not emit share spec {}: {:#}", spec_path, err);
+            warn!("could not emit share spec {:?}: {:#}", spec_path, err);
             return resp.internal_error().into_response();
         }
     };
@@ -166,10 +187,10 @@ pub async fn handle_create_share(
         return resp.internal_error().into_response();
     }
 
-    let mut share = match Share::from_spec(&space.name, Path::new(&spec_path), spec, None) {
+    let mut share = match Share::from_spec(&space.name, &spec_path, spec, None) {
         Ok(share) => share,
         Err(err) => {
-            warn!("could not build share from spec {}: {:#}", spec_path, err);
+            warn!("could not build share from spec {:?}: {:#}", spec_path, err);
             return resp.internal_error().into_response();
         }
     };

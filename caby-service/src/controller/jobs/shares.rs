@@ -13,7 +13,7 @@ use crate::{
     },
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     job::Input,
-    share::{load_state, remove_state, Share, ShareSpec},
+    share::{load_state, remove_routes_for_spec, remove_state, Share, ShareSpec},
     space::{Space, SpaceDir},
     Result,
 };
@@ -140,7 +140,10 @@ async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
     };
 
     let spec = ShareSpec::try_parse(&content)?;
-    let existing = load_state(space, from).await?;
+    let existing = match load_state(space, to).await? {
+        Some(existing) => Some(existing),
+        None => load_state(space, from).await?,
+    };
     let share = Share::from_spec(&space.name, to, spec, existing)?;
     share.save(space).await?;
     remove_state(space, from).await?;
@@ -149,16 +152,16 @@ async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
 }
 
 pub async fn try_cleanup_share(space: &Space, path: &Path) -> Result<()> {
-    let Some(share) = load_state(space, path).await? else {
-        info!(
-            "controller: no share state to clean up for {}/{}",
-            space.name,
-            path.display()
-        );
-        return Ok(());
-    };
+    if let Some(share) = load_state(space, path).await? {
+        return Share::delete(space, &share.id).await;
+    }
 
-    Share::delete(space, &share.id).await
+    info!(
+        "controller: share state already gone for {}/{}, dropping any orphaned route",
+        space.name,
+        path.display()
+    );
+    remove_routes_for_spec(space, path).await
 }
 
 #[cfg(test)]
@@ -201,11 +204,67 @@ mod tests {
         let moved = load_state(&space, to).await.unwrap().unwrap();
         assert_eq!(moved.id, original.id);
         assert_eq!(moved.spec_path, "albums/trip.share.caby");
-        assert_eq!(moved.root_entry, "albums/trip");
+        assert_eq!(moved.root_entry, "albums");
 
         assert!(load_state(&space, from).await.unwrap().is_none());
         let via_route = Share::load(&space, &original.id).await.unwrap().unwrap();
         assert_eq!(via_route.spec_path, "albums/trip.share.caby");
+
+        let _ = std::fs::remove_dir_all(&space.path);
+    }
+
+    #[tokio::test]
+    async fn move_carries_id_when_meta_already_moved_by_ops() {
+        let space = temp_space();
+        let from = Path::new("photos.share.caby");
+        let to = Path::new("albums/trip.share.caby");
+        let body = "guest_flows:\n  - permissions: [view]";
+
+        let original = seed_share(&space, from, body).await;
+
+        // simulate ops::rename: the spec AND its meta dir (state) are already at `to`
+        write_live_spec(&space, to, body).await;
+        let meta_from = space.join(SpaceDir::META, from).unwrap();
+        let meta_to = space.join(SpaceDir::META, to).unwrap();
+        fs::create_dir_all(meta_to.parent().unwrap()).await.unwrap();
+        fs::rename(&meta_from, &meta_to).await.unwrap();
+
+        move_share(&space, from, to).await.unwrap();
+
+        let moved = load_state(&space, to).await.unwrap().unwrap();
+        assert_eq!(moved.id, original.id, "id not carried across rename");
+        assert_eq!(moved.spec_path, "albums/trip.share.caby");
+        assert_eq!(moved.root_entry, "albums");
+        let via_route = Share::load(&space, &original.id).await.unwrap().unwrap();
+        assert_eq!(via_route.spec_path, "albums/trip.share.caby");
+
+        let _ = std::fs::remove_dir_all(&space.path);
+    }
+
+    #[tokio::test]
+    async fn cleanup_drops_orphaned_route_when_state_gone() {
+        let space = temp_space();
+        let spec_path = Path::new("subdir.share.caby");
+        let share = seed_share(&space, spec_path, "guest_flows:\n  - permissions: [view]").await;
+
+        let route_file = space.shares().join(format!("{}.json", share.id));
+        assert!(route_file.exists());
+
+        // a legacy/malformed route (no spec_path) must not abort the reverse scan
+        fs::write(
+            space.shares().join("legacyfatroute.json"),
+            r#"{"id":"legacyfatroute","owner_id":"x"}"#,
+        )
+        .await
+        .unwrap();
+
+        // simulate ops::remove having deleted the spec's meta dir (the state)
+        remove_state(&space, spec_path).await.unwrap();
+        assert!(load_state(&space, spec_path).await.unwrap().is_none());
+
+        try_cleanup_share(&space, spec_path).await.unwrap();
+
+        assert!(!route_file.exists(), "orphaned route not dropped");
 
         let _ = std::fs::remove_dir_all(&space.path);
     }

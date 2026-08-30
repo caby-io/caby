@@ -435,8 +435,10 @@ impl Share {
         let Some(spec_path) = read_route(space, id).await? else {
             return Ok(());
         };
+        let spec_path = Path::new(&spec_path);
 
-        remove_state(space, Path::new(&spec_path)).await?;
+        remove_spec(space, spec_path).await?;
+        remove_state(space, spec_path).await?;
         remove_route(space, id).await
     }
 }
@@ -456,9 +458,26 @@ pub async fn load_state(space: &Space, spec_path: &Path) -> Result<Option<Share>
 pub async fn remove_state(space: &Space, spec_path: &Path) -> Result<()> {
     let path = state_path(space, spec_path)?;
     match fs::remove_file(&path).await {
+        Ok(()) => {}
+        Err(err) if err.kind() == ErrorKind::NotFound => {}
+        Err(err) => {
+            return Err(anyhow!(err).context(format!("could not remove share state {:?}", path)))
+        }
+    }
+
+    if let Some(parent) = path.parent() {
+        let _ = fs::remove_dir(parent).await;
+    }
+
+    Ok(())
+}
+
+async fn remove_spec(space: &Space, spec_path: &Path) -> Result<()> {
+    let live = space.join(SpaceDir::LIVE, spec_path)?;
+    match fs::remove_file(&live).await {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
-        Err(err) => Err(anyhow!(err).context(format!("could not remove share state {:?}", path))),
+        Err(err) => Err(anyhow!(err).context(format!("could not remove share spec {:?}", live))),
     }
 }
 
@@ -508,6 +527,39 @@ async fn remove_route(space: &Space, id: &str) -> Result<()> {
     }
 }
 
+pub async fn remove_routes_for_spec(space: &Space, spec_path: &Path) -> Result<()> {
+    let dir = space.shares();
+    let mut read_dir = match fs::read_dir(&dir).await {
+        Ok(read_dir) => read_dir,
+        Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
+        Err(err) => {
+            return Err(anyhow!(err).context(format!("could not read shares dir {:?}", dir)))
+        }
+    };
+
+    let target = spec_path.to_string_lossy();
+    while let Some(entry) = read_dir
+        .next_entry()
+        .await
+        .with_context(|| format!("could not read shares dir {:?}", dir))?
+    {
+        let path = entry.path();
+        if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
+            continue;
+        }
+        let Some(id) = path.file_stem().and_then(|stem| stem.to_str()) else {
+            continue;
+        };
+        match read_route(space, id).await {
+            Ok(Some(spec)) if spec == target => remove_route(space, id).await?,
+            Ok(_) => {}
+            Err(err) => warn!("skipping unreadable share route {:?}: {:#}", path, err),
+        }
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -517,7 +569,7 @@ mod tests {
         Share::new(
             "holden",
             "rocinante",
-            "photos.share.caby",
+            "photos/public.share.caby",
             "photos",
             account_flows,
             guest_flows,
@@ -606,12 +658,12 @@ mod tests {
 
     #[test]
     fn from_spec_mints_an_id_then_carries_it_across_edits() {
-        let spec_path = std::path::Path::new("photos/trip.share.caby");
+        let spec_path = std::path::Path::new("photos/public.share.caby");
         let first =
             Share::from_spec("rocinante", spec_path, spec(&[Permission::View]), None).unwrap();
         assert!(!first.id.is_empty());
-        assert_eq!(first.root_entry, "photos/trip");
-        assert_eq!(first.spec_path, "photos/trip.share.caby");
+        assert_eq!(first.root_entry, "photos");
+        assert_eq!(first.spec_path, "photos/public.share.caby");
         assert!(first.can_any_guest(Permission::View));
 
         let second = Share::from_spec(
@@ -708,6 +760,39 @@ mod tests {
 
         // deleting an already-absent share is a no-op success
         Share::delete(&space, &share.id).await.unwrap();
+
+        cleanup(&space);
+    }
+
+    #[tokio::test]
+    async fn delete_removes_the_live_spec_and_prunes_meta() {
+        let space = temp_space();
+        let share = sample(vec![], vec![]);
+        let spec_path = Path::new(&share.spec_path);
+
+        let spec_live = space.join(SpaceDir::LIVE, spec_path).unwrap();
+        fs::create_dir_all(spec_live.parent().unwrap())
+            .await
+            .unwrap();
+        fs::write(&spec_live, "guest_flows:\n  - permissions: [view]")
+            .await
+            .unwrap();
+        share.save(&space).await.unwrap();
+
+        let meta_dir = space.join(SpaceDir::META, spec_path).unwrap();
+        assert!(fs::try_exists(&spec_live).await.unwrap());
+        assert!(fs::try_exists(&meta_dir).await.unwrap());
+
+        Share::delete(&space, &share.id).await.unwrap();
+
+        assert!(
+            !fs::try_exists(&spec_live).await.unwrap(),
+            "live spec left behind"
+        );
+        assert!(
+            !fs::try_exists(&meta_dir).await.unwrap(),
+            "empty meta dir left behind"
+        );
 
         cleanup(&space);
     }
