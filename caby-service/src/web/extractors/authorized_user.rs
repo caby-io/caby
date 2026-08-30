@@ -186,7 +186,7 @@ where
     }
 }
 
-pub struct RequireAccount;
+pub struct RequireAccount(pub Account);
 
 impl<S> FromRequestParts<S> for RequireAccount
 where
@@ -197,7 +197,10 @@ where
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         match resolve(parts, state).await? {
-            Some(auth) if auth.is_account() => Ok(RequireAccount),
+            Some(AuthUser {
+                user: User::Account(account),
+                ..
+            }) => Ok(RequireAccount(account)),
             Some(_) => Err(JSendBuilder::new()
                 .status_code(StatusCode::FORBIDDEN)
                 .fail(UnauthorizedResponse {

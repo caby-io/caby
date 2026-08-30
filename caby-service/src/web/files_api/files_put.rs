@@ -38,7 +38,7 @@ pub enum PutEntryRequest {
 pub async fn handle_put_files(
     State(events_tx): State<Sender>,
     space: Space,
-    _: RequireAccount,
+    RequireAccount(account): RequireAccount,
     path_params: Path<FilesPathParams>,
     Json(payload): Json<PutEntryRequest>,
 ) -> Response {
@@ -60,6 +60,7 @@ pub async fn handle_put_files(
             put_file(
                 &space,
                 &events_tx,
+                &account.name,
                 &rel_path,
                 &name,
                 content.as_deref(),
@@ -98,6 +99,7 @@ async fn put_directory(
 async fn put_file(
     space: &Space,
     events_tx: &Sender,
+    author: &str,
     rel_path: &std::path::Path,
     name: &str,
     content: Option<&str>,
@@ -125,7 +127,7 @@ async fn put_file(
         WriteOutcome::Created(path) | WriteOutcome::Deconflicted(path) => {
             emit(
                 events_tx,
-                Event::from_create(space.name.clone(), path.clone()),
+                Event::from_create(space.name.clone(), path.clone()).by(author),
             );
             resp.status_code(StatusCode::CREATED)
                 .success(path.to_string_lossy().into_owned())
@@ -133,7 +135,7 @@ async fn put_file(
         WriteOutcome::Overwritten(path) => {
             emit(
                 events_tx,
-                Event::from_modify(space.name.clone(), path.clone()),
+                Event::from_modify(space.name.clone(), path.clone()).by(author),
             );
             resp.status_code(StatusCode::OK)
                 .success(path.to_string_lossy().into_owned())

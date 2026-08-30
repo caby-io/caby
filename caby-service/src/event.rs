@@ -21,6 +21,7 @@ pub struct Event {
     pub kind: EventKind,
     pub space: String,
     pub path: PathBuf,
+    pub actor: Option<String>,
 }
 
 impl Event {
@@ -29,7 +30,13 @@ impl Event {
             space: space.into(),
             path: path.into(),
             kind,
+            actor: None,
         }
+    }
+
+    pub fn by(mut self, actor: impl Into<String>) -> Self {
+        self.actor = Some(actor.into());
+        self
     }
 
     pub fn from_create(space: impl Into<String>, path: impl Into<PathBuf>) -> Self {
