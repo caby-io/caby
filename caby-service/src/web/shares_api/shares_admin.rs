@@ -82,12 +82,12 @@ pub async fn handle_admin_get_share(
 ) -> Response {
     let resp = JSendBuilder::new();
 
-    let Some(account) = auth.as_account() else {
+    if auth.as_account().is_none() {
         return resp
             .status_code(StatusCode::FORBIDDEN)
             .fail("only accounts can administer shares")
             .into_response();
-    };
+    }
 
     let share = match Share::load(&space, &params.id).await {
         Ok(Some(share)) => share,
@@ -102,13 +102,6 @@ pub async fn handle_admin_get_share(
             return resp.internal_error().into_response();
         }
     };
-
-    if !share.can_admin(account) {
-        return resp
-            .status_code(StatusCode::FORBIDDEN)
-            .fail("not authorized to administer this share")
-            .into_response();
-    }
 
     resp.success(AdminShareResponse::from(&share))
         .into_response()

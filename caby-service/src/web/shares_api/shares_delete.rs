@@ -22,12 +22,12 @@ pub async fn handle_delete_share(
 ) -> Response {
     let resp = JSendBuilder::new();
 
-    let Some(account) = auth.as_account() else {
+    if auth.as_account().is_none() {
         return resp
             .status_code(StatusCode::FORBIDDEN)
             .fail("only accounts can delete shares")
             .into_response();
-    };
+    }
 
     let share = match Share::load(&space, &params.id).await {
         Ok(Some(share)) => share,
@@ -42,13 +42,6 @@ pub async fn handle_delete_share(
             return resp.internal_error().into_response();
         }
     };
-
-    if !share.can_admin(account) {
-        return resp
-            .status_code(StatusCode::FORBIDDEN)
-            .fail("not authorized to delete this share")
-            .into_response();
-    }
 
     if let Err(err) = Share::delete(&space, &share.id).await {
         warn!("could not delete share {}: {:#}", share.id, err);

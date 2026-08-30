@@ -373,10 +373,6 @@ impl Share {
     }
 
     pub fn can_account(&self, account: &Account, permission: Permission) -> bool {
-        if self.can_admin(account) {
-            return true;
-        }
-
         if let Some(grant) = self.account_allowlist.get(&account.name) {
             if grant.permissions.contains(&permission) {
                 return true;
@@ -404,10 +400,6 @@ impl Share {
         }
 
         self.can_any_guest(permission)
-    }
-
-    pub fn can_admin(&self, account: &Account) -> bool {
-        account.name == self.owner_id
     }
 
     pub fn grant(&mut self, user: &User, permissions: BTreeSet<Permission>) {
@@ -1008,17 +1000,9 @@ mod tests {
     }
 
     #[test]
-    fn owner_bypasses_flows_and_allowlist() {
+    fn owner_has_no_implicit_content_access() {
         let share = sample(vec![], vec![]);
-        assert!(share.can_account(&account("holden"), Permission::Delete));
-        assert!(!share.can_account(&account("marco"), Permission::Delete));
-    }
-
-    #[test]
-    fn can_admin_only_for_owner() {
-        let share = sample(vec![], vec![]);
-        assert!(share.can_admin(&account("holden")));
-        assert!(!share.can_admin(&account("marco")));
+        assert!(!share.can_account(&account("holden"), Permission::Delete));
     }
 
     #[test]
