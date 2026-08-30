@@ -25,6 +25,8 @@ xxhash-rust = { version = "0.8.15", features = ["xxh64"]}
 yaml-rust2 = "0.11.0"
 anyhow = "1.0.102"
 argon2 = "0.5.3"
+bcrypt = "0.19.3"
+sha-crypt = "0.5"
 jiff = { version = "0.2.35", default-features = false, features = ["std", "serde"] }
 rand = "0.10.1"
 email_address = "0.2.9"

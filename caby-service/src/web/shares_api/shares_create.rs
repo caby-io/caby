@@ -18,7 +18,7 @@ use crate::{
     auth::AuthUser,
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     jsend::JSendBuilder,
-    share::{Share, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
+    share::{hash_format, Share, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
     space::{Space, SpaceDir},
     user::{try_hash_password, Permission},
     Result,
@@ -100,6 +100,13 @@ pub async fn handle_create_share(
             return resp
                 .fail("a flow must not set both password and password_hash")
                 .into_response();
+        }
+        if let Some(hash) = &flow.password_hash {
+            if hash_format(hash).is_none() {
+                return resp
+                    .fail("password_hash must be argon2 '$argon2id$', bcrypt '$2b$', or sha512-crypt '$6$'")
+                    .into_response();
+            }
         }
     }
 
