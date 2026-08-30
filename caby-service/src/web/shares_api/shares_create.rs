@@ -1,4 +1,7 @@
-use std::{collections::BTreeSet, path::PathBuf};
+use std::{
+    collections::BTreeSet,
+    path::{Path, PathBuf},
+};
 
 use axum::{
     extract::Json,
@@ -14,9 +17,9 @@ use tracing::warn;
 use crate::{
     auth::AuthUser,
     jsend::JSendBuilder,
-    share::{Share, ShareAccessFlow, ShareAuth, ShareLimits},
+    share::{Share, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
     space::{Space, SpaceDir},
-    user::Permission,
+    user::{try_hash_password, Permission},
     Result,
 };
 
@@ -33,6 +36,7 @@ pub struct CreateShareRequest {
 #[derive(Deserialize)]
 pub struct CreateFlow {
     pub password: Option<String>,
+    pub password_hash: Option<String>,
     pub permissions: BTreeSet<Permission>,
     pub limits: Option<ShareLimits>,
 }
@@ -46,15 +50,16 @@ struct CreateShareResponse {
     expires_at: Option<Timestamp>,
 }
 
-impl TryFrom<CreateFlow> for ShareAccessFlow {
+impl TryFrom<CreateFlow> for SpecFlow {
     type Error = crate::Error;
 
     fn try_from(flow: CreateFlow) -> Result<Self> {
-        let auth = match flow.password {
-            Some(ref plaintext) => ShareAuth::password(plaintext)?,
-            None => ShareAuth::Open,
+        let auth = match (flow.password, flow.password_hash) {
+            (Some(plaintext), _) => SpecAuth::Hash(try_hash_password(&plaintext)?),
+            (None, Some(hash)) => SpecAuth::Hash(hash),
+            (None, None) => SpecAuth::Open,
         };
-        Ok(ShareAccessFlow {
+        Ok(SpecFlow {
             auth,
             permissions: flow.permissions,
             limits: flow.limits,
@@ -88,6 +93,11 @@ pub async fn handle_create_share(
                 .fail("each flow must grant at least one permission")
                 .into_response();
         }
+        if flow.password.is_some() && flow.password_hash.is_some() {
+            return resp
+                .fail("a flow must not set both password and password_hash")
+                .into_response();
+        }
     }
 
     let cleaned_root = PathBuf::from(&req.root_entry).clean();
@@ -114,11 +124,11 @@ pub async fn handle_create_share(
     let (account_flows, guest_flows) = match (
         req.account_flows
             .into_iter()
-            .map(ShareAccessFlow::try_from)
+            .map(SpecFlow::try_from)
             .collect::<Result<Vec<_>>>(),
         req.guest_flows
             .into_iter()
-            .map(ShareAccessFlow::try_from)
+            .map(SpecFlow::try_from)
             .collect::<Result<Vec<_>>>(),
     ) {
         (Ok(accounts), Ok(guests)) => (accounts, guests),
@@ -128,16 +138,43 @@ pub async fn handle_create_share(
         }
     };
 
-    let spec_path = format!("{root_entry}.share.caby");
-    let share = Share::new(
-        &account.name,
-        &space.name,
-        &spec_path,
-        &root_entry,
+    let spec = ShareSpec {
         account_flows,
         guest_flows,
-        req.expires_at,
-    );
+        expires_at: req.expires_at,
+    };
+
+    let spec_path = format!("{root_entry}.share.caby");
+    let spec_live = match space.join(SpaceDir::LIVE, Path::new(&spec_path)) {
+        Ok(path) => path,
+        Err(err) => {
+            return resp
+                .fail(format!("invalid share path: {}", err))
+                .into_response();
+        }
+    };
+
+    let yaml = match String::try_from(&spec) {
+        Ok(yaml) => yaml,
+        Err(err) => {
+            warn!("could not emit share spec {}: {:#}", spec_path, err);
+            return resp.internal_error().into_response();
+        }
+    };
+    if let Err(err) = fs::write(&spec_live, yaml).await {
+        warn!("could not write share spec {:?}: {:#}", spec_live, err);
+        return resp.internal_error().into_response();
+    }
+
+    let mut share = match Share::from_spec(&space.name, Path::new(&spec_path), spec, None) {
+        Ok(share) => share,
+        Err(err) => {
+            warn!("could not build share from spec {}: {:#}", spec_path, err);
+            return resp.internal_error().into_response();
+        }
+    };
+    share.owner_id = account.name.clone();
+
     if let Err(err) = share.save(&space).await {
         warn!("could not save share {}: {:#}", share.id, err);
         return resp.internal_error().into_response();

@@ -38,6 +38,17 @@ impl TryFrom<&str> for Permission {
     }
 }
 
+impl From<Permission> for &'static str {
+    fn from(permission: Permission) -> Self {
+        match permission {
+            Permission::View => "view",
+            Permission::Download => "download",
+            Permission::Write => "write",
+            Permission::Delete => "delete",
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct SpaceAccess {
     pub name: String,

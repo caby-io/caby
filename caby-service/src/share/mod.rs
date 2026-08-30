@@ -25,7 +25,7 @@ use crate::{
 
 pub mod spec;
 
-pub use spec::{spec_root, ShareSpec, SpecFlow};
+pub use spec::{spec_root, ShareSpec, SpecAuth, SpecFlow};
 
 pub const CABY_SHARE_STATE_FILE: &str = "share.json";
 const SHARE_DEFAULT_FILTER: &[fn(&str) -> bool] = &[is_share_spec];
@@ -238,9 +238,10 @@ impl TryFrom<SpecFlow> for ShareAccessFlow {
     type Error = crate::Error;
 
     fn try_from(flow: SpecFlow) -> Result<Self> {
-        let auth = match flow.password {
-            Some(ref plaintext) => ShareAuth::password(plaintext)?,
-            None => ShareAuth::Open,
+        let auth = match flow.auth {
+            SpecAuth::Open => ShareAuth::Open,
+            SpecAuth::Password(plaintext) => ShareAuth::password(&plaintext)?,
+            SpecAuth::Hash(hash) => ShareAuth::Password { hash },
         };
         Ok(ShareAccessFlow {
             auth,
@@ -595,7 +596,7 @@ mod tests {
         ShareSpec {
             account_flows: vec![],
             guest_flows: vec![SpecFlow {
-                password: None,
+                auth: SpecAuth::Open,
                 permissions: guest_perms.iter().copied().collect(),
                 limits: None,
             }],

@@ -5,7 +5,7 @@ use std::{
 
 use anyhow::{anyhow, Context};
 use jiff::{civil, tz::TimeZone, Timestamp};
-use yaml_rust2::{Yaml, YamlLoader};
+use yaml_rust2::{yaml::Hash, Yaml, YamlEmitter, YamlLoader};
 
 use crate::{files::CABY_SHARE_SPEC_EXT, share::ShareLimits, user::Permission, Result};
 
@@ -24,8 +24,14 @@ pub struct ShareSpec {
     pub expires_at: Option<Timestamp>,
 }
 
+pub enum SpecAuth {
+    Open,
+    Password(String),
+    Hash(String),
+}
+
 pub struct SpecFlow {
-    pub password: Option<String>,
+    pub auth: SpecAuth,
     pub permissions: BTreeSet<Permission>,
     pub limits: Option<ShareLimits>,
 }
@@ -37,6 +43,77 @@ impl ShareSpec {
         let doc = docs.first().ok_or_else(|| anyhow!("share spec is empty"))?;
         Self::try_from(doc)
     }
+}
+
+impl TryFrom<&ShareSpec> for String {
+    type Error = crate::Error;
+
+    fn try_from(spec: &ShareSpec) -> Result<Self> {
+        let mut root = Hash::new();
+        if !spec.account_flows.is_empty() {
+            root.insert(
+                yaml_str("account_flows"),
+                flows_to_yaml(&spec.account_flows),
+            );
+        }
+        if !spec.guest_flows.is_empty() {
+            root.insert(yaml_str("guest_flows"), flows_to_yaml(&spec.guest_flows));
+        }
+        if let Some(expires_at) = spec.expires_at {
+            root.insert(yaml_str("expires_at"), yaml_str(&expires_at.to_string()));
+        }
+
+        let mut out = String::new();
+        YamlEmitter::new(&mut out)
+            .dump(&Yaml::Hash(root))
+            .map_err(|err| anyhow!("could not emit share spec: {}", err))?;
+        Ok(out)
+    }
+}
+
+fn yaml_str(s: &str) -> Yaml {
+    Yaml::String(s.to_owned())
+}
+
+fn flows_to_yaml(flows: &[SpecFlow]) -> Yaml {
+    Yaml::Array(flows.iter().map(flow_to_yaml).collect())
+}
+
+fn flow_to_yaml(flow: &SpecFlow) -> Yaml {
+    let mut map = Hash::new();
+    match &flow.auth {
+        SpecAuth::Open => {}
+        SpecAuth::Password(plaintext) => {
+            map.insert(yaml_str("password"), yaml_str(plaintext));
+        }
+        SpecAuth::Hash(hash) => {
+            map.insert(yaml_str("password_hash"), yaml_str(hash));
+        }
+    }
+    let permissions = flow
+        .permissions
+        .iter()
+        .map(|perm| yaml_str(<&str>::from(*perm)))
+        .collect();
+    map.insert(yaml_str("permissions"), Yaml::Array(permissions));
+    if let Some(limits) = &flow.limits {
+        map.insert(yaml_str("limits"), limits_to_yaml(limits));
+    }
+    Yaml::Hash(map)
+}
+
+fn limits_to_yaml(limits: &ShareLimits) -> Yaml {
+    let mut map = Hash::new();
+    if let Some(value) = limits.max_file_bytes {
+        map.insert(yaml_str("max_file_bytes"), Yaml::Integer(value as i64));
+    }
+    if let Some(value) = limits.max_bytes_per_day {
+        map.insert(yaml_str("max_bytes_per_day"), Yaml::Integer(value as i64));
+    }
+    if let Some(value) = limits.max_files_per_day {
+        map.insert(yaml_str("max_files_per_day"), Yaml::Integer(value as i64));
+    }
+    Yaml::Hash(map)
 }
 
 impl TryFrom<&Yaml> for ShareSpec {
@@ -75,11 +152,7 @@ fn parse_flows(node: &Yaml, field: &str) -> Result<Vec<SpecFlow>> {
 }
 
 fn parse_flow(flow: &Yaml, field: &str, i: usize) -> Result<SpecFlow> {
-    let password = match &flow["password"] {
-        Yaml::BadValue | Yaml::Null => None,
-        Yaml::String(s) => Some(s.clone()),
-        _ => return Err(anyhow!(".{}[{}].password must be a string", field, i)),
-    };
+    let auth = parse_auth(flow, field, i)?;
 
     let permissions = parse_permissions(&flow["permissions"], field, i)?;
     if permissions.is_empty() {
@@ -93,10 +166,34 @@ fn parse_flow(flow: &Yaml, field: &str, i: usize) -> Result<SpecFlow> {
     let limits = parse_limits(&flow["limits"], field, i)?;
 
     Ok(SpecFlow {
-        password,
+        auth,
         permissions,
         limits,
     })
+}
+
+fn parse_auth(flow: &Yaml, field: &str, i: usize) -> Result<SpecAuth> {
+    let password = parse_opt_string(&flow["password"], field, i, "password")?;
+    let password_hash = parse_opt_string(&flow["password_hash"], field, i, "password_hash")?;
+
+    match (password, password_hash) {
+        (Some(_), Some(_)) => Err(anyhow!(
+            ".{}[{}] must not set both password and password_hash",
+            field,
+            i
+        )),
+        (Some(plaintext), None) => Ok(SpecAuth::Password(plaintext)),
+        (None, Some(hash)) => Ok(SpecAuth::Hash(hash)),
+        (None, None) => Ok(SpecAuth::Open),
+    }
+}
+
+fn parse_opt_string(node: &Yaml, field: &str, i: usize, key: &str) -> Result<Option<String>> {
+    match node {
+        Yaml::BadValue | Yaml::Null => Ok(None),
+        Yaml::String(s) => Ok(Some(s.clone())),
+        _ => Err(anyhow!(".{}[{}].{} must be a string", field, i, key)),
+    }
 }
 
 fn parse_permissions(node: &Yaml, field: &str, i: usize) -> Result<BTreeSet<Permission>> {
@@ -209,14 +306,17 @@ expires_at: 2026-12-31T00:00:00Z
         assert!(spec.expires_at.is_some());
 
         assert_eq!(spec.guest_flows.len(), 1);
-        assert!(spec.guest_flows[0].password.is_none());
+        assert!(matches!(spec.guest_flows[0].auth, SpecAuth::Open));
         assert_eq!(
             spec.guest_flows[0].permissions,
             BTreeSet::from([Permission::View, Permission::Download])
         );
 
         assert_eq!(spec.account_flows.len(), 1);
-        assert_eq!(spec.account_flows[0].password.as_deref(), Some("hunter2"));
+        assert!(matches!(
+            &spec.account_flows[0].auth,
+            SpecAuth::Password(pw) if pw == "hunter2"
+        ));
         let limits = spec.account_flows[0].limits.as_ref().unwrap();
         assert_eq!(limits.max_file_bytes, Some(1048576));
         assert_eq!(limits.max_bytes_per_day, None);
@@ -302,5 +402,65 @@ expires_at: 2026-12-31T00:00:00Z
             "guest_flows:\n  - permissions: [view]\n    limits:\n      max_file_bytes: -1"
         )
         .is_err());
+    }
+
+    #[test]
+    fn parses_a_pre_hashed_password() {
+        let spec = ShareSpec::try_parse(
+            "guest_flows:\n  - password_hash: $argon2id$abc\n    permissions: [view]",
+        )
+        .unwrap();
+        assert!(matches!(
+            &spec.guest_flows[0].auth,
+            SpecAuth::Hash(hash) if hash == "$argon2id$abc"
+        ));
+    }
+
+    #[test]
+    fn rejects_both_password_and_hash() {
+        assert!(ShareSpec::try_parse(
+            "guest_flows:\n  - password: hunter2\n    password_hash: $argon2id$abc\n    permissions: [view]"
+        )
+        .is_err());
+    }
+
+    #[test]
+    fn emits_yaml_that_parses_back_equivalently() {
+        let spec = ShareSpec {
+            account_flows: vec![SpecFlow {
+                auth: SpecAuth::Hash("$argon2id$abc".to_owned()),
+                permissions: BTreeSet::from([Permission::View, Permission::Write]),
+                limits: Some(ShareLimits {
+                    max_file_bytes: Some(1024),
+                    max_bytes_per_day: None,
+                    max_files_per_day: Some(5),
+                }),
+            }],
+            guest_flows: vec![SpecFlow {
+                auth: SpecAuth::Open,
+                permissions: BTreeSet::from([Permission::View]),
+                limits: None,
+            }],
+            expires_at: Some("2026-12-31T00:00:00Z".parse().unwrap()),
+        };
+
+        let yaml = String::try_from(&spec).unwrap();
+        let round = ShareSpec::try_parse(&yaml).unwrap();
+
+        assert_eq!(round.expires_at, spec.expires_at);
+        assert!(matches!(
+            &round.account_flows[0].auth,
+            SpecAuth::Hash(hash) if hash == "$argon2id$abc"
+        ));
+        assert_eq!(
+            round.account_flows[0].permissions,
+            spec.account_flows[0].permissions
+        );
+        assert_eq!(round.account_flows[0].limits, spec.account_flows[0].limits);
+        assert!(matches!(round.guest_flows[0].auth, SpecAuth::Open));
+        assert_eq!(
+            round.guest_flows[0].permissions,
+            spec.guest_flows[0].permissions
+        );
     }
 }
