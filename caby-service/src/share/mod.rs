@@ -16,6 +16,7 @@ use tracing::warn;
 
 use crate::{
     auth::User,
+    files::{has_ext, CABY_SHARE_SPEC_EXT},
     guest::Guest,
     space::{Space, SpaceDir},
     user::{try_hash_password, Account, Permission},
@@ -27,6 +28,16 @@ pub mod spec;
 pub use spec::{spec_root, ShareSpec, SpecFlow};
 
 pub const CABY_SHARE_STATE_FILE: &str = "share.json";
+const SHARE_DEFAULT_FILTER: &[fn(&str) -> bool] = &[is_share_spec];
+
+fn is_share_spec(name: &str) -> bool {
+    has_ext(Path::new(name), CABY_SHARE_SPEC_EXT)
+}
+
+// todo: support files + dirs
+pub fn is_filtered(name: &str) -> bool {
+    SHARE_DEFAULT_FILTER.iter().any(|rule| rule(name))
+}
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 #[serde(tag = "type", rename_all = "snake_case")]
@@ -531,6 +542,15 @@ mod tests {
         let b = sample(vec![], vec![]);
         assert!(!a.id.is_empty());
         assert_ne!(a.id, b.id);
+    }
+
+    #[test]
+    fn hides_share_specs_from_shares() {
+        assert!(is_filtered("photos.share.caby"));
+        assert!(is_filtered("a.b.share.caby"));
+        assert!(!is_filtered("photo.jpg"));
+        assert!(!is_filtered("notes.txt"));
+        assert!(!is_filtered("share.caby"));
     }
 
     #[test]

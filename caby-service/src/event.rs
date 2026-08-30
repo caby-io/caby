@@ -21,6 +21,7 @@ pub struct Event {
     pub kind: EventKind,
     pub space: String,
     pub path: PathBuf,
+    // todo: ensure all endpoints are setting this
     pub actor: Option<String>,
 }
 

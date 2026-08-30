@@ -13,7 +13,7 @@ use crate::{
     config::Config,
     files::{build_entries, Entry},
     jsend::JSendBuilder,
-    share::Share,
+    share::{is_filtered, Share},
     space::Space,
     user::Permission,
 };
@@ -83,6 +83,8 @@ pub async fn handle_list_share_files(
             return resp.internal_error().into_response();
         }
     };
+
+    entries.retain(|entry| !is_filtered(&entry.name));
 
     let root_entry = share.root_entry.as_str();
     for entry in &mut entries {

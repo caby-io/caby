@@ -13,7 +13,7 @@ use tracing::warn;
 use crate::{
     auth::{authorize_share, AuthUser},
     jsend::JSendBuilder,
-    share::Share,
+    share::{is_filtered, Share},
     space::{Space, SpaceDir},
     user::Permission,
 };
@@ -60,6 +60,17 @@ pub async fn handle_download_share(
     }
 
     let rel = PathBuf::from(params.path);
+    if rel
+        .file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(is_filtered)
+    {
+        return resp
+            .status_code(StatusCode::NOT_FOUND)
+            .fail("file not found")
+            .into_response();
+    }
+
     let scoped = match share.scope_path(&space, &rel) {
         Ok(scoped) => scoped,
         Err(_) => return resp.fail("invalid path").into_response(),
