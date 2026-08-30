@@ -18,7 +18,7 @@ use crate::{
     auth::AuthUser,
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     jsend::JSendBuilder,
-    share::{hash_format, Share, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
+    share::{hash_format, reconcile_spec, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
     space::{Space, SpaceDir},
     user::{try_hash_password, Permission},
     Result,
@@ -194,18 +194,21 @@ pub async fn handle_create_share(
         return resp.internal_error().into_response();
     }
 
-    let share = match Share::from_spec(&space.name, &spec_path, spec, None, Some(&account.name)) {
-        Ok(share) => share,
+    let share = match reconcile_spec(&space, &spec_path, Some(&account.name)).await {
+        Ok(Some(share)) => share,
+        Ok(None) => {
+            warn!("new share spec vanished before reconcile {:?}", spec_path);
+            return resp.internal_error().into_response();
+        }
         Err(err) => {
-            warn!("could not build share from spec {:?}: {:#}", spec_path, err);
+            let _ = fs::remove_file(&spec_live).await;
+            warn!(
+                "could not reconcile new share spec {:?}: {:#}",
+                spec_path, err
+            );
             return resp.internal_error().into_response();
         }
     };
-
-    if let Err(err) = share.save(&space).await {
-        warn!("could not save share {}: {:#}", share.id, err);
-        return resp.internal_error().into_response();
-    }
 
     resp.success(CreateShareResponse {
         id: share.id,

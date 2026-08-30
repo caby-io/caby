@@ -13,7 +13,7 @@ use crate::{
     },
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     job::Input,
-    share::{load_state, remove_routes_for_spec, remove_state, Share, ShareSpec},
+    share::{cleanup_spec, load_state, reconcile_spec, remove_state, Share, ShareSpec},
     space::{Space, SpaceDir},
     Result,
 };
@@ -94,23 +94,7 @@ pub async fn try_reconcile_share(
         return Err(anyhow!("unknown space {}", space_name));
     };
 
-    let live = space.join(SpaceDir::LIVE, path)?;
-
-    let content = match fs::read_to_string(&live).await {
-        Ok(content) => content,
-        // share spec doesn't exist, attempt an opportunistic cleanup of the state/route
-        Err(err) if err.kind() == ErrorKind::NotFound => {
-            return try_cleanup_share(&space, path).await
-        }
-        Err(err) => {
-            return Err(anyhow!(err).context(format!("could not read share spec {:?}", live)))
-        }
-    };
-
-    let spec = ShareSpec::try_parse(&content)?;
-    let existing = load_state(&space, path).await?;
-    let share = Share::from_spec(&space.name, path, spec, existing, actor)?;
-    share.save(&space).await?;
+    reconcile_spec(&space, path, actor).await?;
 
     Ok(())
 }
@@ -136,9 +120,7 @@ async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
     let content = match fs::read_to_string(&live).await {
         Ok(content) => content,
         // the moved-to spec is already gone; clean up whatever the move left behind
-        Err(err) if err.kind() == ErrorKind::NotFound => {
-            return try_cleanup_share(space, from).await
-        }
+        Err(err) if err.kind() == ErrorKind::NotFound => return cleanup_spec(space, from).await,
         Err(err) => {
             return Err(anyhow!(err).context(format!("could not read share spec {:?}", live)))
         }
@@ -154,19 +136,6 @@ async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
     remove_state(space, from).await?;
 
     Ok(())
-}
-
-pub async fn try_cleanup_share(space: &Space, path: &Path) -> Result<()> {
-    if let Some(share) = load_state(space, path).await? {
-        return Share::delete(space, &share.id).await;
-    }
-
-    info!(
-        "controller: share state already gone for {}/{}, dropping any orphaned route",
-        space.name,
-        path.display()
-    );
-    remove_routes_for_spec(space, path).await
 }
 
 #[cfg(test)]
@@ -267,7 +236,7 @@ mod tests {
         remove_state(&space, spec_path).await.unwrap();
         assert!(load_state(&space, spec_path).await.unwrap().is_none());
 
-        try_cleanup_share(&space, spec_path).await.unwrap();
+        cleanup_spec(&space, spec_path).await.unwrap();
 
         assert!(!route_file.exists(), "orphaned route not dropped");
 

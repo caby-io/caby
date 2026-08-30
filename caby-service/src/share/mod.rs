@@ -479,6 +479,39 @@ impl Share {
     }
 }
 
+pub async fn reconcile_spec(
+    space: &Space,
+    spec_path: &Path,
+    actor: Option<&str>,
+) -> Result<Option<Share>> {
+    let live = space.join(SpaceDir::LIVE, spec_path)?;
+
+    let content = match fs::read_to_string(&live).await {
+        Ok(content) => content,
+        Err(err) if err.kind() == ErrorKind::NotFound => {
+            cleanup_spec(space, spec_path).await?;
+            return Ok(None);
+        }
+        Err(err) => {
+            return Err(anyhow!(err).context(format!("could not read share spec {:?}", live)))
+        }
+    };
+
+    let spec = ShareSpec::try_parse(&content)?;
+    let existing = load_state(space, spec_path).await?;
+    let share = Share::from_spec(&space.name, spec_path, spec, existing, actor)?;
+    share.save(space).await?;
+
+    Ok(Some(share))
+}
+
+pub async fn cleanup_spec(space: &Space, spec_path: &Path) -> Result<()> {
+    if let Some(share) = load_state(space, spec_path).await? {
+        return Share::delete(space, &share.id).await;
+    }
+    remove_routes_for_spec(space, spec_path).await
+}
+
 pub async fn load_state(space: &Space, spec_path: &Path) -> Result<Option<Share>> {
     let path = state_path(space, spec_path)?;
     if !fs::try_exists(&path)
