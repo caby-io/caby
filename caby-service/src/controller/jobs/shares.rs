@@ -6,7 +6,7 @@ use tracing::{debug, info};
 
 use crate::{
     config::Config,
-    controller::{EventHandler, Priority},
+    controller::{EventHandler, PathLocks, Priority},
     event::{
         Event,
         EventKind::{FileCreated, FileModified, FileMoved, FileRemoved},
@@ -80,6 +80,7 @@ fn find_space(cfg: &Config, name: &str) -> Option<Space> {
 
 pub async fn try_reconcile_share(
     cfg: &Config,
+    locks: &PathLocks,
     space_name: &str,
     path: &Path,
     actor: Option<&str>,
@@ -94,12 +95,18 @@ pub async fn try_reconcile_share(
         return Err(anyhow!("unknown space {}", space_name));
     };
 
-    reconcile_spec(&space, path, actor).await?;
+    reconcile_spec(locks, &space, path, actor).await?;
 
     Ok(())
 }
 
-pub async fn try_move_share(cfg: &Config, space_name: &str, from: &Path, to: &Path) -> Result<()> {
+pub async fn try_move_share(
+    cfg: &Config,
+    locks: &PathLocks,
+    space_name: &str,
+    from: &Path,
+    to: &Path,
+) -> Result<()> {
     info!(
         "controller: Starting MoveShare on {}/{} -> {}",
         space_name,
@@ -111,16 +118,19 @@ pub async fn try_move_share(cfg: &Config, space_name: &str, from: &Path, to: &Pa
         return Err(anyhow!("unknown space {}", space_name));
     };
 
-    move_share(&space, from, to).await
+    move_share(locks, &space, from, to).await
 }
 
-async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
+async fn move_share(locks: &PathLocks, space: &Space, from: &Path, to: &Path) -> Result<()> {
+    let (from_guard, to_guard) = locks.acquire_pair(&space.name, from, to).await;
     let live = space.join(SpaceDir::LIVE, to)?;
 
     let content = match fs::read_to_string(&live).await {
         Ok(content) => content,
         // the moved-to spec is already gone; clean up whatever the move left behind
-        Err(err) if err.kind() == ErrorKind::NotFound => return cleanup_spec(space, from).await,
+        Err(err) if err.kind() == ErrorKind::NotFound => {
+            return cleanup_spec(space, from, &from_guard).await
+        }
         Err(err) => {
             return Err(anyhow!(err).context(format!("could not read share spec {:?}", live)))
         }
@@ -132,7 +142,7 @@ async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
         None => load_state(space, from).await?,
     };
     let share = Share::from_spec(&space.name, to, spec, existing, None)?;
-    share.save(space).await?;
+    share.save(space, &to_guard).await?;
     remove_state(space, from).await?;
 
     Ok(())
@@ -141,6 +151,7 @@ async fn move_share(space: &Space, from: &Path, to: &Path) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::controller::PathGuard;
 
     fn temp_space() -> Space {
         Space {
@@ -153,7 +164,7 @@ mod tests {
     async fn seed_share(space: &Space, spec_path: &Path, body: &str) -> Share {
         let spec = ShareSpec::try_parse(body).unwrap();
         let share = Share::from_spec(&space.name, spec_path, spec, None, None).unwrap();
-        share.save(space).await.unwrap();
+        share.save(space, &PathGuard::test().await).await.unwrap();
         share
     }
 
@@ -173,7 +184,8 @@ mod tests {
         let original = seed_share(&space, from, body).await;
         write_live_spec(&space, to, body).await;
 
-        move_share(&space, from, to).await.unwrap();
+        let locks = PathLocks::default();
+        move_share(&locks, &space, from, to).await.unwrap();
 
         let moved = load_state(&space, to).await.unwrap().unwrap();
         assert_eq!(moved.id, original.id);
@@ -203,7 +215,8 @@ mod tests {
         fs::create_dir_all(meta_to.parent().unwrap()).await.unwrap();
         fs::rename(&meta_from, &meta_to).await.unwrap();
 
-        move_share(&space, from, to).await.unwrap();
+        let locks = PathLocks::default();
+        move_share(&locks, &space, from, to).await.unwrap();
 
         let moved = load_state(&space, to).await.unwrap().unwrap();
         assert_eq!(moved.id, original.id, "id not carried across rename");
@@ -236,7 +249,9 @@ mod tests {
         remove_state(&space, spec_path).await.unwrap();
         assert!(load_state(&space, spec_path).await.unwrap().is_none());
 
-        cleanup_spec(&space, spec_path).await.unwrap();
+        cleanup_spec(&space, spec_path, &PathGuard::test().await)
+            .await
+            .unwrap();
 
         assert!(!route_file.exists(), "orphaned route not dropped");
 
@@ -251,7 +266,8 @@ mod tests {
 
         let original = seed_share(&space, from, "guest_flows:\n  - permissions: [view]").await;
 
-        move_share(&space, from, to).await.unwrap();
+        let locks = PathLocks::default();
+        move_share(&locks, &space, from, to).await.unwrap();
 
         assert!(load_state(&space, from).await.unwrap().is_none());
         assert!(Share::load(&space, &original.id).await.unwrap().is_none());

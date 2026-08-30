@@ -1,5 +1,7 @@
+use std::sync::Arc;
+
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -7,7 +9,8 @@ use serde::Serialize;
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser, jsend::JSendBuilder, share::Share, space::Space, web::shares_api::ShareIdParam,
+    auth::AuthUser, controller::PathLocks, jsend::JSendBuilder, share::Share, space::Space,
+    web::shares_api::ShareIdParam,
 };
 
 #[derive(Serialize)]
@@ -18,6 +21,7 @@ struct DeleteShareResponse {
 pub async fn handle_delete_share(
     space: Space,
     auth: AuthUser,
+    State(locks): State<Arc<PathLocks>>,
     Path(params): Path<ShareIdParam>,
 ) -> Response {
     let resp = JSendBuilder::new();
@@ -43,7 +47,10 @@ pub async fn handle_delete_share(
         }
     };
 
-    if let Err(err) = Share::delete(&space, &share.id).await {
+    let guard = locks
+        .acquire(&space.name, std::path::Path::new(&share.spec_path))
+        .await;
+    if let Err(err) = Share::delete(&space, &share.id, &guard).await {
         warn!("could not delete share {}: {:#}", share.id, err);
         return resp.internal_error().into_response();
     }

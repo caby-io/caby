@@ -1,7 +1,7 @@
-use std::collections::BTreeSet;
+use std::{collections::BTreeSet, sync::Arc};
 
 use axum::{
-    extract::{Json, Path},
+    extract::{Json, Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -10,8 +10,9 @@ use tracing::warn;
 
 use crate::{
     auth::{AuthUser, User},
+    controller::PathLocks,
     jsend::JSendBuilder,
-    share::{Share, ShareAccessFlow, ShareAuth},
+    share::{load_state, Share, ShareAccessFlow, ShareAuth},
     space::Space,
     user::Permission,
     web::shares_api::ShareIdParam,
@@ -31,11 +32,30 @@ pub async fn handle_password_auth_share(
     space: Space,
     auth: AuthUser,
     Path(params): Path<ShareIdParam>,
+    State(locks): State<Arc<PathLocks>>,
     Json(req): Json<PasswordAuthShareRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
 
-    let mut share = match Share::load(&space, &params.id).await {
+    let spec_path = match Share::load(&space, &params.id).await {
+        Ok(Some(share)) => share.spec_path,
+        Ok(None) => {
+            return resp
+                .status_code(StatusCode::NOT_FOUND)
+                .fail("share not found")
+                .into_response()
+        }
+        Err(err) => {
+            warn!("could not load share {}: {:#}", params.id, err);
+            return resp.internal_error().into_response();
+        }
+    };
+
+    let guard = locks
+        .acquire(&space.name, std::path::Path::new(&spec_path))
+        .await;
+
+    let mut share = match load_state(&space, std::path::Path::new(&spec_path)).await {
         Ok(Some(share)) => share,
         Ok(None) => {
             return resp
@@ -93,7 +113,7 @@ pub async fn handle_password_auth_share(
 
     share.grant(&auth.user, permissions.clone());
 
-    if let Err(err) = share.save(&space).await {
+    if let Err(err) = share.save(&space, &guard).await {
         warn!("could not record share grant for {}: {:#}", share.id, err);
         return resp.internal_error().into_response();
     }

@@ -1,10 +1,11 @@
 use std::{
     collections::BTreeSet,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use axum::{
-    extract::Json,
+    extract::{Json, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -16,6 +17,7 @@ use tracing::warn;
 
 use crate::{
     auth::AuthUser,
+    controller::PathLocks,
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     jsend::JSendBuilder,
     share::{hash_format, reconcile_spec, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
@@ -73,6 +75,7 @@ impl TryFrom<CreateFlow> for SpecFlow {
 pub async fn handle_create_share(
     space: Space,
     auth: AuthUser,
+    State(locks): State<Arc<PathLocks>>,
     Json(req): Json<CreateShareRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
@@ -194,7 +197,7 @@ pub async fn handle_create_share(
         return resp.internal_error().into_response();
     }
 
-    let share = match reconcile_spec(&space, &spec_path, Some(&account.name)).await {
+    let share = match reconcile_spec(&locks, &space, &spec_path, Some(&account.name)).await {
         Ok(Some(share)) => share,
         Ok(None) => {
             warn!("new share spec vanished before reconcile {:?}", spec_path);

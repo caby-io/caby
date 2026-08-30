@@ -2,7 +2,11 @@ use axum::extract::FromRef;
 use std::sync::Arc;
 
 use crate::{
-    auth::oidc::OidcClient, config::Config, controller::Controller, event::Sender, Result,
+    auth::oidc::OidcClient,
+    config::Config,
+    controller::{Controller, PathLocks},
+    event::Sender,
+    Result,
 };
 
 #[derive(Clone)]
@@ -45,6 +49,12 @@ impl FromRef<AppState> for Option<Arc<OidcClient>> {
 impl FromRef<AppState> for Arc<Controller> {
     fn from_ref(state: &AppState) -> Self {
         state.controller.clone()
+    }
+}
+
+impl FromRef<AppState> for Arc<PathLocks> {
+    fn from_ref(state: &AppState) -> Self {
+        state.controller.locks()
     }
 }
 

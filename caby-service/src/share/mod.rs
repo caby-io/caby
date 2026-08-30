@@ -16,6 +16,7 @@ use tracing::warn;
 
 use crate::{
     auth::User,
+    controller::{PathGuard, PathLocks},
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     guest::Guest,
     space::{Space, SpaceDir},
@@ -446,7 +447,7 @@ impl Share {
         Ok(())
     }
 
-    pub async fn save(&self, space: &Space) -> Result<()> {
+    pub async fn save(&self, space: &Space, _guard: &PathGuard) -> Result<()> {
         let spec_path = Path::new(&self.spec_path);
         self.write_to(&state_path(space, spec_path)?).await?;
         write_route(space, &self.id, &self.spec_path).await
@@ -459,7 +460,7 @@ impl Share {
         load_state(space, Path::new(&spec_path)).await
     }
 
-    pub async fn delete(space: &Space, id: &str) -> Result<()> {
+    pub async fn delete(space: &Space, id: &str, _guard: &PathGuard) -> Result<()> {
         let Some(spec_path) = read_route(space, id).await? else {
             return Ok(());
         };
@@ -472,16 +473,18 @@ impl Share {
 }
 
 pub async fn reconcile_spec(
+    locks: &PathLocks,
     space: &Space,
     spec_path: &Path,
     actor: Option<&str>,
 ) -> Result<Option<Share>> {
+    let guard = locks.acquire(&space.name, spec_path).await;
     let live = space.join(SpaceDir::LIVE, spec_path)?;
 
     let content = match fs::read_to_string(&live).await {
         Ok(content) => content,
         Err(err) if err.kind() == ErrorKind::NotFound => {
-            cleanup_spec(space, spec_path).await?;
+            cleanup_spec(space, spec_path, &guard).await?;
             return Ok(None);
         }
         Err(err) => {
@@ -492,14 +495,14 @@ pub async fn reconcile_spec(
     let spec = ShareSpec::try_parse(&content)?;
     let existing = load_state(space, spec_path).await?;
     let share = Share::from_spec(&space.name, spec_path, spec, existing, actor)?;
-    share.save(space).await?;
+    share.save(space, &guard).await?;
 
     Ok(Some(share))
 }
 
-pub async fn cleanup_spec(space: &Space, spec_path: &Path) -> Result<()> {
+pub async fn cleanup_spec(space: &Space, spec_path: &Path, guard: &PathGuard) -> Result<()> {
     if let Some(share) = load_state(space, spec_path).await? {
-        return Share::delete(space, &share.id).await;
+        return Share::delete(space, &share.id, guard).await;
     }
     remove_routes_for_spec(space, spec_path).await
 }
@@ -698,7 +701,7 @@ mod tests {
             None,
         );
 
-        share.save(&space).await.unwrap();
+        share.save(&space, &PathGuard::test().await).await.unwrap();
         let loaded = Share::load(&space, &share.id).await.unwrap();
         assert_eq!(loaded, Some(share));
 
@@ -800,7 +803,7 @@ mod tests {
             vec![],
             None,
         )
-        .save(&space)
+        .save(&space, &PathGuard::test().await)
         .await
         .unwrap();
         Share::new(
@@ -812,7 +815,7 @@ mod tests {
             vec![],
             None,
         )
-        .save(&space)
+        .save(&space, &PathGuard::test().await)
         .await
         .unwrap();
 
@@ -826,13 +829,17 @@ mod tests {
     async fn delete_removes_and_is_idempotent() {
         let space = temp_space();
         let share = sample(vec![], vec![]);
-        share.save(&space).await.unwrap();
+        share.save(&space, &PathGuard::test().await).await.unwrap();
 
-        Share::delete(&space, &share.id).await.unwrap();
+        Share::delete(&space, &share.id, &PathGuard::test().await)
+            .await
+            .unwrap();
         assert_eq!(Share::load(&space, &share.id).await.unwrap(), None);
 
         // deleting an already-absent share is a no-op success
-        Share::delete(&space, &share.id).await.unwrap();
+        Share::delete(&space, &share.id, &PathGuard::test().await)
+            .await
+            .unwrap();
 
         cleanup(&space);
     }
@@ -850,13 +857,15 @@ mod tests {
         fs::write(&spec_live, "guest_flows:\n  - permissions: [view]")
             .await
             .unwrap();
-        share.save(&space).await.unwrap();
+        share.save(&space, &PathGuard::test().await).await.unwrap();
 
         let meta_dir = space.join(SpaceDir::META, spec_path).unwrap();
         assert!(fs::try_exists(&spec_live).await.unwrap());
         assert!(fs::try_exists(&meta_dir).await.unwrap());
 
-        Share::delete(&space, &share.id).await.unwrap();
+        Share::delete(&space, &share.id, &PathGuard::test().await)
+            .await
+            .unwrap();
 
         assert!(
             !fs::try_exists(&spec_live).await.unwrap(),

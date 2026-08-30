@@ -22,9 +22,11 @@ use crate::{
 };
 
 pub mod jobs;
+pub mod locks;
 pub mod registry;
 
 pub use crate::job::Priority;
+pub use locks::{PathGuard, PathLocks};
 
 pub type EventHandler = fn(&Event) -> Vec<(Priority, Input)>;
 
@@ -50,6 +52,7 @@ fn retry_backoff(attempts: u32) -> SignedDuration {
 // todo: add controller settings to config
 pub struct Controller {
     cfg: Config,
+    locks: Arc<PathLocks>,
     handlers: Vec<EventHandler>,
     registry: Mutex<Registry>,
     // todo: notification system that we can wire to websockets
@@ -108,6 +111,7 @@ impl Controller {
 
         let controller = Arc::new(Self {
             cfg,
+            locks: Arc::new(PathLocks::default()),
             handlers: jobs::handlers(),
             registry: Mutex::new(Registry::default()),
             notify: Notify::new(),
@@ -125,6 +129,10 @@ impl Controller {
         task::spawn(self.clone().run_events(events_rx));
     }
 
+    pub fn locks(&self) -> Arc<PathLocks> {
+        self.locks.clone()
+    }
+
     pub async fn shutdown(&self) {
         self.cancel.cancel();
         self.notify.notify_waiters();
@@ -135,7 +143,7 @@ impl Controller {
     // Jobs
 
     async fn supervise_job(self: Arc<Self>, mut lease: JobLease, _slot: OwnedSemaphorePermit) {
-        let result = AssertUnwindSafe(jobs::run(&self.cfg, lease.job()))
+        let result = AssertUnwindSafe(jobs::run(&self.cfg, &self.locks, lease.job()))
             .catch_unwind()
             .await
             .unwrap_or_else(|panic| Err(anyhow!("job panicked: {}", panic_message(&*panic))));
