@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { Entry } from '$lib/files/entry';
-	import EntriesBreadcrumbs from './EntriesBreadcrumbs.svelte';
+	import Breadcrumbs from './Breadcrumbs.svelte';
 	import IconLucideX from '~icons/lucide/x';
 	import IconLucideFolderInput from '~icons/lucide/folder-input';
 	import IconLucideDownload from '~icons/lucide/download';
@@ -30,7 +30,7 @@
 </script>
 
 <header class="fx fx--ac">
-	<EntriesBreadcrumbs {space} />
+	<Breadcrumbs {space} />
 	<div class="actions fx fx--ac">
 		{#if in_selection}
 			<button

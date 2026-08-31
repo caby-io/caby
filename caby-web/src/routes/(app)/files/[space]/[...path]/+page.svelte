@@ -18,9 +18,7 @@
 	import { page } from '$app/state';
 	import * as fs from '$lib/fs';
 
-	import Directory from './Directory.svelte';
-	import File from './File.svelte';
-	import Loading from './Loading.svelte';
+	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
@@ -30,7 +28,7 @@
 	import type { Space } from '$lib/space';
 	import type { SelectedEntry } from '$lib/files/select';
 	import DeleteDialog from './DeleteDialog.svelte';
-	import EntriesBar from './EntriesBar.svelte';
+	import EntriesBar from '$lib/files/browse/EntriesBar.svelte';
 	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
 	import ContextMenu, { type ContextMenuProps } from '$lib/files/ContextMenu.svelte';
 	import MediaPreviewDialog from '$lib/files/MediaPreviewDialog.svelte';
@@ -486,61 +484,31 @@
 			{handleDownloadSelected}
 			{exitSelection}
 		/>
-		<main
-			class="entries fx-grow"
-			class:drag-over={drag_over_ct > 0}
-			class:loading
-			ondragenter={onDragEnter}
-			ondragover={onDragOver}
-			ondragleave={onDragLeave}
-			ondragend={onDragEnd}
-			ondrop={onDrop}
-			oncontextmenu={(e) => handleContextMenu(e)}
-		>
-			<section class="directories">
-				<h3>Directories</h3>
-				<div class="dir-list">
-					{#each dir_entries as entry, index}
-						<Directory
-							{entry}
-							{space}
-							selection_mode={in_selection}
-							onSelect={(e: MouseEvent) => handleSelectOp(e, { index, entry })}
-							onDragStart={onEntryDragStart}
-							onDragEnd={onEntryDragEnd}
-							onDragEnter={onEntryDragEnter}
-							onDragOver={onEntryDragOver}
-							onDragLeave={onEntryDragLeave}
-							onDrop={onEntryDrop}
-							onContextMenu={handleContextMenu}
-						/>
-					{/each}
-				</div>
-			</section>
-			<section class="files">
-				<h3>Files</h3>
-				<div class="file-list">
-					{#each file_entries as entry, index}
-						<File
-							{entry}
-							{space}
-							selection_mode={in_selection}
-							onSelect={(e: MouseEvent) =>
-								handleSelectOp(e, { index: index + dir_entries.length, entry: entry })}
-							onPreview={(entry) => handlePreview(entry)}
-							onDragStart={onEntryDragStart}
-							onDragEnd={onEntryDragEnd}
-							onDragOver={onEntryDragOver}
-							onDrop={onEntryDrop}
-							onContextMenu={handleContextMenu}
-						/>
-					{/each}
-				</div>
-			</section>
-			<aside class="upload-bar fx fx--cc">
-				<TasksList />
-			</aside>
-		</main>
+		<EntriesGrid
+			{dir_entries}
+			{file_entries}
+			{space}
+			{in_selection}
+			{loading}
+			{drag_over_ct}
+			{onDragEnter}
+			{onDragOver}
+			{onDragLeave}
+			{onDragEnd}
+			{onDrop}
+			{handleContextMenu}
+			{handleSelectOp}
+			{handlePreview}
+			{onEntryDragStart}
+			{onEntryDragEnd}
+			{onEntryDragEnter}
+			{onEntryDragOver}
+			{onEntryDragLeave}
+			{onEntryDrop}
+		/>
+		<aside class="upload-bar fx fx--cc">
+			<TasksList />
+		</aside>
 	</section>
 </div>
 
@@ -625,111 +593,16 @@
 		min-height: calc(100vh - var(--top-nav-height) - 1px);
 	}
 
-	// todo: redo this after moving the entities
+	aside.upload-bar {
+		position: fixed;
+		padding-left: calc(var(--sidebar-width) + 1px);
+		bottom: 0;
+		left: 0;
+		width: 100%;
 
-	main.entries {
-		background: var(--clr-background);
-		padding: 1rem;
-		position: relative;
-		transition: opacity 0.2s;
-
-		// temporarily remove since we use it for everything including upload updates
-		// &.loading {
-		// 	opacity: 0.5;
-		// }
-
-		&.drag-over {
-			opacity: 0.5;
-			// pointer-events: none;
-
-			&::after {
-				position: absolute;
-				top: 0;
-				left: 0;
-				content: '';
-				width: 100%;
-				height: 100%;
-				background: var(--clr-background);
-				opacity: 0.4;
-			}
-		}
-
-		> aside.upload-bar {
-			position: fixed;
-			padding-left: calc(var(--sidebar-width) + 1px);
-			bottom: 0;
-			left: 0;
-			width: 100%;
-
-			@media (max-width: bp.$bp-files-sidebar) {
-				padding: 0 1rem;
-				opacity: 0.9;
-			}
-		}
-
-		> aside.add-action {
-			position: fixed;
-			right: 0;
-			bottom: 0;
-			padding: 1rem;
-		}
-	}
-
-	.directories,
-	.files {
-		> h3 {
-			// font-weight: normal;
-			margin: 1rem 0;
-		}
-
-		&:first-of-type {
-			> h3 {
-				margin-top: 0;
-			}
-		}
-	}
-
-	.dir-list,
-	.file-list {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr));
-		grid-auto-rows: minmax(12rem, 1fr);
-		// grid-auto-columns: max-content;
-		gap: 0.75rem;
-		// grid-template-columns: repeat(auto-fill);
-	}
-
-	.file-list {
-		padding-bottom: 8rem;
-	}
-
-	// todo: move to module
-	.directory {
-		background-color: white;
-		display: flex;
-		border-radius: 3px;
-
-		> .preview {
-			margin: 0.5rem;
-			font-size: 3rem;
-			background-color: rgb(233, 235, 241);
-			border-radius: 3px;
-
-			> img {
-				height: 3.5rem;
-				width: 5rem;
-			}
-		}
-
-		> .details {
-			margin: 0 0.5rem 0.5rem 0.5rem;
-
-			> h1 {
-				font-size: 1rem;
-				// font-weight: ;
-				padding: 0;
-				margin: 0;
-			}
+		@media (max-width: bp.$bp-files-sidebar) {
+			padding: 0 1rem;
+			opacity: 0.9;
 		}
 	}
 </style>
