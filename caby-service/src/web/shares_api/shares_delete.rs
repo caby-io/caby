@@ -9,8 +9,11 @@ use serde::Serialize;
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser, config::Config, controller::PathLocks, jsend::JSendBuilder, share::Share,
-    web::shares_api::ShareIdParam,
+    config::Config,
+    controller::PathLocks,
+    jsend::JSendBuilder,
+    share::Share,
+    web::{extractors::RequireAccount, shares_api::ShareIdParam},
 };
 
 #[derive(Serialize)]
@@ -20,18 +23,11 @@ struct DeleteShareResponse {
 
 pub async fn handle_delete_share(
     State(cfg): State<Config>,
-    auth: AuthUser,
+    _: RequireAccount,
     State(locks): State<Arc<PathLocks>>,
     Path(params): Path<ShareIdParam>,
 ) -> Response {
     let resp = JSendBuilder::new();
-
-    if auth.as_account().is_none() {
-        return resp
-            .status_code(StatusCode::FORBIDDEN)
-            .fail("only accounts can delete shares")
-            .into_response();
-    }
 
     let (space, share) = match Share::resolve(&cfg, &params.id).await {
         Ok(Some(resolved)) => resolved,

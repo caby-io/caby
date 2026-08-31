@@ -1,6 +1,5 @@
 use axum::{
     extract::State,
-    http::StatusCode,
     response::{IntoResponse, Response},
 };
 use jiff::Timestamp;
@@ -8,11 +7,11 @@ use serde::Serialize;
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser,
     config::Config,
     jsend::JSendBuilder,
     share::{get_shares_in_space, Share},
     space::Space,
+    web::extractors::RequireAccount,
 };
 
 #[derive(Serialize)]
@@ -45,17 +44,10 @@ struct ShareListResponse {
 
 pub async fn handle_list_shares(
     space: Space,
-    auth: AuthUser,
+    _: RequireAccount,
     State(cfg): State<Config>,
 ) -> Response {
     let resp = JSendBuilder::new();
-
-    if auth.as_account().is_none() {
-        return resp
-            .status_code(StatusCode::FORBIDDEN)
-            .fail("only accounts can list shares")
-            .into_response();
-    }
 
     let shares = match get_shares_in_space(&cfg.shares_path, &space).await {
         Ok(shares) => shares,

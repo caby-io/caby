@@ -16,7 +16,6 @@ use tokio::fs;
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser,
     config::Config,
     controller::PathLocks,
     files::{has_ext, CABY_SHARE_SPEC_EXT},
@@ -24,6 +23,7 @@ use crate::{
     share::{hash_format, reconcile_spec, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
     space::{Space, SpaceDir},
     user::{try_hash_password, Permission},
+    web::extractors::RequireAccount,
     Result,
 };
 
@@ -75,19 +75,12 @@ impl TryFrom<CreateFlow> for SpecFlow {
 
 pub async fn handle_create_share(
     space: Space,
-    auth: AuthUser,
+    RequireAccount(account): RequireAccount,
     State(cfg): State<Config>,
     State(locks): State<Arc<PathLocks>>,
     Json(req): Json<CreateShareRequest>,
 ) -> Response {
     let resp = JSendBuilder::new();
-
-    let Some(account) = auth.as_account() else {
-        return resp
-            .status_code(StatusCode::FORBIDDEN)
-            .fail("only account users can create shares")
-            .into_response();
-    };
 
     if let Some(expires_at) = req.expires_at {
         if expires_at <= Timestamp::now() {

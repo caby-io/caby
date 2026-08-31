@@ -196,13 +196,7 @@ where
                 user: User::Account(account),
                 ..
             }) => Ok(RequireAccount(account)),
-            Some(_) => Err(JSendBuilder::new()
-                .status_code(StatusCode::FORBIDDEN)
-                .fail(UnauthorizedResponse {
-                    reason: "account required",
-                })
-                .into_response()),
-            None => Err(unauthorized()),
+            _ => Err(unauthorized()),
         }
     }
 }

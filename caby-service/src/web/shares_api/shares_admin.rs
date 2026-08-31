@@ -10,12 +10,11 @@ use serde::Serialize;
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser,
     config::Config,
     jsend::JSendBuilder,
     share::{Grant, Share, ShareAccessFlow, ShareAuth, ShareLimits},
     user::Permission,
-    web::shares_api::ShareIdParam,
+    web::{extractors::RequireAccount, shares_api::ShareIdParam},
 };
 
 #[derive(Serialize)]
@@ -77,17 +76,10 @@ impl From<&Share> for AdminShareResponse {
 
 pub async fn handle_admin_get_share(
     State(cfg): State<Config>,
-    auth: AuthUser,
+    _: RequireAccount,
     Path(params): Path<ShareIdParam>,
 ) -> Response {
     let resp = JSendBuilder::new();
-
-    if auth.as_account().is_none() {
-        return resp
-            .status_code(StatusCode::FORBIDDEN)
-            .fail("only accounts can administer shares")
-            .into_response();
-    }
 
     let share = match Share::resolve(&cfg, &params.id).await {
         Ok(Some((_, share))) => share,
