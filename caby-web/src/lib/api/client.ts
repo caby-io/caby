@@ -125,6 +125,7 @@ export type Token = {
 export type Auth = {
 	login_token?: Token;
 	elevated_token?: Token;
+	guest_token?: string;
 };
 
 // const UNHANDLED_REQUEST_ERROR: ApiResponse<null> = {
@@ -162,6 +163,14 @@ export class ApiClient {
 
 	public removeLoginToken = () => {
 		this.auth.login_token = undefined;
+	};
+
+	public setGuestToken = (token: string) => {
+		this.auth.guest_token = token;
+	};
+
+	public removeGuestToken = () => {
+		this.auth.guest_token = undefined;
 	};
 
 	public isAuthenticated = (): boolean => {

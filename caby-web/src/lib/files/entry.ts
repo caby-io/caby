@@ -22,6 +22,7 @@ export type FileFields = {
 	preview_url?: string;
 	can_preview: boolean;
 	media_url?: string;
+	download_url?: string;
 };
 
 export type DirFields = {
