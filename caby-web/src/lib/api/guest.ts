@@ -3,7 +3,7 @@ import type { ApiClient } from './client';
 
 const GUEST_TOKEN_COOKIE = 'guest_token';
 
-type StoredGuestToken = {
+type GuestToken = {
 	value: string;
 	expires_at: string;
 };
@@ -14,13 +14,14 @@ export const readGuestToken = async (): Promise<string | undefined> => {
 		return undefined;
 	}
 
-	let stored: StoredGuestToken;
+	let stored: GuestToken;
 	try {
 		stored = JSON.parse(decodeURIComponent(cookie.value));
 	} catch {
 		return undefined;
 	}
 
+	// don't rely on backend since token is stateless
 	if (new Date() >= new Date(stored.expires_at)) {
 		await cookieStore.delete(GUEST_TOKEN_COOKIE);
 		return undefined;
@@ -30,7 +31,7 @@ export const readGuestToken = async (): Promise<string | undefined> => {
 };
 
 export const writeGuestToken = async (value: string, expires_at: string): Promise<void> => {
-	const stored: StoredGuestToken = { value, expires_at };
+	const stored: GuestToken = { value, expires_at };
 	await cookieStore.set({
 		name: GUEST_TOKEN_COOKIE,
 		sameSite: 'strict',

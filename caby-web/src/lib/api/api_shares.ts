@@ -34,36 +34,30 @@ const withGuest = (client: ApiClient, builder: ApiRequestBuilder): ApiRequestBui
 
 export const getShare = async (
 	client: ApiClient,
-	space: string,
 	id: string
 ): Promise<ApiResponse<GetShareData>> => {
-	const req = withGuest(client, ApiRequestBuilder.get(`shares/${space}/${id}`)).intoRequest();
+	const req = withGuest(client, ApiRequestBuilder.get(`shares/${id}`)).intoRequest();
 	return await client.exec(req);
 };
 
 export const authSharePassword = async (
 	client: ApiClient,
-	space: string,
 	id: string,
 	password: string
 ): Promise<ApiResponse<AuthShareData>> => {
 	const req = withGuest(
 		client,
-		ApiRequestBuilder.post(`shares/${space}/${id}/auth/password`).withJsonBody({ password })
+		ApiRequestBuilder.post(`shares/${id}/auth/password`).withJsonBody({ password })
 	).intoRequest();
 	return await client.exec(req);
 };
 
 export const listShare = async (
 	client: ApiClient,
-	space: string,
 	id: string,
 	path: string
 ): Promise<ApiResponse<ListShareData>> => {
 	const suffix = path ? `/${path}` : '';
-	const req = withGuest(
-		client,
-		ApiRequestBuilder.get(`shares/${space}/${id}/list${suffix}`)
-	).intoRequest();
+	const req = withGuest(client, ApiRequestBuilder.get(`shares/${id}/list${suffix}`)).intoRequest();
 	return await client.exec(req);
 };

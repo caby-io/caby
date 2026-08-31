@@ -525,8 +525,8 @@
 <ContextMenu
 	bind:dialog={contextMenuDialog}
 	position={contextMenuProps.position}
-	{space}
 	bind:entry={contextMenuProps.entry}
+	onDownload={(entry) => downloadEntries(client, space, [entry])}
 	{handleMoveEntries}
 	{handleAddContent}
 	{handleDeleteEntries}

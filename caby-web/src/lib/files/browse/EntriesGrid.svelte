@@ -8,9 +8,10 @@
 		dir_entries,
 		file_entries,
 		space,
-		in_selection,
-		loading,
-		drag_over_ct,
+		href_base,
+		in_selection = false,
+		loading = false,
+		drag_over_ct = 0,
 		onDragEnter,
 		onDragOver,
 		onDragLeave,
@@ -29,23 +30,24 @@
 		dir_entries: Entry[];
 		file_entries: Entry[];
 		space: string;
-		in_selection: boolean;
-		loading: boolean;
-		drag_over_ct: number;
-		onDragEnter: (e: DragEvent) => void;
-		onDragOver: (e: DragEvent) => void;
-		onDragLeave: (e: DragEvent) => void;
-		onDragEnd: (e: DragEvent) => void;
-		onDrop: (e: DragEvent) => void;
-		handleContextMenu: (e: MouseEvent, entry?: Entry) => void;
-		handleSelectOp: (e: MouseEvent, selected: SelectedEntry) => void;
-		handlePreview: (entry: Entry) => void;
-		onEntryDragStart: (e: DragEvent, entry: Entry) => void;
-		onEntryDragEnd: (e: DragEvent, entry: Entry) => void;
-		onEntryDragEnter: (e: DragEvent, entry: Entry) => void;
-		onEntryDragOver: (e: DragEvent, entry: Entry) => void;
-		onEntryDragLeave: (e: DragEvent, entry: Entry) => void;
-		onEntryDrop: (e: DragEvent, entry: Entry) => void;
+		href_base?: string;
+		in_selection?: boolean;
+		loading?: boolean;
+		drag_over_ct?: number;
+		onDragEnter?: (e: DragEvent) => void;
+		onDragOver?: (e: DragEvent) => void;
+		onDragLeave?: (e: DragEvent) => void;
+		onDragEnd?: (e: DragEvent) => void;
+		onDrop?: (e: DragEvent) => void;
+		handleContextMenu?: (e: MouseEvent, entry?: Entry) => void;
+		handleSelectOp?: (e: MouseEvent, selected: SelectedEntry) => void;
+		handlePreview?: (entry: Entry) => void;
+		onEntryDragStart?: (e: DragEvent, entry: Entry) => void;
+		onEntryDragEnd?: (e: DragEvent, entry: Entry) => void;
+		onEntryDragEnter?: (e: DragEvent, entry: Entry) => void;
+		onEntryDragOver?: (e: DragEvent, entry: Entry) => void;
+		onEntryDragLeave?: (e: DragEvent, entry: Entry) => void;
+		onEntryDrop?: (e: DragEvent, entry: Entry) => void;
 	} = $props();
 </script>
 
@@ -58,7 +60,7 @@
 	ondragleave={onDragLeave}
 	ondragend={onDragEnd}
 	ondrop={onDrop}
-	oncontextmenu={(e) => handleContextMenu(e)}
+	oncontextmenu={(e) => handleContextMenu?.(e)}
 >
 	<section class="directories">
 		<h3>Directories</h3>
@@ -67,8 +69,9 @@
 				<Directory
 					{entry}
 					{space}
+					{href_base}
 					selection_mode={in_selection}
-					onSelect={(e: MouseEvent) => handleSelectOp(e, { index, entry })}
+					onSelect={(e: MouseEvent) => handleSelectOp?.(e, { index, entry })}
 					onDragStart={onEntryDragStart}
 					onDragEnd={onEntryDragEnd}
 					onDragEnter={onEntryDragEnter}
@@ -89,8 +92,8 @@
 					{space}
 					selection_mode={in_selection}
 					onSelect={(e: MouseEvent) =>
-						handleSelectOp(e, { index: index + dir_entries.length, entry: entry })}
-					onPreview={(entry) => handlePreview(entry)}
+						handleSelectOp?.(e, { index: index + dir_entries.length, entry })}
+					onPreview={handlePreview}
 					onDragStart={onEntryDragStart}
 					onDragEnd={onEntryDragEnd}
 					onDragOver={onEntryDragOver}
