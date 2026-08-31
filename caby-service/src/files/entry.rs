@@ -35,6 +35,7 @@ pub enum EntryFields {
         preview_url: Option<String>,
         can_preview: bool,
         media_url: Option<String>,
+        download_url: Option<String>,
     },
     Symlink {
         is_broken: bool,
@@ -122,6 +123,7 @@ impl EntryFactory {
             preview_url,
             can_preview,
             media_url,
+            download_url: None,
         });
         self
     }

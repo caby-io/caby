@@ -11,9 +11,9 @@ use tracing::warn;
 use crate::{
     auth::{authorize_share, AuthUser},
     config::Config,
-    files::{build_entries, Entry},
+    files::{build_entries, Entry, EntryFields},
     jsend::JSendBuilder,
-    share::{is_filtered, Share},
+    share::{download_token, is_filtered, Share},
     space::Space,
     user::Permission,
 };
@@ -29,6 +29,13 @@ struct ListShareResponse {
     path: String,
     parent_dir: Option<String>,
     entries: Vec<Entry>,
+}
+
+fn build_download_url(cfg: &Config, space: &str, id: &str, path: &str, token: &str) -> String {
+    let mut url = cfg.urls.backend.clone();
+    url.set_path(&format!("/v0/shares/{}/{}/download/{}", space, id, path));
+    url.query_pairs_mut().append_pair("token", token);
+    url.to_string()
 }
 
 pub async fn handle_list_share_files(
@@ -86,10 +93,35 @@ pub async fn handle_list_share_files(
 
     entries.retain(|entry| !is_filtered(&entry.name));
 
+    let can_download = authorize_share(auth.as_ref(), &share, Permission::Download);
     let root_entry = share.root_entry.as_str();
     for entry in &mut entries {
-        if let Ok(stripped) = StdPath::new(&entry.path).strip_prefix(root_entry) {
-            entry.path = stripped.to_string_lossy().into_owned();
+        let scoped_path = entry.path.clone();
+
+        let display_path = match StdPath::new(&entry.path).strip_prefix(root_entry) {
+            Ok(stripped) => stripped.to_string_lossy().into_owned(),
+            Err(_) => entry.path.clone(),
+        };
+        entry.path = display_path.clone();
+
+        if can_download {
+            if let Some(EntryFields::File { download_url, .. }) = &mut entry.entry_fields {
+                match download_token::generate_token(&cfg, &share.id, &scoped_path) {
+                    Ok(token) => {
+                        *download_url = Some(build_download_url(
+                            &cfg,
+                            &space.name,
+                            &share.id,
+                            &display_path,
+                            &token,
+                        ));
+                    }
+                    Err(err) => warn!(
+                        "could not mint download token for {}: {:#}",
+                        scoped_path, err
+                    ),
+                }
+            }
         }
     }
 

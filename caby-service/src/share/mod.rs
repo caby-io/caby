@@ -24,6 +24,7 @@ use crate::{
     Result,
 };
 
+pub mod download_token;
 pub mod spec;
 
 pub use spec::{spec_root, ShareSpec, SpecAuth, SpecFlow};

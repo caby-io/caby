@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use axum::{
     body::Body,
-    extract::Path,
+    extract::{Path, Query, State},
     http::{header, StatusCode},
     response::{IntoResponse, Response},
 };
@@ -11,11 +11,10 @@ use tokio_util::io::ReaderStream;
 use tracing::warn;
 
 use crate::{
-    auth::{authorize_share, AuthUser},
+    config::Config,
     jsend::JSendBuilder,
-    share::{is_filtered, Share},
+    share::{download_token, is_filtered, Share},
     space::{Space, SpaceDir},
-    user::Permission,
 };
 
 #[derive(Deserialize)]
@@ -24,12 +23,39 @@ pub struct DownloadParams {
     path: String,
 }
 
+#[derive(Deserialize)]
+pub struct DownloadTokenQuery {
+    token: Option<String>,
+}
+
 pub async fn handle_download_share(
+    State(cfg): State<Config>,
     space: Space,
-    auth: Option<AuthUser>,
     Path(params): Path<DownloadParams>,
+    Query(query): Query<DownloadTokenQuery>,
 ) -> Response {
     let resp = JSendBuilder::new();
+
+    let unauthorized = || {
+        JSendBuilder::new()
+            .status_code(StatusCode::UNAUTHORIZED)
+            .fail("not authorized for this share")
+            .into_response()
+    };
+
+    let Some(token) = query.token else {
+        return unauthorized();
+    };
+    let payload = match download_token::decode_token(&cfg, &token) {
+        Ok(payload) => payload,
+        Err(err) => {
+            warn!("could not decode share download token: {:#}", err);
+            return unauthorized();
+        }
+    };
+    if payload.is_expired() || payload.share_id != params.id {
+        return unauthorized();
+    }
 
     let share = match Share::load(&space, &params.id).await {
         Ok(Some(share)) => share,
@@ -52,15 +78,17 @@ pub async fn handle_download_share(
             .into_response();
     }
 
-    if !authorize_share(auth.as_ref(), &share, Permission::Download) {
-        return resp
-            .status_code(StatusCode::FORBIDDEN)
-            .fail("not authorized for this share")
-            .into_response();
+    let rel = PathBuf::from(&params.path);
+    let scoped = match share.scope_path(&space, &rel) {
+        Ok(scoped) => scoped,
+        Err(_) => return resp.fail("invalid path").into_response(),
+    };
+
+    if scoped.to_string_lossy() != payload.path {
+        return unauthorized();
     }
 
-    let rel = PathBuf::from(params.path);
-    if rel
+    if scoped
         .file_name()
         .and_then(|name| name.to_str())
         .is_some_and(is_filtered)
@@ -70,11 +98,6 @@ pub async fn handle_download_share(
             .fail("file not found")
             .into_response();
     }
-
-    let scoped = match share.scope_path(&space, &rel) {
-        Ok(scoped) => scoped,
-        Err(_) => return resp.fail("invalid path").into_response(),
-    };
 
     let live = match space.join(SpaceDir::LIVE, &scoped) {
         Ok(live) => live,

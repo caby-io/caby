@@ -2,11 +2,11 @@ use std::str::FromStr;
 
 use anyhow::anyhow;
 use axum::{
-    extract::{FromRef, FromRequestParts, OptionalFromRequestParts, Query},
+    extract::{FromRef, FromRequestParts, OptionalFromRequestParts},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
 };
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use tokio::fs;
 use tracing::{error, warn};
 
@@ -16,17 +16,12 @@ use crate::{
     guest::{token, Guest},
     jsend::JSendBuilder,
     user::Account,
-    web::headers::HEADER_CABY_USER_NAME,
+    web::headers::{HEADER_CABY_GUEST_TOKEN, HEADER_CABY_USER_NAME},
 };
 
 #[derive(Serialize)]
 pub struct UnauthorizedResponse<'a> {
     pub reason: &'a str,
-}
-
-#[derive(Deserialize)]
-struct GuestTokenQuery {
-    token: Option<String>,
 }
 
 fn unauthorized() -> Response {
@@ -126,14 +121,14 @@ where
         }));
     }
 
-    let guest_token = Query::<GuestTokenQuery>::from_request_parts(parts, state)
-        .await
-        .ok()
-        .and_then(|Query(query)| query.token);
+    let guest_token = parts
+        .headers
+        .get(&HEADER_CABY_GUEST_TOKEN)
+        .and_then(|header| header.to_str().ok());
 
     if let Some(guest_token) = guest_token {
         let decoded =
-            token::decode_token(&cfg.token_encryption_key, &guest_token).map_err(|err| {
+            token::decode_token(&cfg.token_encryption_key, guest_token).map_err(|err| {
                 warn!("could not decode guest token: {:#}", err);
                 unauthorized()
             })?;
@@ -148,7 +143,7 @@ where
         })?;
 
         return Ok(Some(AuthUser {
-            token: guest_token,
+            token: guest_token.to_owned(),
             user: User::Guest(guest),
         }));
     }
