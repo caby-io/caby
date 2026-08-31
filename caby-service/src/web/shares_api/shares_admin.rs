@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -11,9 +11,9 @@ use tracing::warn;
 
 use crate::{
     auth::AuthUser,
+    config::Config,
     jsend::JSendBuilder,
     share::{Grant, Share, ShareAccessFlow, ShareAuth, ShareLimits},
-    space::Space,
     user::Permission,
     web::shares_api::ShareIdParam,
 };
@@ -76,7 +76,7 @@ impl From<&Share> for AdminShareResponse {
 }
 
 pub async fn handle_admin_get_share(
-    space: Space,
+    State(cfg): State<Config>,
     auth: AuthUser,
     Path(params): Path<ShareIdParam>,
 ) -> Response {
@@ -89,8 +89,8 @@ pub async fn handle_admin_get_share(
             .into_response();
     }
 
-    let share = match Share::load(&space, &params.id).await {
-        Ok(Some(share)) => share,
+    let share = match Share::resolve(&cfg, &params.id).await {
+        Ok(Some((_, share))) => share,
         Ok(None) => {
             return resp
                 .status_code(StatusCode::NOT_FOUND)

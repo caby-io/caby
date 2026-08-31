@@ -1,4 +1,5 @@
 use axum::{
+    extract::State,
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -8,6 +9,7 @@ use tracing::warn;
 
 use crate::{
     auth::AuthUser,
+    config::Config,
     jsend::JSendBuilder,
     share::{get_shares_in_space, Share},
     space::Space,
@@ -41,7 +43,11 @@ struct ShareListResponse {
     shares: Vec<ShareSummary>,
 }
 
-pub async fn handle_list_shares(space: Space, auth: AuthUser) -> Response {
+pub async fn handle_list_shares(
+    space: Space,
+    auth: AuthUser,
+    State(cfg): State<Config>,
+) -> Response {
     let resp = JSendBuilder::new();
 
     if auth.as_account().is_none() {
@@ -51,7 +57,7 @@ pub async fn handle_list_shares(space: Space, auth: AuthUser) -> Response {
             .into_response();
     }
 
-    let shares = match get_shares_in_space(&space).await {
+    let shares = match get_shares_in_space(&cfg.shares_path, &space).await {
         Ok(shares) => shares,
         Err(err) => {
             warn!("could not list shares in {}: {:#}", space.name, err);

@@ -1,7 +1,7 @@
 use std::path::Path as StdPath;
 
 use axum::{
-    extract::Path,
+    extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
 };
@@ -10,9 +10,9 @@ use tracing::warn;
 
 use crate::{
     auth::AuthUser,
+    config::Config,
     jsend::JSendBuilder,
     share::{Share, ShareAuth},
-    space::Space,
     web::shares_api::ShareIdParam,
 };
 
@@ -31,14 +31,14 @@ struct GetShareResponse {
 }
 
 pub async fn handle_get_share(
-    space: Space,
+    State(cfg): State<Config>,
     auth: Option<AuthUser>,
     Path(params): Path<ShareIdParam>,
 ) -> Response {
     let resp = JSendBuilder::new();
 
-    let share = match Share::load(&space, &params.id).await {
-        Ok(Some(share)) => share,
+    let share = match Share::resolve(&cfg, &params.id).await {
+        Ok(Some((_, share))) => share,
         Ok(None) => {
             return resp
                 .status_code(StatusCode::NOT_FOUND)

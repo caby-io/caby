@@ -97,28 +97,22 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
         .nest(
             "/shares",
             Router::new()
-                .route("/{space}", post(shares_api::handle_create_share))
-                .route("/{space}", get(shares_api::handle_list_shares))
-                .route("/{space}/{id}", get(shares_api::handle_get_share))
-                .route("/{space}/{id}", delete(shares_api::handle_delete_share))
+                .route("/list/{space}", get(shares_api::handle_list_shares))
+                .route("/new/{space}", post(shares_api::handle_create_share))
+                .route("/{id}", get(shares_api::handle_get_share))
+                .route("/{id}", delete(shares_api::handle_delete_share))
+                .route("/{id}/admin", get(shares_api::handle_admin_get_share))
                 .route(
-                    "/{space}/{id}/admin",
-                    get(shares_api::handle_admin_get_share),
-                )
-                .route(
-                    "/{space}/{id}/auth/password",
+                    "/{id}/auth/password",
                     post(shares_api::handle_password_auth_share),
                 )
+                .route("/{id}/list", get(shares_api::handle_list_share_files))
                 .route(
-                    "/{space}/{id}/list",
+                    "/{id}/list/{*path}",
                     get(shares_api::handle_list_share_files),
                 )
                 .route(
-                    "/{space}/{id}/list/{*path}",
-                    get(shares_api::handle_list_share_files),
-                )
-                .route(
-                    "/{space}/{id}/download/{*path}",
+                    "/{id}/download/{*path}",
                     get(shares_api::handle_download_share),
                 ),
         )

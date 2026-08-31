@@ -9,7 +9,7 @@ use serde::Serialize;
 use tracing::warn;
 
 use crate::{
-    auth::AuthUser, controller::PathLocks, jsend::JSendBuilder, share::Share, space::Space,
+    auth::AuthUser, config::Config, controller::PathLocks, jsend::JSendBuilder, share::Share,
     web::shares_api::ShareIdParam,
 };
 
@@ -19,7 +19,7 @@ struct DeleteShareResponse {
 }
 
 pub async fn handle_delete_share(
-    space: Space,
+    State(cfg): State<Config>,
     auth: AuthUser,
     State(locks): State<Arc<PathLocks>>,
     Path(params): Path<ShareIdParam>,
@@ -33,8 +33,8 @@ pub async fn handle_delete_share(
             .into_response();
     }
 
-    let share = match Share::load(&space, &params.id).await {
-        Ok(Some(share)) => share,
+    let (space, share) = match Share::resolve(&cfg, &params.id).await {
+        Ok(Some(resolved)) => resolved,
         Ok(None) => {
             return resp
                 .status_code(StatusCode::NOT_FOUND)
@@ -50,7 +50,7 @@ pub async fn handle_delete_share(
     let guard = locks
         .acquire(&space.name, std::path::Path::new(&share.spec_path))
         .await;
-    if let Err(err) = Share::delete(&space, &share.id, &guard).await {
+    if let Err(err) = Share::delete(&cfg.shares_path, &space, &share.id, &guard).await {
         warn!("could not delete share {}: {:#}", share.id, err);
         return resp.internal_error().into_response();
     }

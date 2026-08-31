@@ -17,6 +17,7 @@ use tracing::warn;
 
 use crate::{
     auth::AuthUser,
+    config::Config,
     controller::PathLocks,
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     jsend::JSendBuilder,
@@ -75,6 +76,7 @@ impl TryFrom<CreateFlow> for SpecFlow {
 pub async fn handle_create_share(
     space: Space,
     auth: AuthUser,
+    State(cfg): State<Config>,
     State(locks): State<Arc<PathLocks>>,
     Json(req): Json<CreateShareRequest>,
 ) -> Response {
@@ -197,7 +199,15 @@ pub async fn handle_create_share(
         return resp.internal_error().into_response();
     }
 
-    let share = match reconcile_spec(&locks, &space, &spec_path, Some(&account.name)).await {
+    let share = match reconcile_spec(
+        &cfg.shares_path,
+        &locks,
+        &space,
+        &spec_path,
+        Some(&account.name),
+    )
+    .await
+    {
         Ok(Some(share)) => share,
         Ok(None) => {
             warn!("new share spec vanished before reconcile {:?}", spec_path);

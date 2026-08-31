@@ -14,7 +14,7 @@ use crate::{
     config::Config,
     jsend::JSendBuilder,
     share::{download_token, is_filtered, Share},
-    space::{Space, SpaceDir},
+    space::SpaceDir,
 };
 
 #[derive(Deserialize)]
@@ -30,7 +30,6 @@ pub struct DownloadTokenQuery {
 
 pub async fn handle_download_share(
     State(cfg): State<Config>,
-    space: Space,
     Path(params): Path<DownloadParams>,
     Query(query): Query<DownloadTokenQuery>,
 ) -> Response {
@@ -57,8 +56,8 @@ pub async fn handle_download_share(
         return unauthorized();
     }
 
-    let share = match Share::load(&space, &params.id).await {
-        Ok(Some(share)) => share,
+    let (space, share) = match Share::resolve(&cfg, &params.id).await {
+        Ok(Some(resolved)) => resolved,
         Ok(None) => {
             return resp
                 .status_code(StatusCode::NOT_FOUND)

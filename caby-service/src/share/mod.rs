@@ -16,6 +16,7 @@ use tracing::warn;
 
 use crate::{
     auth::User,
+    config::Config,
     controller::{PathGuard, PathLocks},
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     guest::Guest,
@@ -152,8 +153,12 @@ impl From<&Share> for ShareStateFile {
     }
 }
 
-fn route_path(space: &Space, id: &str) -> Result<PathBuf> {
-    space.join(SpaceDir::SHARES, Path::new(&format!("{id}.json")))
+fn route_path(shares_root: &Path, id: &str) -> Result<PathBuf> {
+    let path = shares_root.join(format!("{id}.json")).clean();
+    if !path.starts_with(shares_root) {
+        return Err(anyhow!("share id out of bounds: {:?}", id));
+    }
+    Ok(path)
 }
 
 fn state_path(space: &Space, spec_path: &Path) -> Result<PathBuf> {
@@ -170,13 +175,12 @@ async fn load_share_file(path: &Path) -> Result<Share> {
     Ok(Share::from(stored))
 }
 
-pub async fn get_shares_in_space(space: &Space) -> Result<Vec<Share>> {
-    let dir = space.shares();
-    let mut read_dir = match fs::read_dir(&dir).await {
+pub async fn get_shares_in_space(shares_root: &Path, space: &Space) -> Result<Vec<Share>> {
+    let mut read_dir = match fs::read_dir(shares_root).await {
         Ok(read_dir) => read_dir,
         Err(err) if err.kind() == ErrorKind::NotFound => return Ok(Vec::new()),
         Err(err) => {
-            return Err(anyhow!(err).context(format!("could not read shares dir {:?}", dir)))
+            return Err(anyhow!(err).context(format!("could not read shares dir {:?}", shares_root)))
         }
     };
 
@@ -184,7 +188,7 @@ pub async fn get_shares_in_space(space: &Space) -> Result<Vec<Share>> {
     while let Some(entry) = read_dir
         .next_entry()
         .await
-        .with_context(|| format!("could not read shares dir {:?}", dir))?
+        .with_context(|| format!("could not read shares dir {:?}", shares_root))?
     {
         let path = entry.path();
         if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
@@ -195,9 +199,15 @@ pub async fn get_shares_in_space(space: &Space) -> Result<Vec<Share>> {
             continue;
         };
 
-        match Share::load(space, id).await {
-            Ok(Some(share)) => shares.push(share),
-            Ok(None) => warn!("skipping dangling share route {:?}", path),
+        match read_route(shares_root, id).await {
+            Ok(Some(route)) if route.space == space.name => {
+                match load_state(space, Path::new(&route.spec_path)).await {
+                    Ok(Some(share)) => shares.push(share),
+                    Ok(None) => warn!("skipping dangling share route {:?}", path),
+                    Err(err) => warn!("skipping unreadable share state {:?}: {:#}", path, err),
+                }
+            }
+            Ok(_) => {}
             Err(err) => warn!("skipping unreadable share route {:?}: {:#}", path, err),
         }
     }
@@ -448,32 +458,45 @@ impl Share {
         Ok(())
     }
 
-    pub async fn save(&self, space: &Space, _guard: &PathGuard) -> Result<()> {
+    pub async fn save(&self, shares_root: &Path, space: &Space, _guard: &PathGuard) -> Result<()> {
         let spec_path = Path::new(&self.spec_path);
         self.write_to(&state_path(space, spec_path)?).await?;
-        write_route(space, &self.id, &self.spec_path).await
+        write_route(shares_root, &self.id, &self.space, &self.spec_path).await
     }
 
-    pub async fn load(space: &Space, id: &str) -> Result<Option<Share>> {
-        let Some(spec_path) = read_route(space, id).await? else {
+    pub async fn resolve(cfg: &Config, id: &str) -> Result<Option<(Space, Share)>> {
+        let Some(route) = read_route(&cfg.shares_path, id).await? else {
             return Ok(None);
         };
-        load_state(space, Path::new(&spec_path)).await
+        let Some(space) = cfg.runtime.load().spaces.get(&route.space).map(Space::from) else {
+            warn!("share {} routes to unknown space {}", id, route.space);
+            return Ok(None);
+        };
+        let Some(share) = load_state(&space, Path::new(&route.spec_path)).await? else {
+            return Ok(None);
+        };
+        Ok(Some((space, share)))
     }
 
-    pub async fn delete(space: &Space, id: &str, _guard: &PathGuard) -> Result<()> {
-        let Some(spec_path) = read_route(space, id).await? else {
+    pub async fn delete(
+        shares_root: &Path,
+        space: &Space,
+        id: &str,
+        _guard: &PathGuard,
+    ) -> Result<()> {
+        let Some(route) = read_route(shares_root, id).await? else {
             return Ok(());
         };
-        let spec_path = Path::new(&spec_path);
+        let spec_path = Path::new(&route.spec_path);
 
         remove_spec(space, spec_path).await?;
         remove_state(space, spec_path).await?;
-        remove_route(space, id).await
+        remove_route(shares_root, id).await
     }
 }
 
 pub async fn reconcile_spec(
+    shares_root: &Path,
     locks: &PathLocks,
     space: &Space,
     spec_path: &Path,
@@ -485,7 +508,7 @@ pub async fn reconcile_spec(
     let content = match fs::read_to_string(&live).await {
         Ok(content) => content,
         Err(err) if err.kind() == ErrorKind::NotFound => {
-            cleanup_spec(space, spec_path, &guard).await?;
+            cleanup_spec(shares_root, space, spec_path, &guard).await?;
             return Ok(None);
         }
         Err(err) => {
@@ -496,16 +519,21 @@ pub async fn reconcile_spec(
     let spec = ShareSpec::try_parse(&content)?;
     let existing = load_state(space, spec_path).await?;
     let share = Share::from_spec(&space.name, spec_path, spec, existing, actor)?;
-    share.save(space, &guard).await?;
+    share.save(shares_root, space, &guard).await?;
 
     Ok(Some(share))
 }
 
-pub async fn cleanup_spec(space: &Space, spec_path: &Path, guard: &PathGuard) -> Result<()> {
+pub async fn cleanup_spec(
+    shares_root: &Path,
+    space: &Space,
+    spec_path: &Path,
+    guard: &PathGuard,
+) -> Result<()> {
     if let Some(share) = load_state(space, spec_path).await? {
-        return Share::delete(space, &share.id, guard).await;
+        return Share::delete(shares_root, space, &share.id, guard).await;
     }
-    remove_routes_for_spec(space, spec_path).await
+    remove_routes_for_spec(shares_root, &space.name, spec_path).await
 }
 
 pub async fn load_state(space: &Space, spec_path: &Path) -> Result<Option<Share>> {
@@ -548,24 +576,25 @@ async fn remove_spec(space: &Space, spec_path: &Path) -> Result<()> {
 
 #[derive(Serialize, Deserialize)]
 struct RouteFile {
+    space: String,
     spec_path: String,
 }
 
-async fn read_route(space: &Space, id: &str) -> Result<Option<String>> {
-    let path = route_path(space, id)?;
+async fn read_route(shares_root: &Path, id: &str) -> Result<Option<RouteFile>> {
+    let path = route_path(shares_root, id)?;
     match fs::read_to_string(&path).await {
         Ok(content) => {
             let route: RouteFile = serde_json::from_str(&content)
                 .with_context(|| format!("could not parse share route {:?}", path))?;
-            Ok(Some(route.spec_path))
+            Ok(Some(route))
         }
         Err(err) if err.kind() == ErrorKind::NotFound => Ok(None),
         Err(err) => Err(anyhow!(err).context(format!("could not read share route {:?}", path))),
     }
 }
 
-async fn write_route(space: &Space, id: &str, spec_path: &str) -> Result<()> {
-    let path = route_path(space, id)?;
+async fn write_route(shares_root: &Path, id: &str, space: &str, spec_path: &str) -> Result<()> {
+    let path = route_path(shares_root, id)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)
             .await
@@ -573,6 +602,7 @@ async fn write_route(space: &Space, id: &str, spec_path: &str) -> Result<()> {
     }
 
     let serialized = serde_json::to_string_pretty(&RouteFile {
+        space: space.to_owned(),
         spec_path: spec_path.to_owned(),
     })
     .context("could not serialize share route")?;
@@ -583,8 +613,8 @@ async fn write_route(space: &Space, id: &str, spec_path: &str) -> Result<()> {
     Ok(())
 }
 
-async fn remove_route(space: &Space, id: &str) -> Result<()> {
-    let path = route_path(space, id)?;
+async fn remove_route(shares_root: &Path, id: &str) -> Result<()> {
+    let path = route_path(shares_root, id)?;
     match fs::remove_file(&path).await {
         Ok(()) => Ok(()),
         Err(err) if err.kind() == ErrorKind::NotFound => Ok(()),
@@ -592,13 +622,16 @@ async fn remove_route(space: &Space, id: &str) -> Result<()> {
     }
 }
 
-pub async fn remove_routes_for_spec(space: &Space, spec_path: &Path) -> Result<()> {
-    let dir = space.shares();
-    let mut read_dir = match fs::read_dir(&dir).await {
+pub async fn remove_routes_for_spec(
+    shares_root: &Path,
+    space: &str,
+    spec_path: &Path,
+) -> Result<()> {
+    let mut read_dir = match fs::read_dir(shares_root).await {
         Ok(read_dir) => read_dir,
         Err(err) if err.kind() == ErrorKind::NotFound => return Ok(()),
         Err(err) => {
-            return Err(anyhow!(err).context(format!("could not read shares dir {:?}", dir)))
+            return Err(anyhow!(err).context(format!("could not read shares dir {:?}", shares_root)))
         }
     };
 
@@ -606,7 +639,7 @@ pub async fn remove_routes_for_spec(space: &Space, spec_path: &Path) -> Result<(
     while let Some(entry) = read_dir
         .next_entry()
         .await
-        .with_context(|| format!("could not read shares dir {:?}", dir))?
+        .with_context(|| format!("could not read shares dir {:?}", shares_root))?
     {
         let path = entry.path();
         if path.extension().and_then(|ext| ext.to_str()) != Some("json") {
@@ -615,8 +648,10 @@ pub async fn remove_routes_for_spec(space: &Space, spec_path: &Path) -> Result<(
         let Some(id) = path.file_stem().and_then(|stem| stem.to_str()) else {
             continue;
         };
-        match read_route(space, id).await {
-            Ok(Some(spec)) if spec == target => remove_route(space, id).await?,
+        match read_route(shares_root, id).await {
+            Ok(Some(route)) if route.space == space && route.spec_path == target => {
+                remove_route(shares_root, id).await?
+            }
             Ok(_) => {}
             Err(err) => warn!("skipping unreadable share route {:?}: {:#}", path, err),
         }
@@ -648,6 +683,10 @@ mod tests {
             display: "Rocinante".to_owned(),
             path: std::env::temp_dir().join(format!("caby-share-{}", xid::new())),
         }
+    }
+
+    fn shares_root(space: &Space) -> PathBuf {
+        space.path.join("shares")
     }
 
     fn cleanup(space: &Space) {
@@ -702,8 +741,17 @@ mod tests {
             None,
         );
 
-        share.save(&space, &PathGuard::test().await).await.unwrap();
-        let loaded = Share::load(&space, &share.id).await.unwrap();
+        let root = shares_root(&space);
+        share
+            .save(&root, &space, &PathGuard::test().await)
+            .await
+            .unwrap();
+
+        let route = read_route(&root, &share.id).await.unwrap().unwrap();
+        assert_eq!(route.space, space.name);
+        let loaded = load_state(&space, Path::new(&route.spec_path))
+            .await
+            .unwrap();
         assert_eq!(loaded, Some(share));
 
         cleanup(&space);
@@ -759,19 +807,19 @@ mod tests {
     #[tokio::test]
     async fn share_route_round_trip() {
         let space = temp_space();
+        let root = shares_root(&space);
 
-        assert!(read_route(&space, "abc123").await.unwrap().is_none());
+        assert!(read_route(&root, "abc123").await.unwrap().is_none());
 
-        write_route(&space, "abc123", "photos/trip.share.caby")
+        write_route(&root, "abc123", &space.name, "photos/trip.share.caby")
             .await
             .unwrap();
-        assert_eq!(
-            read_route(&space, "abc123").await.unwrap().as_deref(),
-            Some("photos/trip.share.caby")
-        );
+        let route = read_route(&root, "abc123").await.unwrap().unwrap();
+        assert_eq!(route.space, space.name);
+        assert_eq!(route.spec_path, "photos/trip.share.caby");
 
-        remove_route(&space, "abc123").await.unwrap();
-        assert!(read_route(&space, "abc123").await.unwrap().is_none());
+        remove_route(&root, "abc123").await.unwrap();
+        assert!(read_route(&root, "abc123").await.unwrap().is_none());
 
         cleanup(&space);
     }
@@ -779,15 +827,17 @@ mod tests {
     #[tokio::test]
     async fn load_missing_is_none() {
         let space = temp_space();
-        let loaded = Share::load(&space, "does-not-exist").await.unwrap();
-        assert_eq!(loaded, None);
+        let root = shares_root(&space);
+        assert!(read_route(&root, "does-not-exist").await.unwrap().is_none());
         cleanup(&space);
     }
 
     #[tokio::test]
     async fn get_shares_in_space_missing_dir_is_empty() {
         let space = temp_space();
-        let listed = get_shares_in_space(&space).await.unwrap();
+        let listed = get_shares_in_space(&shares_root(&space), &space)
+            .await
+            .unwrap();
         assert!(listed.is_empty());
         cleanup(&space);
     }
@@ -804,7 +854,7 @@ mod tests {
             vec![],
             None,
         )
-        .save(&space, &PathGuard::test().await)
+        .save(&shares_root(&space), &space, &PathGuard::test().await)
         .await
         .unwrap();
         Share::new(
@@ -816,11 +866,13 @@ mod tests {
             vec![],
             None,
         )
-        .save(&space, &PathGuard::test().await)
+        .save(&shares_root(&space), &space, &PathGuard::test().await)
         .await
         .unwrap();
 
-        let listed = get_shares_in_space(&space).await.unwrap();
+        let listed = get_shares_in_space(&shares_root(&space), &space)
+            .await
+            .unwrap();
         assert_eq!(listed.len(), 2);
 
         cleanup(&space);
@@ -829,16 +881,20 @@ mod tests {
     #[tokio::test]
     async fn delete_removes_and_is_idempotent() {
         let space = temp_space();
+        let root = shares_root(&space);
         let share = sample(vec![], vec![]);
-        share.save(&space, &PathGuard::test().await).await.unwrap();
-
-        Share::delete(&space, &share.id, &PathGuard::test().await)
+        share
+            .save(&root, &space, &PathGuard::test().await)
             .await
             .unwrap();
-        assert_eq!(Share::load(&space, &share.id).await.unwrap(), None);
+
+        Share::delete(&root, &space, &share.id, &PathGuard::test().await)
+            .await
+            .unwrap();
+        assert!(read_route(&root, &share.id).await.unwrap().is_none());
 
         // deleting an already-absent share is a no-op success
-        Share::delete(&space, &share.id, &PathGuard::test().await)
+        Share::delete(&root, &space, &share.id, &PathGuard::test().await)
             .await
             .unwrap();
 
@@ -858,13 +914,17 @@ mod tests {
         fs::write(&spec_live, "guest_flows:\n  - permissions: [view]")
             .await
             .unwrap();
-        share.save(&space, &PathGuard::test().await).await.unwrap();
+        let root = shares_root(&space);
+        share
+            .save(&root, &space, &PathGuard::test().await)
+            .await
+            .unwrap();
 
         let meta_dir = space.join(SpaceDir::META, spec_path).unwrap();
         assert!(fs::try_exists(&spec_live).await.unwrap());
         assert!(fs::try_exists(&meta_dir).await.unwrap());
 
-        Share::delete(&space, &share.id, &PathGuard::test().await)
+        Share::delete(&root, &space, &share.id, &PathGuard::test().await)
             .await
             .unwrap();
 

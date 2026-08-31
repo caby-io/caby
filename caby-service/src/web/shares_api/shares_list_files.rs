@@ -14,7 +14,6 @@ use crate::{
     files::{build_entries, Entry, EntryFields},
     jsend::JSendBuilder,
     share::{download_token, is_filtered, Share},
-    space::Space,
     user::Permission,
 };
 
@@ -31,23 +30,22 @@ struct ListShareResponse {
     entries: Vec<Entry>,
 }
 
-fn build_download_url(cfg: &Config, space: &str, id: &str, path: &str, token: &str) -> String {
+fn build_download_url(cfg: &Config, id: &str, path: &str, token: &str) -> String {
     let mut url = cfg.urls.backend.clone();
-    url.set_path(&format!("/v0/shares/{}/{}/download/{}", space, id, path));
+    url.set_path(&format!("/v0/shares/{}/download/{}", id, path));
     url.query_pairs_mut().append_pair("token", token);
     url.to_string()
 }
 
 pub async fn handle_list_share_files(
     State(cfg): State<Config>,
-    space: Space,
     auth: Option<AuthUser>,
     Path(params): Path<ListParams>,
 ) -> Response {
     let resp = JSendBuilder::new();
 
-    let share = match Share::load(&space, &params.id).await {
-        Ok(Some(share)) => share,
+    let (space, share) = match Share::resolve(&cfg, &params.id).await {
+        Ok(Some(resolved)) => resolved,
         Ok(None) => {
             return resp
                 .status_code(StatusCode::NOT_FOUND)
@@ -108,13 +106,8 @@ pub async fn handle_list_share_files(
             if let Some(EntryFields::File { download_url, .. }) = &mut entry.entry_fields {
                 match download_token::generate_token(&cfg, &share.id, &scoped_path) {
                     Ok(token) => {
-                        *download_url = Some(build_download_url(
-                            &cfg,
-                            &space.name,
-                            &share.id,
-                            &display_path,
-                            &token,
-                        ));
+                        *download_url =
+                            Some(build_download_url(&cfg, &share.id, &display_path, &token));
                     }
                     Err(err) => warn!(
                         "could not mint download token for {}: {:#}",

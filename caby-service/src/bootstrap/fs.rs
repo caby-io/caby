@@ -29,6 +29,7 @@ pub async fn init(cfg: &Config) -> Result<()> {
     // Initialize core application paths
     init_dir("users", &cfg.users_path).await?;
     init_dir("spaces", &cfg.spaces_path).await?;
+    init_dir("shares", &cfg.shares_path).await?;
     if cfg.auth.oidc.is_some() {
         init_dir(OIDC_DIR, &cfg.home_path.join(OIDC_DIR)).await?;
     }
@@ -62,11 +63,6 @@ pub async fn init(cfg: &Config) -> Result<()> {
         init_dir(
             &format!("spaces/{}/meta", &space_config.name),
             &space_config.path.join("meta"),
-        )
-        .await?;
-        init_dir(
-            &format!("spaces/{}/shares", &space_config.name),
-            &space_config.path.join("shares"),
         )
         .await?;
         init_dir(

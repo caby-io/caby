@@ -14,16 +14,15 @@
 /app/cabynet
   ├── /oidc
   ├── /users
+  ├── /shares                 # instance-wide id -> {space, spec_path} route pointers
   ├── /spaces
     ├── /user
       ├── /live
-      ├── /meta
-      ├── /shares
+      ├── /meta               # share state records live here: meta/{spec_path}/share.json
       └── /uploads
     └── /media
       ├── /live
       ├── /meta
-      ├── /shares
       └── /uploads
   ├── .secrets
   └── config.yaml

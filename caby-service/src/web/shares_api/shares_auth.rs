@@ -10,10 +10,10 @@ use tracing::warn;
 
 use crate::{
     auth::{AuthUser, User},
+    config::Config,
     controller::PathLocks,
     jsend::JSendBuilder,
     share::{load_state, Share, ShareAccessFlow, ShareAuth},
-    space::Space,
     user::Permission,
     web::shares_api::ShareIdParam,
 };
@@ -29,7 +29,7 @@ struct AuthShareResponse {
 }
 
 pub async fn handle_password_auth_share(
-    space: Space,
+    State(cfg): State<Config>,
     auth: AuthUser,
     Path(params): Path<ShareIdParam>,
     State(locks): State<Arc<PathLocks>>,
@@ -37,8 +37,8 @@ pub async fn handle_password_auth_share(
 ) -> Response {
     let resp = JSendBuilder::new();
 
-    let spec_path = match Share::load(&space, &params.id).await {
-        Ok(Some(share)) => share.spec_path,
+    let (space, spec_path) = match Share::resolve(&cfg, &params.id).await {
+        Ok(Some((space, share))) => (space, share.spec_path),
         Ok(None) => {
             return resp
                 .status_code(StatusCode::NOT_FOUND)
@@ -113,7 +113,7 @@ pub async fn handle_password_auth_share(
 
     share.grant(&auth.user, permissions.clone());
 
-    if let Err(err) = share.save(&space, &guard).await {
+    if let Err(err) = share.save(&cfg.shares_path, &space, &guard).await {
         warn!("could not record share grant for {}: {:#}", share.id, err);
         return resp.internal_error().into_response();
     }
