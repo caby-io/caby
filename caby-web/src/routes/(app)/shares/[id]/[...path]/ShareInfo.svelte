@@ -1,29 +1,16 @@
 <script lang="ts">
-	import type { ShareAuthOptions } from '$lib/api/api_shares';
 	import IconLucideShare2 from '~icons/lucide/share-2';
-	import IconLucideLock from '~icons/lucide/lock';
-	import IconLucideGlobe from '~icons/lucide/globe';
 
-	let { root_name, auth }: { root_name: string; auth?: ShareAuthOptions } = $props();
+	let { root_name, id }: { root_name: string; id: string } = $props();
 </script>
 
-<div class="share-info fx fx--col">
+<div class="share-info fx fx--col box-shadow-0-card border-0">
 	<div class="badge fx fx--ac">
 		<IconLucideShare2 />
-		<span>Shared folder</span>
+		Share
 	</div>
 	<h2 class="name" title={root_name}>{root_name}</h2>
-	{#if auth}
-		<div class="access fx fx--ac">
-			{#if auth.password}
-				<IconLucideLock />
-				<span>Password protected</span>
-			{:else if auth.open}
-				<IconLucideGlobe />
-				<span>Public link</span>
-			{/if}
-		</div>
-	{/if}
+	<div class="id" title={id}>{id}</div>
 </div>
 
 <style lang="scss">
@@ -31,20 +18,16 @@
 		gap: 0.5rem;
 		padding: 1rem;
 		margin: 0.75rem;
-		border-radius: 8px;
 		color: var(--clr-text-0);
-		background:
-			linear-gradient(var(--clr-background-1), var(--clr-background-1)) padding-box,
-			linear-gradient(320deg, var(--clr-primary), var(--clr-accent)) border-box;
-		border: 2px solid transparent;
+		background-color: var(--clr-background-2);
 
 		.badge {
 			gap: 0.4rem;
-			font-size: 0.7rem;
-			font-weight: 600;
+			font-size: 0.8rem;
 			letter-spacing: 0.08em;
 			text-transform: uppercase;
-			color: var(--clr-accent);
+			font-weight: bold;
+			color: var(--clr-primary);
 		}
 
 		.name {
@@ -53,10 +36,13 @@
 			overflow-wrap: anywhere;
 		}
 
-		.access {
-			gap: 0.4rem;
-			font-size: 0.8rem;
+		.id {
+			font-family: monospace;
+			font-size: 0.7rem;
 			color: var(--clr-text-2);
+			white-space: nowrap;
+			overflow: hidden;
+			text-overflow: ellipsis;
 		}
 	}
 </style>

@@ -10,6 +10,7 @@
 	} from '$lib/api/api_shares';
 	import { syncGuestToken, ensureGuestToken, clearGuestToken } from '$lib/api/guest';
 	import type { Entry } from '$lib/files/entry';
+	import type { SelectedEntry } from '$lib/files/select';
 	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
 	import Breadcrumbs from '$lib/files/browse/Breadcrumbs.svelte';
 	import ContextMenu from '$lib/files/ContextMenu.svelte';
@@ -36,6 +37,42 @@
 	let entries = $state<Entry[]>([]);
 	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
 	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
+
+	let selection_mode = $state<null | 'touch' | 'desktop'>(null);
+	let in_selection = $derived(selection_mode !== null);
+	let selected_entries = $derived(new Set(entries.filter((e) => e.is_selected === true)));
+	let last_selected: SelectedEntry | undefined = $state();
+
+	$effect(() => {
+		if (selection_mode === 'desktop' && selected_entries.size === 0) selection_mode = null;
+	});
+
+	const handleSelectOp = (e: MouseEvent, selected: SelectedEntry) => {
+		if (selection_mode === null) selection_mode = 'desktop';
+
+		if (
+			e.shiftKey &&
+			last_selected &&
+			last_selected.entry.entry_type == selected.entry.entry_type
+		) {
+			let low_index = last_selected.index;
+			let high_index = selected.index;
+			if (last_selected.index > selected.index) {
+				low_index = selected.index;
+				high_index = last_selected.index;
+			}
+
+			entries.slice(low_index, high_index + 1).forEach((e) => {
+				e.is_selected = true;
+			});
+
+			last_selected = selected;
+			return;
+		}
+
+		selected.entry.is_selected = !selected.entry.is_selected;
+		last_selected = selected;
+	};
 
 	let preview_entries = $derived(file_entries.filter((e) => e.entry_fields?.can_preview));
 	// svelte-ignore non_reactive_update
@@ -173,7 +210,7 @@
 <div class="share-view fx">
 	<section class="left fx fx--col" class:open={menu.open}>
 		{#if root_name}
-			<ShareInfo {root_name} {auth} />
+			<ShareInfo {root_name} {id} />
 		{/if}
 	</section>
 	<div
@@ -197,13 +234,15 @@
 			</div>
 		{:else}
 			<header class="bar fx fx--ac">
-				<Breadcrumbs {href_base} root_label={root_name} />
+				<Breadcrumbs {href_base} />
 			</header>
 			<EntriesGrid
 				{dir_entries}
 				{file_entries}
 				{space}
 				{href_base}
+				{in_selection}
+				{handleSelectOp}
 				{handleContextMenu}
 				{handlePreview}
 			/>

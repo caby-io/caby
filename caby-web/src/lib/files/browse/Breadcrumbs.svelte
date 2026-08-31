@@ -2,11 +2,7 @@
 	import { page } from '$app/state';
 	import IconCiHouse02 from '~icons/ci/house-02';
 
-	let {
-		space,
-		href_base,
-		root_label
-	}: { space?: string; href_base?: string; root_label?: string } = $props();
+	let { space, href_base }: { space?: string; href_base?: string } = $props();
 
 	const base = $derived(href_base ?? `/files/${space}`);
 	const dirs = $derived((page.params.path ?? '').split('/').filter(Boolean));
@@ -19,11 +15,7 @@
 <div class="breadcrumbs fx fx--ac">
 	<div class="breadcrumb fx fx--ac">
 		<a class="fx fx--ac" href={base}>
-			{#if root_label}
-				{root_label}
-			{:else}
-				<IconCiHouse02 class="house-icon" />
-			{/if}
+			<IconCiHouse02 class="house-icon" />
 		</a>
 	</div>
 	{#each dirs as dir, i}
