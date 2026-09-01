@@ -1,8 +1,15 @@
 <script lang="ts">
 	import { page } from '$app/state';
+	import type { Component } from 'svelte';
 	import IconCiHouse02 from '~icons/ci/house-02';
 
-	let { space, href_base }: { space?: string; href_base?: string } = $props();
+	let {
+		space,
+		href_base,
+		root_icon
+	}: { space?: string; href_base?: string; root_icon?: Component } = $props();
+
+	const RootIcon = $derived(root_icon ?? IconCiHouse02);
 
 	const base = $derived(href_base ?? `/files/${space}`);
 	const dirs = $derived((page.params.path ?? '').split('/').filter(Boolean));
@@ -15,7 +22,7 @@
 <div class="breadcrumbs fx fx--ac">
 	<div class="breadcrumb fx fx--ac">
 		<a class="fx fx--ac" href={base}>
-			<IconCiHouse02 class="house-icon" />
+			<RootIcon />
 		</a>
 	</div>
 	{#each dirs as dir, i}
@@ -35,7 +42,7 @@
 			opacity: 1;
 			border-radius: 3px;
 
-			:global(.house-icon) {
+			:global(svg) {
 				font-size: 0.9em;
 			}
 

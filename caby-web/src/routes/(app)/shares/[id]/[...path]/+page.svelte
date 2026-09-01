@@ -17,6 +17,7 @@
 	import MediaPreviewDialog from '$lib/files/MediaPreviewDialog.svelte';
 	import PasswordPanel from './PasswordPanel.svelte';
 	import ShareInfo from './ShareInfo.svelte';
+	import IconLucideShare2 from '~icons/lucide/share-2';
 
 	const id = $derived(page.params.id!);
 	const path = $derived(page.params.path ?? '');
@@ -234,7 +235,7 @@
 			</div>
 		{:else}
 			<header class="bar fx fx--ac">
-				<Breadcrumbs {href_base} />
+				<Breadcrumbs {href_base} root_icon={IconLucideShare2} />
 			</header>
 			<EntriesGrid
 				{dir_entries}
