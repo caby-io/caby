@@ -265,10 +265,10 @@ mod tests {
         let route_file = root.join(format!("{}.json", share.id));
         assert!(route_file.exists());
 
-        // a legacy/malformed route (no spec_path) must not abort the reverse scan
+        // a malformed route (missing spec_path) must not abort the reverse scan
         fs::write(
-            root.join("legacyfatroute.json"),
-            r#"{"id":"legacyfatroute","owner_id":"x"}"#,
+            root.join("malformed.json"),
+            r#"{"id":"malformed","owner_id":"x"}"#,
         )
         .await
         .unwrap();
