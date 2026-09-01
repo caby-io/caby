@@ -41,10 +41,10 @@
 	let is_processing = $derived(entry.is_processing);
 	let is_targetted = $derived(entry.is_targetted);
 
-	let img_failed = $state(false);
+	let failed_url = $state<string | undefined>();
 	let kind = $derived(entry.entry_fields.kind);
 	let preview_url = $derived(entry.entry_fields.preview_url);
-	let show_preview = $derived(kind === 'image' && !!preview_url && !img_failed);
+	let show_preview = $derived(kind === 'image' && !!preview_url && failed_url !== preview_url);
 	let KindIcon = $derived(pickKindIcon(kind));
 	let can_preview = $derived(entry.entry_fields.can_preview);
 
@@ -83,9 +83,10 @@
 			<img
 				src={preview_url}
 				alt={entry.name}
+				decoding="async"
 				loading="lazy"
 				draggable="false"
-				onerror={() => (img_failed = true)}
+				onerror={() => (failed_url = preview_url)}
 			/>
 		</section>
 	{:else}

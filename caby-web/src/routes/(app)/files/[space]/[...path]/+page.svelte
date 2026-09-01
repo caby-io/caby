@@ -16,12 +16,14 @@
 
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import * as fs from '$lib/fs';
 
 	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
 	import LoadingBar from '$lib/LoadingBar.svelte';
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
+	import { EntryType } from '$lib/files/entry';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
 	import { downloadEntries } from '$lib/files/download';
 	import { getFilesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
@@ -39,7 +41,7 @@
 	import MoveDialog from './MoveDialog.svelte';
 	import EntriesOverviewNav from '$lib/files/overview/EntriesOverviewNav.svelte';
 	import { fsEntryIntoFiles } from '$lib/files/upload/drop';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	const menu = getContext<{ open: boolean }>('menu');
 	import { UploadGroup } from '$lib/files/upload/upload_group';
@@ -76,13 +78,13 @@
 	// File List Operations
 
 	let entries: Entry[] = $derived(filesResponse.entries);
-	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
-	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
+	let dir_entries = $derived(entries.filter((e) => e.entry_type === EntryType.DIRECTORY));
+	let file_entries = $derived(entries.filter((e) => e.entry_type === EntryType.FILE));
 
 	let loading = $state(false);
+	let reloading = $state(false);
 
 	const getFilesList = async (path: string) => {
-		loading = true;
 		const resp = await listFiles(client, space, path);
 		if (resp.status != 'success') {
 			filesResponse = {
@@ -91,16 +93,31 @@
 				current_dir: '',
 				entries: []
 			};
-			loading = false;
 			return;
 		}
 		filesResponse = resp.data!;
+	};
+
+	// for first time loads and hard reloads of entire list
+	const reloadFiles = async () => {
+		loading = true;
+		reloading = true;
+		await getFilesList(path);
+		reloading = false;
+		loading = false;
+	};
+
+	// for atomic loads
+	// note: this should be totally replaced by websockets eventually
+	const refreshFiles = async () => {
+		loading = true;
+		await getFilesList(path);
 		loading = false;
 	};
 
 	const onListChange = async () => {
 		// todo: should we clear the delete and selected list?
-		await getFilesList(path);
+		await refreshFiles();
 		await fetchFilesOverview();
 	};
 
@@ -437,12 +454,31 @@
 		// In the switch-case we're updating our boolean flags whenever the
 		// desired bound keys are pressed.
 
+		// todo: move these to a file
+		// todo: support mac
 		switch (e.key) {
 			case 'n':
 				if (!e.altKey) {
 					return;
 				}
 				handleAddContent();
+				return;
+			case 'r': {
+				if (!e.altKey) {
+					return;
+				}
+				if (selected_entries.size !== 1) return;
+				const [entry] = selected_entries;
+				handleRenameEntry(entry);
+				return;
+			}
+			case 'Enter': {
+				if (selected_entries.size !== 1) return;
+				const [entry] = selected_entries;
+				if (entry.entry_type !== EntryType.DIRECTORY) return;
+				goto(`/${fs.join('files', space, entry.path)}`);
+				return;
+			}
 			case 'Delete':
 				handleDeleteSelected();
 				return;
@@ -452,12 +488,24 @@
 		}
 	};
 
-	$effect(() => {
-		// temp
-		uploadManager.upload_groups_completed;
-		getFilesList(path);
-		fetchFilesOverview();
+	onMount(() => {
 		fetchSpaces();
+	});
+
+	$effect(() => {
+		reloadFiles();
+		fetchFilesOverview();
+	});
+
+	// handle upload refresh
+	// todo: we should make a more efficient version of this after refactoring uploadManager -> task manager
+	let last_upload_completed = uploadManager.upload_groups_completed;
+	$effect(() => {
+		const completed = uploadManager.upload_groups_completed;
+		if (completed === last_upload_completed) return;
+		last_upload_completed = completed;
+		refreshFiles();
+		fetchFilesOverview();
 	});
 </script>
 
@@ -491,7 +539,7 @@
 			{file_entries}
 			{space}
 			{in_selection}
-			{loading}
+			dimmed={reloading}
 			{drag_over_ct}
 			{onDragEnter}
 			{onDragOver}
@@ -528,6 +576,7 @@
 	bind:dialog={contextMenuDialog}
 	position={contextMenuProps.position}
 	bind:entry={contextMenuProps.entry}
+	{space}
 	onDownload={(entry) => downloadEntries(client, space, [entry])}
 	{handleMoveEntries}
 	{handleAddContent}

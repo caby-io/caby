@@ -9,6 +9,7 @@
 		type ShareAuthOptions
 	} from '$lib/api/api_shares';
 	import { syncGuestToken, ensureGuestToken, clearGuestToken } from '$lib/api/guest';
+	import { EntryType } from '$lib/files/entry';
 	import type { Entry } from '$lib/files/entry';
 	import type { SelectedEntry } from '$lib/files/select';
 	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
@@ -37,8 +38,8 @@
 	let password_loading = $state(false);
 
 	let entries = $state<Entry[]>([]);
-	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
-	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
+	let dir_entries = $derived(entries.filter((e) => e.entry_type === EntryType.DIRECTORY));
+	let file_entries = $derived(entries.filter((e) => e.entry_type === EntryType.FILE));
 
 	let selection_mode = $state<null | 'touch' | 'desktop'>(null);
 	let in_selection = $derived(selection_mode !== null);
@@ -245,6 +246,7 @@
 				{space}
 				{href_base}
 				{in_selection}
+				dimmed={loading}
 				{handleSelectOp}
 				{handleContextMenu}
 				{handlePreview}
@@ -253,6 +255,7 @@
 				bind:dialog={contextMenuDialog}
 				position={contextMenuProps.position}
 				bind:entry={contextMenuProps.entry}
+				{href_base}
 				onDownload={downloadShareEntry}
 			/>
 			<MediaPreviewDialog bind:this={preview} entries={preview_entries} />

@@ -5,6 +5,8 @@
 		dialog: HTMLElement;
 		position: { x: number; y: number };
 		entry?: Entry;
+		space?: string;
+		href_base?: string;
 		onDownload?: (entry: Entry) => void;
 		handleAddContent?: (entries: (Entry | undefined)[]) => void;
 		handleMoveEntries?: (entry: Entry) => void;
@@ -14,7 +16,10 @@
 </script>
 
 <script lang="ts">
+	import { join } from '$lib/fs';
+	import { EntryType } from './entry';
 	import IconLucidePlus from '~icons/lucide/plus';
+	import IconLucideFolderOpen from '~icons/lucide/folder-open';
 	import IconLucideFolderInput from '~icons/lucide/folder-input';
 	import IconLucideDownload from '~icons/lucide/download';
 	import IconLucidePencilLine from '~icons/lucide/pencil-line';
@@ -24,6 +29,8 @@
 		dialog = $bindable(),
 		position,
 		entry = $bindable(),
+		space,
+		href_base,
 		onDownload,
 		handleAddContent,
 		handleMoveEntries,
@@ -31,8 +38,18 @@
 		handleRenameEntry
 	}: ContextMenuProps = $props();
 
-	const isDir = $derived(entry?.entry_type === 'directory');
+	/*
+	 * todo: the context menu should have contexual visual differences for when we're in different states
+	 *   for example when we have things selected it should clearly organize actions that are targetting the selection
+	 *   on the same thread we need to break up the context menu into different sections
+	 */
+
+	const isDir = $derived(entry?.entry_type === EntryType.DIRECTORY);
 	const typeName = $derived(isDir ? 'Folder' : 'File');
+
+	const open_href = $derived(
+		href_base ? `${href_base}/${entry?.path}` : `/${join('files', space!, entry?.path ?? '')}`
+	);
 
 	// todo: check that this isn't too expensive
 	const handleWindowClick = (e: MouseEvent) => {
@@ -66,6 +83,15 @@
 	{onbeforetoggle}
 >
 	<section class="context-menu-container fx fx--col">
+		{#if entry && isDir}
+			<a class="context-item fx" href={open_href} onclick={() => dialog.hidePopover()}>
+				<div class="icon fx fx--cc">
+					<IconLucideFolderOpen />
+				</div>
+				<div class="title fx-grow">Open {typeName}</div>
+				<div class="tip fx fx--ac"></div>
+			</a>
+		{/if}
 		{#if handleAddContent && (!entry || isDir)}
 			<button class="context-item fx" onclick={() => handleAddContent?.([entry])}>
 				<div class="icon fx fx--cc">

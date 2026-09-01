@@ -10,7 +10,7 @@
 		space,
 		href_base,
 		in_selection = false,
-		loading = false,
+		dimmed = false,
 		drag_over_ct = 0,
 		onDragEnter,
 		onDragOver,
@@ -32,7 +32,7 @@
 		space: string;
 		href_base?: string;
 		in_selection?: boolean;
-		loading?: boolean;
+		dimmed?: boolean;
 		drag_over_ct?: number;
 		onDragEnter?: (e: DragEvent) => void;
 		onDragOver?: (e: DragEvent) => void;
@@ -54,7 +54,7 @@
 <main
 	class="entries fx-grow"
 	class:drag-over={drag_over_ct > 0}
-	class:loading
+	class:dimmed
 	ondragenter={onDragEnter}
 	ondragover={onDragOver}
 	ondragleave={onDragLeave}
@@ -65,7 +65,7 @@
 	<section class="directories">
 		<h3>Directories</h3>
 		<div class="dir-list">
-			{#each dir_entries as entry, index}
+			{#each dir_entries as entry, index (entry.path)}
 				<Directory
 					{entry}
 					{space}
@@ -86,7 +86,7 @@
 	<section class="files">
 		<h3>Files</h3>
 		<div class="file-list">
-			{#each file_entries as entry, index}
+			{#each file_entries as entry, index (entry.path)}
 				<File
 					{entry}
 					{space}
@@ -110,7 +110,11 @@
 		background: var(--clr-background);
 		padding: 1rem;
 		position: relative;
-		transition: opacity 0.2s;
+		transition: opacity 0.3s;
+
+		&.dimmed {
+			opacity: 0.6;
+		}
 
 		&.drag-over {
 			opacity: 0.5;
