@@ -7,6 +7,21 @@ export const EntryType = {
 
 export type EntryType = (typeof EntryType)[keyof typeof EntryType];
 
+export const SpecialType = {
+	SHARE: 'share'
+} as const;
+
+export type SpecialType = (typeof SpecialType)[keyof typeof SpecialType];
+
+export type ShareSpecialFields = {
+	id: string;
+	owner_id: string;
+	root_entry: string;
+	created_at: string;
+	expires_at?: string | null;
+	expired: boolean;
+};
+
 export type Entry<T = any> = {
 	entry_type: EntryType;
 	name: string;
@@ -16,6 +31,8 @@ export type Entry<T = any> = {
 	modified_at: string;
 	pretty_modified_at: string;
 	entry_fields: T;
+	special_type?: SpecialType | null;
+	special_fields?: ShareSpecialFields | null;
 
 	// extra fields for frontend
 	is_selected?: boolean;

@@ -1,11 +1,12 @@
 <script lang="ts">
-	import type { EntryProps, FileFields } from '$lib/files/entry';
+	import { SpecialType, type EntryProps, type FileFields } from '$lib/files/entry';
 	import IconFlatColorIconsFile from '~icons/flat-color-icons/file';
 	import IconFlatColorIconsImageFile from '~icons/flat-color-icons/image-file';
 	import IconFlatColorIconsVideoFile from '~icons/flat-color-icons/video-file';
 	import IconFlatColorIconsAudioFile from '~icons/flat-color-icons/audio-file';
 	import IconFlatColorIconsDocument from '~icons/flat-color-icons/document';
 	import IconFlatColorIconsPackage from '~icons/flat-color-icons/package';
+	import IconLucideShare2 from '~icons/lucide/share-2';
 
 	let {
 		entry,
@@ -44,7 +45,10 @@
 	let failed_url = $state<string | undefined>();
 	let kind = $derived(entry.entry_fields.kind);
 	let preview_url = $derived(entry.entry_fields.preview_url);
-	let show_preview = $derived(kind === 'image' && !!preview_url && failed_url !== preview_url);
+	let is_share = $derived(entry.special_type === SpecialType.SHARE);
+	let show_preview = $derived(
+		!is_share && kind === 'image' && !!preview_url && failed_url !== preview_url
+	);
 	let KindIcon = $derived(pickKindIcon(kind));
 	let can_preview = $derived(entry.entry_fields.can_preview);
 
@@ -97,7 +101,11 @@
 			class:can-preview={can_preview}
 			onclick={handleDisplayClick}
 		>
-			<KindIcon />
+			{#if is_share}
+				<IconLucideShare2 />
+			{:else}
+				<KindIcon />
+			{/if}
 		</section>
 	{/if}
 	<section class="info">

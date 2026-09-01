@@ -17,13 +17,15 @@
 
 <script lang="ts">
 	import { join } from '$lib/fs';
-	import { EntryType } from './entry';
+	import { EntryType, SpecialType } from './entry';
 	import IconLucidePlus from '~icons/lucide/plus';
 	import IconLucideFolderOpen from '~icons/lucide/folder-open';
 	import IconLucideFolderInput from '~icons/lucide/folder-input';
 	import IconLucideDownload from '~icons/lucide/download';
 	import IconLucidePencilLine from '~icons/lucide/pencil-line';
 	import IconLucideTrash2 from '~icons/lucide/trash-2';
+	import IconLucideLink from '~icons/lucide/link';
+	import IconLucideExternalLink from '~icons/lucide/external-link';
 
 	let {
 		dialog = $bindable(),
@@ -50,6 +52,16 @@
 	const open_href = $derived(
 		href_base ? `${href_base}/${entry?.path}` : `/${join('files', space!, entry?.path ?? '')}`
 	);
+
+	const is_share = $derived(entry?.special_type === SpecialType.SHARE);
+	const share_id = $derived(entry?.special_fields?.id);
+	const share_href = $derived(share_id ? `/shares/${share_id}` : undefined);
+
+	const copyShareLink = () => {
+		if (!share_href) return;
+		navigator.clipboard.writeText(`${location.origin}${share_href}`);
+		dialog.hidePopover();
+	};
 
 	// todo: check that this isn't too expensive
 	const handleWindowClick = (e: MouseEvent) => {
@@ -91,6 +103,28 @@
 				<div class="title fx-grow">Open {typeName}</div>
 				<div class="tip fx fx--ac"></div>
 			</a>
+		{/if}
+		{#if is_share && share_href}
+			<a
+				class="context-item fx"
+				href={share_href}
+				target="_blank"
+				rel="noopener noreferrer"
+				onclick={() => dialog.hidePopover()}
+			>
+				<div class="icon fx fx--cc">
+					<IconLucideExternalLink />
+				</div>
+				<div class="title fx-grow">Open Share</div>
+				<div class="tip fx fx--ac"></div>
+			</a>
+			<button class="context-item fx" onclick={copyShareLink}>
+				<div class="icon fx fx--cc">
+					<IconLucideLink />
+				</div>
+				<div class="title fx-grow">Copy Share Link</div>
+				<div class="tip fx fx--ac"></div>
+			</button>
 		{/if}
 		{#if handleAddContent && (!entry || isDir)}
 			<button class="context-item fx" onclick={() => handleAddContent?.([entry])}>
