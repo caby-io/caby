@@ -86,8 +86,6 @@ pub enum Priority {
 pub struct Job {
     pub id: String,
     pub input: Input,
-    // who triggered the job; metadata only, deliberately not part of Input's Eq/Hash
-    // so dedup keys on the work, not the actor (first writer wins the attribution)
     pub actor: Option<String>,
     pub status: Status,
     pub priority: Priority,
