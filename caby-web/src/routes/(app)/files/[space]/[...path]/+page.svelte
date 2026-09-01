@@ -82,9 +82,9 @@
 	let file_entries = $derived(entries.filter((e) => e.entry_type === EntryType.FILE));
 
 	let loading = $state(false);
+	let reloading = $state(false);
 
 	const getFilesList = async (path: string) => {
-		loading = true;
 		const resp = await listFiles(client, space, path);
 		if (resp.status != 'success') {
 			filesResponse = {
@@ -93,16 +93,31 @@
 				current_dir: '',
 				entries: []
 			};
-			loading = false;
 			return;
 		}
 		filesResponse = resp.data!;
+	};
+
+	// for first time loads and hard reloads of entire list
+	const reloadFiles = async () => {
+		loading = true;
+		reloading = true;
+		await getFilesList(path);
+		reloading = false;
+		loading = false;
+	};
+
+	// for atomic loads
+	// note: this should be totally replaced by websockets eventually
+	const refreshFiles = async () => {
+		loading = true;
+		await getFilesList(path);
 		loading = false;
 	};
 
 	const onListChange = async () => {
 		// todo: should we clear the delete and selected list?
-		await getFilesList(path);
+		await refreshFiles();
 		await fetchFilesOverview();
 	};
 
@@ -463,9 +478,10 @@
 	};
 
 	$effect(() => {
-		// temp
+		// temp: should have a proper signal sent from uploads to this
+		// probably should do this once uploadManager -> tasks manager
 		uploadManager.upload_groups_completed;
-		getFilesList(path);
+		reloadFiles();
 		fetchFilesOverview();
 		fetchSpaces();
 	});
@@ -501,7 +517,7 @@
 			{file_entries}
 			{space}
 			{in_selection}
-			{loading}
+			dimmed={reloading}
 			{drag_over_ct}
 			{onDragEnter}
 			{onDragOver}

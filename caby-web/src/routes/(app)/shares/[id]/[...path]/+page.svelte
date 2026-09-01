@@ -246,6 +246,7 @@
 				{space}
 				{href_base}
 				{in_selection}
+				dimmed={loading}
 				{handleSelectOp}
 				{handleContextMenu}
 				{handlePreview}
