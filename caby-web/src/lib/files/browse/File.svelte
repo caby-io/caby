@@ -83,6 +83,7 @@
 			<img
 				src={preview_url}
 				alt={entry.name}
+				decoding="async"
 				loading="lazy"
 				draggable="false"
 				onerror={() => (img_failed = true)}
