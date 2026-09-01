@@ -478,12 +478,18 @@
 	};
 
 	$effect(() => {
-		// temp: should have a proper signal sent from uploads to this
-		// probably should do this once uploadManager -> tasks manager
-		uploadManager.upload_groups_completed;
 		reloadFiles();
 		fetchFilesOverview();
 		fetchSpaces();
+	});
+
+	let last_upload_completed = uploadManager.upload_groups_completed;
+	$effect(() => {
+		const completed = uploadManager.upload_groups_completed;
+		if (completed === last_upload_completed) return;
+		last_upload_completed = completed;
+		refreshFiles();
+		fetchFilesOverview();
 	});
 </script>
 
