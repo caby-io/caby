@@ -38,6 +38,12 @@
 		handleRenameEntry
 	}: ContextMenuProps = $props();
 
+	/*
+	 * todo: the context menu should have contexual visual differences for when we're in different states
+	 *   for example when we have things selected it should clearly organize actions that are targetting the selection
+	 *   on the same thread we need to break up the context menu into different sections
+	 */
+
 	const isDir = $derived(entry?.entry_type === EntryType.DIRECTORY);
 	const typeName = $derived(isDir ? 'Folder' : 'File');
 
