@@ -13,7 +13,7 @@ pub mod ops;
 pub mod overview;
 pub mod pretty;
 
-pub use entry::{build_entries, Entry, EntryFields, EntryType};
+pub use entry::{build_entries, Entry, EntryFields, EntryType, SpecialFields, SpecialType};
 pub use media_type::{FileKind, MediaType};
 
 pub const CABY_EXT: &str = "caby";

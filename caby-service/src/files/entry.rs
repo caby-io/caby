@@ -1,17 +1,24 @@
 use std::{fs::Metadata, os::unix::fs::MetadataExt, path::Path, time::SystemTime};
 
 use anyhow::anyhow;
+use jiff::Timestamp;
 use nest_struct::nest_struct;
 use serde::{Deserialize, Serialize};
 use tokio::fs::{self, read_dir, read_link, DirEntry};
 use tracing::{error, warn};
 
-use crate::{config::Config, error::Result, space::Space};
+use crate::{
+    config::Config,
+    error::Result,
+    share::{load_state, Share},
+    space::Space,
+};
 
 use super::{
+    has_ext,
     media::MediaUrlFactory,
     media_type::{FileKind, MediaType},
-    pretty,
+    pretty, CABY_SHARE_SPEC_EXT,
 };
 
 #[derive(Serialize, Deserialize, PartialEq, Default, Debug)]
@@ -45,6 +52,38 @@ pub enum EntryFields {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SpecialType {
+    Share,
+}
+
+#[derive(Serialize)]
+#[serde(untagged)]
+pub enum SpecialFields {
+    Share {
+        id: String,
+        owner_id: String,
+        root_entry: String,
+        created_at: Timestamp,
+        expires_at: Option<Timestamp>,
+        expired: bool,
+    },
+}
+
+impl From<&Share> for SpecialFields {
+    fn from(share: &Share) -> Self {
+        SpecialFields::Share {
+            id: share.id.clone(),
+            owner_id: share.owner_id.clone(),
+            root_entry: share.root_entry.clone(),
+            created_at: share.created_at,
+            expires_at: share.expires_at,
+            expired: share.is_expired(),
+        }
+    }
+}
+
+#[derive(Serialize)]
 pub struct Entry {
     pub entry_type: EntryType,
 
@@ -58,6 +97,8 @@ pub struct Entry {
 
     // extra fields
     pub entry_fields: Option<EntryFields>,
+    pub special_type: Option<SpecialType>,
+    pub special_fields: Option<SpecialFields>,
 }
 
 #[derive(Default)]
@@ -77,6 +118,8 @@ struct EntryFactory {
     >,
     entry_type: Option<EntryType>,
     fields: Option<EntryFields>,
+    special_type: Option<SpecialType>,
+    special: Option<SpecialFields>,
 }
 
 impl EntryFactory {
@@ -143,6 +186,12 @@ impl EntryFactory {
         self
     }
 
+    fn set_share(&mut self, share: &Share) -> &mut Self {
+        self.special_type = Some(SpecialType::Share);
+        self.special = Some(SpecialFields::from(share));
+        self
+    }
+
     fn build(self) -> Result<Entry> {
         let common = self
             .common
@@ -160,12 +209,15 @@ impl EntryFactory {
             modified_at: common.modified_at,
             pretty_modified_at: common.pretty_modified_at,
             entry_fields: self.fields,
+            special_type: self.special_type,
+            special_fields: self.special,
         })
     }
 }
 
 async fn build_entry(
     dir_entry: DirEntry,
+    space: &Space,
     live_path: &Path,
     media_urls: Option<&MediaUrlFactory<'_>>,
 ) -> Result<Entry> {
@@ -209,6 +261,17 @@ async fn build_entry(
             can_preview,
             media_url,
         );
+
+        // todo: move all special fields compute to their own function/s
+        if has_ext(Path::new(&path), CABY_SHARE_SPEC_EXT) {
+            match load_state(space, Path::new(&path)).await {
+                Ok(Some(share)) => {
+                    factory.set_share(&share);
+                }
+                Ok(None) => {}
+                Err(err) => warn!("could not load share state for {:?}: {:#}", path, err),
+            }
+        }
     } else if metadata.is_symlink() {
         // todo: validate that the symlink doesn't go outside where we are allowed to go
         // todo: this probably goes to the wrong place
@@ -250,7 +313,7 @@ pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<V
     let mut result = vec![];
     while let Some(dir_entry) = entries.next_entry().await? {
         let filename = dir_entry.file_name();
-        match build_entry(dir_entry, &live_path, media_urls.as_ref()).await {
+        match build_entry(dir_entry, space, &live_path, media_urls.as_ref()).await {
             Ok(e) => result.push(e),
             Err(err) => {
                 // todo: send errored entries with the list
