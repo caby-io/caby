@@ -49,6 +49,7 @@ pub enum ShareAuth {
     Password { hash: String },
 }
 
+// todo: implement this
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub struct ShareLimits {
     pub max_file_bytes: Option<u64>,

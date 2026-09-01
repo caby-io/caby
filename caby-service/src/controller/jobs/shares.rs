@@ -72,6 +72,7 @@ pub fn handlers() -> Vec<EventHandler> {
     vec![handle_event]
 }
 
+// todo: wire this
 pub async fn try_scan_shares(cfg: &Config, space: &str) -> Result<()> {
     debug!("controller: ScanShares {} is not wired up yet", space);
     Ok(())
