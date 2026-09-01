@@ -26,6 +26,7 @@ impl PathLocks {
         PathGuard(mutex.lock_owned().await)
     }
 
+    // used most commonly for moves/renames
     pub async fn acquire_pair(
         &self,
         space: &str,
