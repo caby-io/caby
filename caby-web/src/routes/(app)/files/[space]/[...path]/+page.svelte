@@ -41,7 +41,7 @@
 	import MoveDialog from './MoveDialog.svelte';
 	import EntriesOverviewNav from '$lib/files/overview/EntriesOverviewNav.svelte';
 	import { fsEntryIntoFiles } from '$lib/files/upload/drop';
-	import { getContext } from 'svelte';
+	import { getContext, onMount } from 'svelte';
 
 	const menu = getContext<{ open: boolean }>('menu');
 	import { UploadGroup } from '$lib/files/upload/upload_group';
@@ -477,10 +477,13 @@
 		}
 	};
 
+	onMount(() => {
+		fetchSpaces();
+	});
+
 	$effect(() => {
 		reloadFiles();
 		fetchFilesOverview();
-		fetchSpaces();
 	});
 
 	// handle upload refresh
