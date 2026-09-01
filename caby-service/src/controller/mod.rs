@@ -55,8 +55,7 @@ pub struct Controller {
     locks: Arc<PathLocks>,
     handlers: Vec<EventHandler>,
     registry: Mutex<Registry>,
-    // todo: notification system that we can wire to websockets
-    // used to signal the job queue to start, today
+    // todo: duplicate to notification system that we can wire to websockets
     notify: Notify,
     slots: Arc<Semaphore>,
     tasks: TaskTracker,
