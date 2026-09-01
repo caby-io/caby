@@ -483,6 +483,8 @@
 		fetchSpaces();
 	});
 
+	// handle upload refresh
+	// todo: we should make a more efficient version of this after refactoring uploadManager -> task manager
 	let last_upload_completed = uploadManager.upload_groups_completed;
 	$effect(() => {
 		const completed = uploadManager.upload_groups_completed;
