@@ -65,7 +65,7 @@
 	<section class="directories">
 		<h3>Directories</h3>
 		<div class="dir-list">
-			{#each dir_entries as entry, index}
+			{#each dir_entries as entry, index (entry.path)}
 				<Directory
 					{entry}
 					{space}
@@ -86,7 +86,7 @@
 	<section class="files">
 		<h3>Files</h3>
 		<div class="file-list">
-			{#each file_entries as entry, index}
+			{#each file_entries as entry, index (entry.path)}
 				<File
 					{entry}
 					{space}
