@@ -5,6 +5,7 @@ use argon2::{
     password_hash::{rand_core::OsRng, SaltString},
     Argon2, PasswordHasher, PasswordVerifier,
 };
+use serde::{Deserialize, Serialize};
 use tokio::fs::{self, try_exists, write};
 
 use crate::{auth::Token, Result};
@@ -14,9 +15,44 @@ pub enum UserType {
     Agent,
 }
 
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[serde(rename_all = "snake_case")]
+pub enum Permission {
+    View,
+    Download,
+    Write,
+    Delete,
+}
+
+impl TryFrom<&str> for Permission {
+    type Error = crate::Error;
+
+    fn try_from(value: &str) -> Result<Self> {
+        match value {
+            "view" => Ok(Self::View),
+            "download" => Ok(Self::Download),
+            "write" => Ok(Self::Write),
+            "delete" => Ok(Self::Delete),
+            _ => Err(anyhow!("unknown permission '{}'", value)),
+        }
+    }
+}
+
+impl From<Permission> for &'static str {
+    fn from(permission: Permission) -> Self {
+        match permission {
+            Permission::View => "view",
+            Permission::Download => "download",
+            Permission::Write => "write",
+            Permission::Delete => "delete",
+        }
+    }
+}
+
 #[derive(Clone)]
 pub struct SpaceAccess {
     pub name: String,
+    // todo: action:path grant strings (e.g. "view:*", "*:*", "write:/some/path"); model undesigned
     pub permissions: Vec<String>,
 }
 

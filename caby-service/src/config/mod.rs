@@ -90,6 +90,7 @@ pub struct Config {
     pub home_path: PathBuf,
     pub users_path: PathBuf,
     pub spaces_path: PathBuf,
+    pub shares_path: PathBuf,
 
     // secrets
     pub token_encryption_key: Key,
@@ -115,7 +116,8 @@ impl Config {
             .try_set_dir_meta_filename(var("CABY_DIRECTORY_META_FILENAME").ok())?
             .try_set_home_path(Some(home_path))?
             .try_set_users_path(var("CABY_USERS_PATH").ok())?
-            .try_set_spaces_path(var("CABY_SPACES_PATH").ok())?;
+            .try_set_spaces_path(var("CABY_SPACES_PATH").ok())?
+            .try_set_shares_path(var("CABY_SHARES_PATH").ok())?;
 
         // Load from config
         let config_file = ConfigFile::new_from_path(get_config_path()?).await?;
@@ -164,6 +166,7 @@ pub struct ConfigBuilder {
     home_path: Option<PathBuf>,
     users_path: Option<PathBuf>,
     spaces_path: Option<PathBuf>,
+    shares_path: Option<PathBuf>,
     urls: Option<UrlsConfig>,
     auth: Option<AuthConfig>,
     img_thumbs: Option<ImgThumbsConfig>,
@@ -200,6 +203,7 @@ impl ConfigBuilder {
         self.home_path = Some(pb.clone());
         self.try_set_users_path(Some(pb.join("users")))?;
         self.try_set_spaces_path(Some(pb.join("spaces")))?;
+        self.try_set_shares_path(Some(pb.join("shares")))?;
         Ok(self)
     }
 
@@ -216,6 +220,14 @@ impl ConfigBuilder {
             return Ok(self);
         };
         self.spaces_path = Some(p.into());
+        Ok(self)
+    }
+
+    pub fn try_set_shares_path(&mut self, path: Option<impl Into<PathBuf>>) -> Result<&mut Self> {
+        let Some(p) = path else {
+            return Ok(self);
+        };
+        self.shares_path = Some(p.into());
         Ok(self)
     }
 
@@ -278,6 +290,7 @@ impl ConfigBuilder {
             home_path: self.home_path.ok_or(anyhow!("missing home path"))?,
             users_path: self.users_path.ok_or(anyhow!("missing users path"))?,
             spaces_path: self.spaces_path.ok_or(anyhow!("missing spaces path"))?,
+            shares_path: self.shares_path.ok_or(anyhow!("missing shares path"))?,
             urls: self.urls.ok_or(anyhow!("missing urls config"))?,
             auth: self.auth.ok_or(anyhow!("missing auth config"))?,
             img_thumbs: self.img_thumbs.unwrap_or_default(),

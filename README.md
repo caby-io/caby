@@ -37,8 +37,15 @@
 What we're working towards in the near future:
 
 - [ ] File shares _(in progress)_
+  - [x] File shares MVP
+  - [ ] Guest uploads, writes, and deletes
+- [ ] Background tasks (download files, convert videos, and more) _(in progress)_
+  - [x] Background jobs system
+  - [ ] Websocket events
+  - [ ] Background downloads
+- [ ] Web file editor
+- [ ] File versioning
 - [ ] Fine-grained user access
-- [ ] Background tasks (download files, convert videos, and more)
 - [ ] Device syncing
 
 Are we missing something? Let us know on [Discord](https://discord.gg/Z2JkSs2Hzy) or [open an issue](https://github.com/caby-io/caby/issues).

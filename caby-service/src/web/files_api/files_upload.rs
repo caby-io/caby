@@ -1,7 +1,6 @@
 use crate::{
-    auth::AuthUser,
     config::Config,
-    files::merge_dir,
+    files::{merge_dir, ops::FileConflictStrategy},
     jsend::JSendBuilder,
     space::Space,
     upload::{
@@ -10,6 +9,7 @@ use crate::{
         UploadToken, UploadTokenPayload,
     },
     web::{
+        extractors::RequireAccount,
         headers::{get_required_header, HEADER_CABY_CHUNK_INDEX, HEADER_CABY_UPLOAD_TOKEN},
         upload::*,
     },
@@ -42,7 +42,7 @@ use tracing::error;
 pub struct RegisterUploadRequest {
     pub base_path: String,
     pub entries: Vec<UploadEntry>,
-    pub conflict_strategy: ConflictStrategy,
+    pub conflict_strategy: FileConflictStrategy,
 }
 
 #[derive(Serialize)]
@@ -65,7 +65,7 @@ fn is_safe_relative_path(p: &str) -> bool {
 pub async fn handle_register_upload(
     cfg: State<Config>,
     space: Space,
-    user: AuthUser,
+    _: RequireAccount,
     Json(req): Json<RegisterUploadRequest>,
 ) -> Response {
     // basic validation
@@ -143,7 +143,7 @@ pub struct UploadChunkParams {
 pub async fn handle_upload_chunk(
     cfg: State<Config>,
     space: Space,
-    authorized_user: AuthUser,
+    _: RequireAccount,
     headers: HeaderMap,
     path_params: Path<UploadChunkParams>,
     body: Body,
@@ -293,7 +293,7 @@ pub struct UpdateUploadParams {
 pub async fn handle_update_upload(
     cfg: State<Config>,
     space: Space,
-    user: AuthUser,
+    _: RequireAccount,
     headers: HeaderMap,
     path_params: Path<UpdateUploadParams>,
     Json(body): Json<UpdateFileRequest>,
@@ -406,7 +406,7 @@ pub struct PublishUploadParams {
 pub async fn handle_publish_upload(
     cfg: State<Config>,
     space: Space,
-    user: AuthUser,
+    _: RequireAccount,
     headers: HeaderMap,
     path_params: Path<PublishUploadParams>,
 ) -> Response {

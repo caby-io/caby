@@ -13,7 +13,7 @@ import { CombinedProgress, Progress } from './progress.svelte';
 import { client } from '$lib/stores/client.svelte';
 import {
 	publishUpload,
-	ConflictStrategy,
+	FileConflictStrategy,
 	stageUpload,
 	putChunk,
 	registerUpload
@@ -34,7 +34,7 @@ const startRegisterFileWorker = async (on_done: UploadGroupCb, upload_group: Upl
 		upload_group.space,
 		upload_group.base_path,
 		[...upload_group.upload_files.map((f) => f.intoUploadEntry())],
-		ConflictStrategy.OVERRIDE
+		FileConflictStrategy.OVERRIDE
 	);
 	// todo: check for error
 	Object.assign(upload_group.registration, resp.data as UploadRegistration);

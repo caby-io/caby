@@ -22,6 +22,7 @@ export type FileFields = {
 	preview_url?: string;
 	can_preview: boolean;
 	media_url?: string;
+	download_url?: string;
 };
 
 export type DirFields = {
@@ -31,6 +32,7 @@ export type DirFields = {
 export type EntryProps<T> = {
 	entry: Entry<T>;
 	space?: string;
+	href_base?: string;
 
 	// touch-only: when true, taps on the thumbnail also select (instead of preview/navigate)
 	selection_mode?: boolean;

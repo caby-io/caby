@@ -6,7 +6,12 @@ use jiff::Timestamp;
 use rand::RngExt;
 use serde::Serialize;
 
-use crate::{guest::Guest, user::Account, Result};
+use crate::{
+    guest::Guest,
+    share::Share,
+    user::{Account, Permission},
+    Result,
+};
 
 pub mod oidc;
 
@@ -91,11 +96,109 @@ impl AuthUser {
             User::Guest(_) => None,
         }
     }
+
+    pub fn is_account(&self) -> bool {
+        matches!(&self.user, User::Account(_))
+    }
+
+    pub fn is_guest(&self) -> bool {
+        matches!(&self.user, User::Guest(_))
+    }
+
+    pub fn can_on_share(&self, share: &Share, permission: Permission) -> bool {
+        match &self.user {
+            User::Account(account) => share.can_account(account, permission),
+            User::Guest(guest) => share.can_guest(guest, permission),
+        }
+    }
+}
+
+pub fn authorize_share(auth: Option<&AuthUser>, share: &Share, permission: Permission) -> bool {
+    match auth {
+        Some(user) => user.can_on_share(share, permission),
+        None => share.can_any_guest(permission),
+    }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::{collections::BTreeSet, path::PathBuf};
+
     use super::*;
+    use crate::share::{ShareAccessFlow, ShareAuth};
+
+    fn open_flow(permission: Permission) -> ShareAccessFlow {
+        ShareAccessFlow {
+            auth: ShareAuth::Open,
+            permissions: BTreeSet::from([permission]),
+            limits: None,
+        }
+    }
+
+    fn open_account_share() -> Share {
+        Share::new(
+            "holden",
+            "rocinante",
+            "photos.share.caby",
+            "photos",
+            vec![open_flow(Permission::Write)],
+            vec![],
+            None,
+        )
+    }
+
+    fn open_guest_share() -> Share {
+        Share::new(
+            "holden",
+            "rocinante",
+            "photos.share.caby",
+            "photos",
+            vec![],
+            vec![open_flow(Permission::View)],
+            None,
+        )
+    }
+
+    fn account_auth(name: &str) -> AuthUser {
+        AuthUser {
+            token: "token".to_owned(),
+            user: User::Account(Account {
+                name: name.to_owned(),
+                path: PathBuf::from("/tmp"),
+                email: None,
+                activation_token: None,
+                space_access: vec![],
+            }),
+        }
+    }
+
+    fn guest_auth() -> AuthUser {
+        AuthUser {
+            token: "token".to_owned(),
+            user: User::Guest(Guest::new()),
+        }
+    }
+
+    #[test]
+    fn anonymous_gets_open_guest_access() {
+        let share = open_guest_share();
+        assert!(authorize_share(None, &share, Permission::View));
+        assert!(!authorize_share(None, &share, Permission::Download));
+    }
+
+    #[test]
+    fn guest_principal_routes_to_can_guest() {
+        let auth = guest_auth();
+        assert!(auth.can_on_share(&open_guest_share(), Permission::View));
+        assert!(!auth.can_on_share(&open_guest_share(), Permission::Download));
+    }
+
+    #[test]
+    fn account_principal_routes_to_can_account() {
+        let auth = account_auth("naomi");
+        assert!(auth.can_on_share(&open_account_share(), Permission::Write));
+        assert!(!auth.can_on_share(&open_account_share(), Permission::Delete));
+    }
 
     const CHRONO_ERA_FILE: &str =
         "tok3n\n2026-01-02T03:04:05.678901234+00:00\n2026-01-03T03:04:05.678901234+00:00";

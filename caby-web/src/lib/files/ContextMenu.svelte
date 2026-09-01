@@ -1,18 +1,15 @@
 <script module lang="ts">
-	import { client } from '$lib/stores/client.svelte';
-	import { downloadEntries } from './download';
 	import type { Entry } from './entry';
 
 	export type ContextMenuProps = {
 		dialog: HTMLElement;
 		position: { x: number; y: number };
-		space: string;
 		entry?: Entry;
-
-		handleAddContent: any;
-		handleMoveEntries: any;
-		handleDeleteEntries: any; // todo
-		handleRenameEntry: any;
+		onDownload?: (entry: Entry) => void;
+		handleAddContent?: (entries: (Entry | undefined)[]) => void;
+		handleMoveEntries?: (entry: Entry) => void;
+		handleDeleteEntries?: (entries: Entry[]) => void;
+		handleRenameEntry?: (entry: Entry) => void;
 	};
 </script>
 
@@ -26,8 +23,8 @@
 	let {
 		dialog = $bindable(),
 		position,
-		space,
 		entry = $bindable(),
+		onDownload,
 		handleAddContent,
 		handleMoveEntries,
 		handleDeleteEntries,
@@ -57,16 +54,6 @@
 		}
 		entry.is_targetted = false;
 	};
-
-	// const oncontextmenu = (e: MouseEvent) => {
-	// 	e.preventDefault();
-	// 	dialog.hidePopover();
-	// };
-
-	const handleDownload = async () => {
-		if (!entry) return;
-		await downloadEntries(client, space, [entry]);
-	};
 </script>
 
 <svelte:window onclick={handleWindowClick} />
@@ -79,8 +66,8 @@
 	{onbeforetoggle}
 >
 	<section class="context-menu-container fx fx--col">
-		{#if !entry || isDir}
-			<button class="context-item fx" onclick={() => handleAddContent([entry])}>
+		{#if handleAddContent && (!entry || isDir)}
+			<button class="context-item fx" onclick={() => handleAddContent?.([entry])}>
 				<div class="icon fx fx--cc">
 					<IconLucidePlus />
 				</div>
@@ -89,44 +76,52 @@
 			</button>
 		{/if}
 		{#if entry}
-			<button class="context-item fx" onclick={() => handleMoveEntries(entry)}>
-				<div class="icon fx fx--cc">
-					<IconLucideFolderInput />
-				</div>
-				<div class="title fx-grow">Move To..</div>
-				<div class="tip fx fx--ac"></div>
-			</button>
-			{#if isDir}
-				<button class="context-item fx" disabled>
+			{#if handleMoveEntries}
+				<button class="context-item fx" onclick={() => handleMoveEntries?.(entry)}>
 					<div class="icon fx fx--cc">
-						<IconLucideDownload />
+						<IconLucideFolderInput />
 					</div>
-					<div class="title fx-grow">Download {typeName}</div>
-					<div class="tip fx fx--ac">D</div>
-				</button>
-			{:else}
-				<button class="context-item fx" onclick={handleDownload}>
-					<div class="icon fx fx--cc">
-						<IconLucideDownload />
-					</div>
-					<div class="title fx-grow">Download {typeName}</div>
-					<div class="tip fx fx--ac">D</div>
+					<div class="title fx-grow">Move To..</div>
+					<div class="tip fx fx--ac"></div>
 				</button>
 			{/if}
-			<button class="context-item fx" onclick={() => handleRenameEntry(entry)}>
-				<div class="icon fx fx--cc">
-					<IconLucidePencilLine />
-				</div>
-				<div class="title fx-grow">Rename {typeName}</div>
-				<div class="tip fx fx--ac">ALT + R</div>
-			</button>
-			<button class="context-item fx" onclick={() => handleDeleteEntries([entry])}>
-				<div class="icon fx fx--cc">
-					<IconLucideTrash2 />
-				</div>
-				<div class="title fx-grow">Delete {typeName}</div>
-				<div class="tip fx fx--ac">DEL</div>
-			</button>
+			{#if onDownload}
+				{#if isDir}
+					<button class="context-item fx" disabled>
+						<div class="icon fx fx--cc">
+							<IconLucideDownload />
+						</div>
+						<div class="title fx-grow">Download {typeName}</div>
+						<div class="tip fx fx--ac">D</div>
+					</button>
+				{:else}
+					<button class="context-item fx" onclick={() => onDownload?.(entry)}>
+						<div class="icon fx fx--cc">
+							<IconLucideDownload />
+						</div>
+						<div class="title fx-grow">Download {typeName}</div>
+						<div class="tip fx fx--ac">D</div>
+					</button>
+				{/if}
+			{/if}
+			{#if handleRenameEntry}
+				<button class="context-item fx" onclick={() => handleRenameEntry?.(entry)}>
+					<div class="icon fx fx--cc">
+						<IconLucidePencilLine />
+					</div>
+					<div class="title fx-grow">Rename {typeName}</div>
+					<div class="tip fx fx--ac">ALT + R</div>
+				</button>
+			{/if}
+			{#if handleDeleteEntries}
+				<button class="context-item fx" onclick={() => handleDeleteEntries?.([entry])}>
+					<div class="icon fx fx--cc">
+						<IconLucideTrash2 />
+					</div>
+					<div class="title fx-grow">Delete {typeName}</div>
+					<div class="tip fx fx--ac">DEL</div>
+				</button>
+			{/if}
 		{/if}
 	</section>
 </div>
@@ -146,11 +141,6 @@
 				padding: 0.5rem;
 				text-decoration: none;
 				color: inherit;
-				// border-bottom: 1px solid var(--clr-border);
-
-				// &:last-of-type {
-				// 	border-bottom: none;
-				// }
 
 				&:hover:not(:disabled) {
 					background: var(--clr-background);

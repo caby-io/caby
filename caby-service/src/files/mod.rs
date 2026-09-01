@@ -13,8 +13,22 @@ pub mod ops;
 pub mod overview;
 pub mod pretty;
 
-pub use entry::{build_entries, Entry, EntryFields, EntryType};
+pub use entry::{build_entries, Entry, EntryFields, EntryType, SpecialFields, SpecialType};
 pub use media_type::{FileKind, MediaType};
+
+pub const CABY_EXT: &str = "caby";
+pub const CABY_SHARE_SPEC_EXT: &str = "share.caby";
+
+pub fn has_ext(path: &Path, ext: &str) -> bool {
+    let Some(name) = path.file_name() else {
+        return false;
+    };
+
+    match name.as_encoded_bytes().strip_suffix(ext.as_bytes()) {
+        Some(label) => label.len() > 1 && label.ends_with(b"."),
+        None => false,
+    }
+}
 
 // Returns a sanitized full path from the input path
 pub fn joined_path(root_path: &Path, space: &Path, relative_path: &Path) -> Option<PathBuf> {

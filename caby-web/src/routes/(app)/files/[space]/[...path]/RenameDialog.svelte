@@ -1,7 +1,6 @@
 <script lang="ts">
 	import Dialog from '$lib/Dialog.svelte';
 	import { page } from '$app/state';
-	import { PutEntryType } from '$lib/files/api';
 	import { moveFiles, type Move } from '$lib/api/api_files';
 	import { client } from '$lib/stores/client.svelte';
 	import type { Entry } from '$lib/files/entry';

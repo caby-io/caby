@@ -1,5 +1,5 @@
 import { client } from '$lib/stores/client.svelte';
-import { ApiRequestBuilder, type ApiClient, type Token } from './client';
+import { ApiRequestBuilder, type ApiClient, type ApiResponse, type Token } from './client';
 
 export type AuthInfoData = {
 	passwords_enabled: boolean;
@@ -89,4 +89,14 @@ export const logout = async (client: ApiClient): Promise<LogoutResponse> => {
 	const resp = await client.exec<LoginData>(req);
 	client.removeLoginToken();
 	return resp as LogoutResponse;
+};
+
+export type GuestTokenData = {
+	guest_token: string;
+	expires_at: string;
+};
+
+export const createGuest = async (client: ApiClient): Promise<ApiResponse<GuestTokenData>> => {
+	const req = ApiRequestBuilder.post(`auth/guest`).noRedirect().intoRequest();
+	return await client.exec<GuestTokenData>(req);
 };

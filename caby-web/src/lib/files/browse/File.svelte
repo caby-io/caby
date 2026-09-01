@@ -14,9 +14,7 @@
 		onPreview,
 		onDragStart,
 		onDragEnd,
-		// onDragEnter,
 		onDragOver,
-		// onDragLeave,
 		onDrop,
 		onContextMenu
 	}: EntryProps<FileFields> = $props();
@@ -68,11 +66,11 @@
 	class:is_targetted
 	class:is_processing
 	onclick={onSelect}
-	ondragstart={(e) => onDragStart!(e, entry)}
-	ondragend={(e) => onDragEnd!(e, entry)}
-	ondragover={(e) => onDragOver!(e, entry)}
-	ondrop={(e) => onDrop!(e, entry)}
-	oncontextmenu={(e) => onContextMenu!(e, entry)}
+	ondragstart={(e) => onDragStart?.(e, entry)}
+	ondragend={(e) => onDragEnd?.(e, entry)}
+	ondragover={(e) => onDragOver?.(e, entry)}
+	ondrop={(e) => onDrop?.(e, entry)}
+	oncontextmenu={(e) => onContextMenu?.(e, entry)}
 >
 	{#if show_preview}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -102,7 +100,6 @@
 		</section>
 	{/if}
 	<section class="info">
-		<!-- todo: consider splitting extension so we can show it-->
 		<h1 title={entry.name}>{entry.name}</h1>
 		{entry.pretty_modified_at}
 	</section>

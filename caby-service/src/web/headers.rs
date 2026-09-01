@@ -11,6 +11,7 @@ use crate::jsend::JSendBuilder;
 pub static HEADER_CABY_UPLOAD_TOKEN: HeaderName = HeaderName::from_static("caby-upload-token");
 pub static HEADER_CABY_CHUNK_INDEX: HeaderName = HeaderName::from_static("caby-chunk-index");
 pub static HEADER_CABY_USER_NAME: HeaderName = HeaderName::from_static("caby-user-name");
+pub static HEADER_CABY_GUEST_TOKEN: HeaderName = HeaderName::from_static("caby-guest-token");
 
 pub fn cors_allowed_request_headers() -> Vec<HeaderName> {
     vec![
@@ -20,6 +21,7 @@ pub fn cors_allowed_request_headers() -> Vec<HeaderName> {
         HEADER_CABY_UPLOAD_TOKEN.clone(),
         HEADER_CABY_CHUNK_INDEX.clone(),
         HEADER_CABY_USER_NAME.clone(),
+        HEADER_CABY_GUEST_TOKEN.clone(),
     ]
 }
 

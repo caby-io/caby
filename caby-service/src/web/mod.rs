@@ -1,5 +1,5 @@
 use axum::{
-    routing::{get, patch, post, put},
+    routing::{delete, get, patch, post, put},
     Router,
 };
 
@@ -9,6 +9,7 @@ mod auth_api;
 mod extractors;
 mod files_api;
 pub mod headers;
+mod shares_api;
 mod spaces_api;
 mod upload;
 mod users_api;
@@ -26,12 +27,14 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 )
                 .route("/login", post(auth_api::handle_login))
                 .route("/logout", post(auth_api::handle_logout))
+                .route("/guest", post(auth_api::handle_create_guest))
+                .route("/guest/refresh", post(auth_api::handle_refresh_guest))
                 .nest(
                     "/oidc",
                     Router::new()
                         .route("/login", get(auth_api::handle_oidc_login))
                         .route("/callback", get(auth_api::handle_oidc_callback)),
-                ), // .route("/test", get(auth_api::handle_test_auth)),
+                ),
         )
         // .nest(
         //     "/users",
@@ -90,5 +93,27 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 // .route("/upload/complete", post(files_api::handle_complete_upload))
                 .route("/delete/{space}", post(files_api::handle_delete_files))
                 .route("/move/{space}", post(files_api::handle_move_files)),
+        )
+        .nest(
+            "/shares",
+            Router::new()
+                .route("/list/{space}", get(shares_api::handle_list_shares))
+                .route("/new/{space}", post(shares_api::handle_create_share))
+                .route("/{id}", get(shares_api::handle_get_share))
+                .route("/{id}", delete(shares_api::handle_delete_share))
+                .route("/{id}/admin", get(shares_api::handle_admin_get_share))
+                .route(
+                    "/{id}/auth/password",
+                    post(shares_api::handle_password_auth_share),
+                )
+                .route("/{id}/list", get(shares_api::handle_list_share_files))
+                .route(
+                    "/{id}/list/{*path}",
+                    get(shares_api::handle_list_share_files),
+                )
+                .route(
+                    "/{id}/download/{*path}",
+                    get(shares_api::handle_download_share),
+                ),
         )
 }

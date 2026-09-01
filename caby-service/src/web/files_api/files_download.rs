@@ -33,10 +33,10 @@ struct RegisterDownloadResponse {
 pub async fn handle_register_download(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthUser,
+    auth: AuthUser,
     Json(req): Json<RegisterDownloadRequest>,
 ) -> Response {
-    let Some(account) = user.as_account() else {
+    let Some(account) = auth.as_account() else {
         return JSendBuilder::new()
             .status_code(StatusCode::FORBIDDEN)
             .fail("only account users can register downloads")

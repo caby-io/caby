@@ -1,24 +1,28 @@
 <script lang="ts">
 	import { page } from '$app/state';
-	import { join } from '$lib/fs';
+	import type { Component } from 'svelte';
 	import IconCiHouse02 from '~icons/ci/house-02';
 
-	let { space }: { space: string } = $props();
+	let {
+		space,
+		href_base,
+		root_icon
+	}: { space?: string; href_base?: string; root_icon?: Component } = $props();
 
-	const dirs = $derived(page.params.path!.split('/'));
+	const RootIcon = $derived(root_icon ?? IconCiHouse02);
+
+	const base = $derived(href_base ?? `/files/${space}`);
+	const dirs = $derived((page.params.path ?? '').split('/').filter(Boolean));
 
 	const getPath = (index: number) => {
-		return `/${join('files', space, dirs.slice(0, index + 1).join('/'))}`;
+		return `${base}/${dirs.slice(0, index + 1).join('/')}`;
 	};
 </script>
 
 <div class="breadcrumbs fx fx--ac">
-	<!-- <a class="fx fx--ac">
-		<iconify-icon icon="lucide:corner-left-up"></iconify-icon>
-	</a> -->
 	<div class="breadcrumb fx fx--ac">
-		<a class="fx fx--ac" href="/files/{space}">
-			<IconCiHouse02 class="house-icon" />
+		<a class="fx fx--ac" href={base}>
+			<RootIcon />
 		</a>
 	</div>
 	{#each dirs as dir, i}
@@ -31,7 +35,6 @@
 <style lang="scss">
 	.breadcrumbs {
 		.breadcrumb > a {
-			// display: block;
 			padding: 0 0.25rem;
 			height: 2rem;
 			text-decoration: none;
@@ -39,7 +42,7 @@
 			opacity: 1;
 			border-radius: 3px;
 
-			:global(.house-icon) {
+			:global(svg) {
 				font-size: 0.9em;
 			}
 

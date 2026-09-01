@@ -7,12 +7,11 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    auth::AuthUser,
     config::Config,
     files::overview::{build_overview, OverviewEntry},
     jsend,
     space::Space,
-    web::files_api::files_list::FilesPathParams,
+    web::{extractors::RequireAccount, files_api::files_list::FilesPathParams},
 };
 
 // #[derive(Deserialize)]
@@ -33,7 +32,7 @@ struct SummarizeFilesResponse {
 pub async fn handle_files_overview(
     State(cfg): State<Config>,
     space: Space,
-    user: AuthUser,
+    _: RequireAccount,
     path_params: Path<FilesPathParams>,
     Query(params): Query<FilesOverviewParams>,
 ) -> Response {

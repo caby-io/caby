@@ -6,6 +6,7 @@
 	let {
 		entry,
 		space,
+		href_base,
 		selection_mode = false,
 		onSelect,
 		onDragStart,
@@ -20,6 +21,10 @@
 	let is_selected = $derived(entry.is_selected);
 	let is_targetted = $derived(entry.is_targetted);
 	let is_processing = $derived(entry.is_processing);
+
+	let href = $derived(
+		href_base ? `${href_base}/${entry.path}` : `/${join('files', space!, entry.path)}`
+	);
 </script>
 
 <div
@@ -30,24 +35,23 @@
 	class:is_targetted
 	class:is_processing
 	onclick={onSelect}
-	ondragstart={(e) => onDragStart!(e, entry)}
-	ondragend={(e) => onDragEnd!(e, entry)}
-	ondragenter={(e) => onDragEnter!(e, entry)}
-	ondragover={(e) => onDragOver!(e, entry)}
-	ondragleave={(e) => onDragLeave!(e, entry)}
-	ondrop={(e) => onDrop!(e, entry)}
-	oncontextmenu={(e) => onContextMenu!(e, entry)}
+	ondragstart={(e) => onDragStart?.(e, entry)}
+	ondragend={(e) => onDragEnd?.(e, entry)}
+	ondragenter={(e) => onDragEnter?.(e, entry)}
+	ondragover={(e) => onDragOver?.(e, entry)}
+	ondragleave={(e) => onDragLeave?.(e, entry)}
+	ondrop={(e) => onDrop?.(e, entry)}
+	oncontextmenu={(e) => onContextMenu?.(e, entry)}
 >
 	<section class="display fx fx--cc fx-grow"><IconFlatColorIconsFolder /></section>
 	<section class="info">
 		<h1>
-			<!-- todo: figure out a better solution for the double event -->
 			<a
 				onclick={(e) => {
 					if (selection_mode) e.preventDefault();
 					else onSelect = undefined;
 				}}
-				href={`/${join('files', space!, entry.path)}`}>{entry.name}</a
+				{href}>{entry.name}</a
 			>
 		</h1>
 		{entry.pretty_modified_at}

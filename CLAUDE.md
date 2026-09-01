@@ -82,12 +82,19 @@ Uses `pnpm` (enforced via preinstall hook — do not use npm or yarn).
 ### File System Layout
 The backend stores data at `CABY_HOME_PATH` (default: `~/cabynet`):
 ```
-{space}/
-  live/     — actual files
-  meta/     — metadata (mirrors live/ structure)
-  uploads/  — temporary chunked upload storage
-  shares/   — share metadata
+shares/     — instance-wide share route pointers: {id}.json → { space, spec_path }
+spaces/
+  {space}/
+    live/     — actual files
+    meta/     — metadata (mirrors live/ structure); share state at meta/{spec_path}/share.json
+    uploads/  — temporary chunked upload storage
 ```
+Shares are scoped to the whole instance: `shares/` is a top-level dir of `{id}.json` route
+pointers, so a share resolves from its id alone (`/v0/shares/{id}`). The full share record
+(state) lives in its space's `meta/`, since the shared files live in that space. Space-scoped
+management (create/list) follows the `/files/{action}/{space}` convention:
+`GET /v0/shares/list/{space}` and `POST /v0/shares/new/{space}`.
+
 Directory metadata uses `.cabydir` files (configurable via `CABY_DIRECTORY_META_FILENAME`).
 
 ### Environment Variables (Backend)
