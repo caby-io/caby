@@ -454,6 +454,8 @@
 		// In the switch-case we're updating our boolean flags whenever the
 		// desired bound keys are pressed.
 
+		// todo: move these to a file
+		// todo: support mac
 		switch (e.key) {
 			case 'n':
 				if (!e.altKey) {
@@ -461,6 +463,15 @@
 				}
 				handleAddContent();
 				return;
+			case 'r': {
+				if (!e.altKey) {
+					return;
+				}
+				if (selected_entries.size !== 1) return;
+				const [entry] = selected_entries;
+				handleRenameEntry(entry);
+				return;
+			}
 			case 'Enter': {
 				if (selected_entries.size !== 1) return;
 				const [entry] = selected_entries;
