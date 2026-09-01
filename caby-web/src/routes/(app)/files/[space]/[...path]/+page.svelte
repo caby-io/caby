@@ -19,6 +19,7 @@
 	import * as fs from '$lib/fs';
 
 	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
+	import LoadingBar from '$lib/LoadingBar.svelte';
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
@@ -462,6 +463,7 @@
 
 <svelte:window on:keydown={onKeyDown} />
 
+<LoadingBar {loading} />
 <div class="files-view fx">
 	<section class="left fx fx--col" class:open={menu.open}>
 		<SpacesSelector {current_space} {spaces} />
@@ -536,10 +538,6 @@
 
 <style lang="scss">
 	@use '$lib/styles/breakpoints' as bp;
-
-	.files-view {
-		border-top: 1px solid var(--clr-border);
-	}
 
 	.left {
 		background-color: var(--clr-background-1);

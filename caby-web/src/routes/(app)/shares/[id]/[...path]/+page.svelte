@@ -12,6 +12,7 @@
 	import type { Entry } from '$lib/files/entry';
 	import type { SelectedEntry } from '$lib/files/select';
 	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
+	import LoadingBar from '$lib/LoadingBar.svelte';
 	import Breadcrumbs from '$lib/files/browse/Breadcrumbs.svelte';
 	import ContextMenu from '$lib/files/ContextMenu.svelte';
 	import MediaPreviewDialog from '$lib/files/MediaPreviewDialog.svelte';
@@ -208,6 +209,7 @@
 	});
 </script>
 
+<LoadingBar {loading} />
 <div class="share-view fx">
 	<section class="left fx fx--col" class:open={menu.open}>
 		{#if root_name}
@@ -260,10 +262,6 @@
 
 <style lang="scss">
 	@use '$lib/styles/breakpoints' as bp;
-
-	.share-view {
-		border-top: 1px solid var(--clr-border);
-	}
 
 	.left {
 		background-color: var(--clr-background-1);
