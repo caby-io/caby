@@ -1,5 +1,14 @@
+export const EntryType = {
+	UNKNOWN: 'unknown',
+	DIRECTORY: 'directory',
+	FILE: 'file',
+	SYMLINK: 'symlink'
+} as const;
+
+export type EntryType = (typeof EntryType)[keyof typeof EntryType];
+
 export type Entry<T = any> = {
-	entry_type: string;
+	entry_type: EntryType;
 	name: string;
 	path: string;
 	created_at: string;

@@ -16,12 +16,14 @@
 
 <script lang="ts">
 	import { page } from '$app/state';
+	import { goto } from '$app/navigation';
 	import * as fs from '$lib/fs';
 
 	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
 	import LoadingBar from '$lib/LoadingBar.svelte';
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
+	import { EntryType } from '$lib/files/entry';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
 	import { downloadEntries } from '$lib/files/download';
 	import { getFilesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
@@ -76,8 +78,8 @@
 	// File List Operations
 
 	let entries: Entry[] = $derived(filesResponse.entries);
-	let dir_entries = $derived(entries.filter((e) => e.entry_type === 'directory'));
-	let file_entries = $derived(entries.filter((e) => e.entry_type === 'file'));
+	let dir_entries = $derived(entries.filter((e) => e.entry_type === EntryType.DIRECTORY));
+	let file_entries = $derived(entries.filter((e) => e.entry_type === EntryType.FILE));
 
 	let loading = $state(false);
 
@@ -443,6 +445,14 @@
 					return;
 				}
 				handleAddContent();
+				return;
+			case 'Enter': {
+				if (selected_entries.size !== 1) return;
+				const [entry] = selected_entries;
+				if (entry.entry_type !== EntryType.DIRECTORY) return;
+				goto(`/${fs.join('files', space, entry.path)}`);
+				return;
+			}
 			case 'Delete':
 				handleDeleteSelected();
 				return;
@@ -528,6 +538,7 @@
 	bind:dialog={contextMenuDialog}
 	position={contextMenuProps.position}
 	bind:entry={contextMenuProps.entry}
+	{space}
 	onDownload={(entry) => downloadEntries(client, space, [entry])}
 	{handleMoveEntries}
 	{handleAddContent}
