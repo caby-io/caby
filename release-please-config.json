@@ -3,16 +3,18 @@
   "release-type": "simple",
   "include-component-in-tag": false,
   "changelog-path": "CHANGELOG.md",
-  "bootstrap-sha": "90dd4aefaecf409112a452551b6a72c166118701",
   "packages": {
     ".": {
       "component": "caby",
-      "release-as": "0.1.0",
       "bump-minor-pre-major": true,
       "extra-files": [
         "caby-service/Cargo.toml",
         "docker/compose.yaml",
-        { "type": "json", "path": "caby-web/package.json", "jsonpath": "$.version" }
+        {
+          "type": "json",
+          "path": "caby-web/package.json",
+          "jsonpath": "$.version"
+        }
       ]
     }
   }
