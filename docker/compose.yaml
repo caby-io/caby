@@ -1,7 +1,7 @@
 services:
   # backend service
   caby-service:
-    image: ghcr.io/caby-io/caby-service:edge
+    image: ghcr.io/caby-io/caby-service:0.1.0 # x-release-please-version
     restart: unless-stopped
     ports:
       - "8080:8080"
@@ -13,7 +13,7 @@ services:
 
   # frontend service
   caby-web:
-    image: ghcr.io/caby-io/caby-web:edge
+    image: ghcr.io/caby-io/caby-web:0.1.0 # x-release-please-version
     restart: unless-stopped
     ports:
       - "3000:3000"

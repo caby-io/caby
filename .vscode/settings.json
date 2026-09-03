@@ -4,6 +4,9 @@
     "[svelte]": {
         "editor.defaultFormatter": "svelte.svelte-vscode"
     },
+    "[markdown]": {
+        "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
     "rust-analyzer.rustfmt.extraArgs": [
         "+nightly"
     ],
