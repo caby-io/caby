@@ -160,18 +160,3 @@ jobs:
         run: |
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}:${{ steps.meta.outputs.version }}
-
-  github-release:
-    name: GitHub Release
-    needs: merge
-    if: github.ref_type == 'tag'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          fetch-depth: 0
-      - uses: softprops/action-gh-release@v3
-        with:
-          generate_release_notes: true
