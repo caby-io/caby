@@ -1,0 +1,63 @@
+{{- if .Values.ingress.enabled }}
+{{- $webHost := required "ingress.web.host is required when ingress.enabled" .Values.ingress.web.host }}
+{{- $webSvc := include "caby.web.fullname" . }}
+{{- $apiSvc := include "caby.backend.fullname" . }}
+{{- $webPort := .Values.web.service.port }}
+{{- $apiPort := .Values.backend.service.port }}
+{{- $single := eq (include "caby.singleHost" .) "true" }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "caby.fullname" . }}
+  labels:
+    {{- include "caby.labels" . | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  {{- with .Values.ingress.className }}
+  ingressClassName: {{ . }}
+  {{- end }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ $webHost | quote }}
+        {{- if not $single }}
+        - {{ .Values.ingress.api.host | quote }}
+        {{- end }}
+      secretName: {{ .Values.ingress.tlsSecretName | default (printf "%s-tls" (include "caby.fullname" .)) }}
+  {{- end }}
+  rules:
+    - host: {{ $webHost | quote }}
+      http:
+        paths:
+          {{- if $single }}
+          - path: {{ default "/v0" (include "caby.apiBasePath" .) }}
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $apiSvc }}
+                port:
+                  number: {{ $apiPort }}
+          {{- end }}
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $webSvc }}
+                port:
+                  number: {{ $webPort }}
+    {{- if not $single }}
+    - host: {{ .Values.ingress.api.host | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ $apiSvc }}
+                port:
+                  number: {{ $apiPort }}
+    {{- end }}
+{{- end }}

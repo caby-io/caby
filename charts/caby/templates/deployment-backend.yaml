@@ -1,0 +1,139 @@
+{{- if not (or .Values.config.inline .Values.config.existingSecret) }}
+{{- fail "caby: set either config.inline or config.existingSecret so the backend has a config.yaml" }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "caby.backend.fullname" . }}
+  labels:
+    {{- include "caby.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "caby.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "caby.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+      annotations:
+        {{- if .Values.config.inline }}
+        checksum/config: {{ .Values.config.inline | sha256sum }}
+        {{- end }}
+        {{- if .Values.backend.secretEnv }}
+        checksum/env: {{ .Values.backend.secretEnv | toYaml | sha256sum }}
+        {{- end }}
+        {{- with .Values.backend.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "caby.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: caby-service
+          image: {{ include "caby.backend.image" . }}
+          imagePullPolicy: {{ .Values.backend.image.pullPolicy }}
+          {{- with .Values.backend.securityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          env:
+            - name: CABY_HOME_PATH
+              value: /app/cabynet
+            - name: CABY_CONFIG_PATH
+              value: /etc/caby/config.yaml
+            - name: CABY_DIRECTORY_META_FILENAME
+              value: {{ .Values.backend.directoryMetaFilename | quote }}
+            {{- if or .Values.ingress.web.host .Values.backend.frontendUrl }}
+            - name: CABY_FRONTEND_URL
+              value: {{ include "caby.webUrl" . | quote }}
+            {{- end }}
+            {{- if or (coalesce .Values.ingress.api.host .Values.ingress.web.host) .Values.backend.backendUrl }}
+            - name: CABY_BACKEND_URL
+              value: {{ include "caby.apiUrl" . | quote }}
+            {{- end }}
+            {{- with .Values.backend.corsExtraOrigins }}
+            - name: CORS_EXTRA_ORIGINS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- with .Values.backend.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- if or .Values.backend.secretEnv .Values.backend.existingEnvSecret }}
+          envFrom:
+            {{- if .Values.backend.secretEnv }}
+            - secretRef:
+                name: {{ printf "%s-env" (include "caby.fullname" .) }}
+            {{- end }}
+            {{- with .Values.backend.existingEnvSecret }}
+            - secretRef:
+                name: {{ . }}
+            {{- end }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caby
+              readOnly: true
+            - name: data
+              mountPath: /app/cabynet
+            {{- with .Values.backend.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          startupProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 5
+            failureThreshold: 30
+          livenessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+          readinessProbe:
+            tcpSocket:
+              port: http
+            periodSeconds: 10
+          {{- with .Values.backend.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        - name: config
+          secret:
+            secretName: {{ include "caby.configSecretName" . }}
+            items:
+              - key: {{ include "caby.configSecretKey" . }}
+                path: config.yaml
+        - name: data
+          persistentVolumeClaim:
+            claimName: {{ include "caby.pvcName" . }}
+        {{- with .Values.backend.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.backend.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.backend.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

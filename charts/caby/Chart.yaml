@@ -1,0 +1,17 @@
+apiVersion: v2
+name: caby
+description: Simple and reliable self-hosted file management for your home network.
+type: application
+version: 0.1.0 # x-release-please-version
+appVersion: "0.1.0" # x-release-please-version
+home: https://github.com/caby-io/caby
+sources:
+  - https://github.com/caby-io/caby
+keywords:
+  - files
+  - storage
+  - self-hosted
+  - file-management
+maintainers:
+  - name: caby-io
+    url: https://github.com/caby-io

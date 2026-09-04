@@ -1,0 +1,109 @@
+nameOverride: ""
+fullnameOverride: ""
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+  annotations: {}
+
+# The backend config.yaml (spaces, users, activation tokens, optional inline OIDC).
+# It is delivered to the backend as a mounted Secret at CABY_CONFIG_PATH.
+#
+# Serve it one of two ways:
+#   - config.inline:        the chart renders this string into a Secret (default, GitOps-visible).
+#   - config.existingSecret: reference a Secret you manage (sealed-secrets, external-secrets, ...).
+#                            Set config.key to the data key holding the file (default config.yaml).
+#
+config:
+  existingSecret: ""
+  key: config.yaml
+  inline: |
+    spaces:
+      - name: home
+        display: "🏠 Home"
+
+    users:
+      - name: YOUR_USERNAME
+        # generate with: openssl rand -hex 32
+        activation_token: REPLACE_WITH_A_UNIQUE_64_CHARACTER_TOKEN
+        spaces:
+          - name: home
+            permissions: "*"
+
+# Ingress and the public URLs derived from it.
+#
+# The chart supports single or dual hosts for the frontend/backend
+#   - api.host empty or equal to web.host -> shared host with api on /?  (default)
+#   - api.host set to anything else       -> two hosts
+#
+ingress:
+  enabled: true
+  className: ""
+  annotations: {}
+  tls: true
+  tlsSecretName: ""
+  web:
+    # Required. Public hostname of the frontend, e.g. caby.example.com
+    host: ""
+  api:
+    host: ""
+    # Computed correctly for most normal deployments, only override if needed
+    basePath:
+
+persistence:
+  enabled: true
+  existingClaim: ""
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 20Gi
+  annotations: {}
+
+backend:
+  image:
+    repository: ghcr.io/caby-io/caby-service
+    # Defaults to .Chart.AppVersion when empty.
+    tag: ""
+    pullPolicy: IfNotPresent
+  # Override the derived public URLs if you are not using this chart's ingress.
+  backendUrl: ""
+  frontendUrl: ""
+  directoryMetaFilename: .cabydir
+  corsExtraOrigins: ""
+  # Secret env (OIDC_CLIENT_SECRET, etc.). Rendered into a chart-managed Secret and mounted via envFrom.
+  secretEnv: {}
+  # An existing Secret to load env from (envFrom.secretRef), e.g. OIDC credentials you manage.
+  existingEnvSecret: ""
+  extraEnv: []
+  # Extra volumes and mounts on the backend (e.g. existing media dirs, NFS shares).
+  extraVolumes: []
+  extraVolumeMounts: []
+  service:
+    port: 8080
+  resources: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}
+
+web:
+  replicas: 1
+  image:
+    repository: ghcr.io/caby-io/caby-web
+    tag: ""
+    pullPolicy: IfNotPresent
+  # Override the derived PUBLIC_API_BASE (browser -> API origin + prefix).
+  publicApiBase: ""
+  extraEnv: []
+  service:
+    port: 3000
+  resources: {}
+  podSecurityContext: {}
+  securityContext: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  podAnnotations: {}

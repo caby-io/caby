@@ -16,6 +16,7 @@ jobs:
     outputs:
       service: ${{ steps.filter.outputs.service }}
       web: ${{ steps.filter.outputs.web }}
+      chart: ${{ steps.filter.outputs.chart }}
     steps:
       - uses: actions/checkout@v7
       - uses: dorny/paths-filter@v4
@@ -27,6 +28,9 @@ jobs:
               - '.github/workflows/ci.yml'
             web:
               - 'caby-web/**'
+              - '.github/workflows/ci.yml'
+            chart:
+              - 'charts/**'
               - '.github/workflows/ci.yml'
 
   service:
@@ -102,3 +106,21 @@ jobs:
 
       - name: Build
         run: pnpm run build
+
+  chart:
+    name: Helm Chart CI
+    needs: changes
+    if: needs.changes.outputs.chart == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v4
+
+      - name: Lint
+        run: helm lint charts/caby --set ingress.web.host=caby.example.com
+
+      - name: Template
+        run: |
+          helm template caby charts/caby --set ingress.web.host=caby.example.com > /dev/null
+          helm template caby charts/caby --set ingress.web.host=caby.example.com --set ingress.api.host=api.example.com > /dev/null

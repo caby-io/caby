@@ -15,6 +15,7 @@ use crate::{
     jsend::JSendBuilder,
     share::{download_token, is_filtered, Share},
     user::Permission,
+    web::v0_path,
 };
 
 #[derive(Deserialize)]
@@ -32,7 +33,12 @@ struct ListShareResponse {
 
 fn build_download_url(cfg: &Config, id: &str, path: &str, token: &str) -> String {
     let mut url = cfg.urls.backend.clone();
-    url.set_path(&format!("/v0/shares/{}/download/{}", id, path));
+    url.set_path(&format!(
+        "{}/shares/{}/download/{}",
+        v0_path(cfg.urls.backend.path()),
+        id,
+        path
+    ));
     url.query_pairs_mut().append_pair("token", token);
     url.to_string()
 }
