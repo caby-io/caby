@@ -10,7 +10,7 @@ use chacha20poly1305::{
 use jiff::Timestamp;
 use tracing::error;
 
-use crate::{config::Config, Result};
+use crate::{config::Config, web::v0_path, Result};
 
 const TOKEN_LIFETIME_MINS: i64 = 60;
 const TOKEN_LIFETIME_SECS: i64 = TOKEN_LIFETIME_MINS * 60;
@@ -95,7 +95,8 @@ impl<'a> MediaUrlFactory<'a> {
     fn endpoint_url(&self, kind: &str, rel: &Path) -> String {
         let mut url = self.cfg.urls.backend.clone();
         url.set_path(&format!(
-            "/v0/files/{}/{}/{}",
+            "{}/files/{}/{}/{}",
+            v0_path(self.cfg.urls.backend.path()),
             kind,
             self.space,
             rel.to_string_lossy()

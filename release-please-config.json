@@ -10,6 +10,7 @@
       "extra-files": [
         "caby-service/Cargo.toml",
         "docker/compose.yaml",
+        "charts/caby/Chart.yaml",
         {
           "type": "json",
           "path": "caby-web/package.json",

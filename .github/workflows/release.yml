@@ -160,3 +160,25 @@ jobs:
         run: |
           docker buildx imagetools inspect \
             ghcr.io/${{ github.repository_owner }}/${{ matrix.image.name }}:${{ steps.meta.outputs.version }}
+
+  publish-chart:
+    name: Publish Helm chart
+    needs: merge
+    if: github.ref_type == 'tag'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: azure/setup-helm@v4
+
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Package
+        run: helm package charts/caby --destination dist
+
+      - name: Push
+        run: helm push dist/caby-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts

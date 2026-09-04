@@ -1,0 +1,28 @@
+Caby {{ .Chart.AppVersion }} is deploying.
+
+{{- if .Values.ingress.enabled }}
+
+  Web:  {{ include "caby.webUrl" . }}
+  API:  {{ include "caby.publicApiBase" . }}
+{{- if eq (include "caby.singleHost" .) "true" }}
+  Mode: single host, path-based ({{ include "caby.apiBasePath" . }} -> backend), same-origin.
+{{- else }}
+  Mode: two hosts. Backend CORS is set to allow {{ include "caby.webUrl" . }}.
+{{- end }}
+{{- else }}
+
+  Ingress is disabled. Reach the services in-cluster:
+    web: {{ include "caby.web.fullname" . }}:{{ .Values.web.service.port }}
+    api: {{ include "caby.backend.fullname" . }}:{{ .Values.backend.service.port }}
+  The browser must still reach PUBLIC_API_BASE ({{ include "caby.publicApiBase" . }}).
+{{- end }}
+
+{{- if and (not .Values.config.existingSecret) (contains "REPLACE_WITH_A_UNIQUE" .Values.config.inline) }}
+
+  WARNING: config.inline still contains the placeholder activation_token.
+  Generate one with `openssl rand -hex 32` and set config.inline (or config.existingSecret).
+{{- end }}
+
+Watch rollout:
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "caby.backend.fullname" . }}
+  kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "caby.web.fullname" . }}

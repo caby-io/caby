@@ -79,11 +79,12 @@ async fn main() -> Result<()> {
         .allow_origin(cfg.urls.cors_allowed_origins.clone())
         .allow_credentials(true);
 
+    let v0_path = web::v0_path(cfg.urls.backend.path());
     let state = state::AppState::new(cfg).await?;
     let controller = state.controller.clone();
 
     let app = Router::new()
-        .nest("/v0", web::api_router(&state))
+        .nest(&v0_path, web::api_router(&state))
         .layer(
             TraceLayer::new_for_http()
                 .make_span_with(

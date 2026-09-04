@@ -14,6 +14,10 @@ mod spaces_api;
 mod upload;
 mod users_api;
 
+pub fn v0_path(base_path: &str) -> String {
+    format!("{}/v0", base_path.trim_end_matches('/'))
+}
+
 pub fn api_router(state: &AppState) -> Router<AppState> {
     Router::new()
         .nest(

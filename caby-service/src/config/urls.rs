@@ -42,6 +42,9 @@ impl UrlsConfig {
         })?;
         let backend = Url::parse(&input_backend)
             .map_err(|err| anyhow!(err).context("Backend URL must be a valid URL"))?;
+        if backend.query().is_some() || backend.fragment().is_some() {
+            return Err(anyhow!("Backend URL must not contain a query or fragment"));
+        }
 
         let input_frontend = var(ENV_FRONTEND_URL)
             .ok()
