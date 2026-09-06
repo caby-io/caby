@@ -1,0 +1,23 @@
+name: GHCR Cleanup
+
+on:
+  schedule:
+    - cron: "0 4 * * 5"
+  workflow_dispatch:
+
+jobs:
+  clean:
+    name: Prune images
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    steps:
+      - name: Prune images
+        uses: dataaxiom/ghcr-cleanup-action@v1.2.2
+        with:
+          packages: caby-service,caby-web
+          delete-tags: edge-*
+          keep-n-tagged: 10
+          exclude-tags: latest,edge
+          delete-untagged: true
+          delete-partial-images: true
