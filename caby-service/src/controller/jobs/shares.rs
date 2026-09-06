@@ -164,15 +164,20 @@ mod tests {
     use crate::controller::PathGuard;
 
     fn temp_space() -> Space {
+        let base = std::env::temp_dir().join(format!("caby-move-{}", xid::new()));
         Space {
             name: "rocinante".to_owned(),
             display: "Rocinante".to_owned(),
-            path: std::env::temp_dir().join(format!("caby-move-{}", xid::new())),
+            live: base.join("live"),
+            meta: base.join("meta"),
+            uploads: base.join("uploads"),
+            managed: true,
+            readonly: false,
         }
     }
 
     fn shares_root(space: &Space) -> std::path::PathBuf {
-        space.path.join("shares")
+        space.live.parent().unwrap().join("shares")
     }
 
     async fn seed_share(space: &Space, spec_path: &Path, body: &str) -> Share {
@@ -218,7 +223,7 @@ mod tests {
         let via_route = listed.iter().find(|s| s.id == original.id).unwrap();
         assert_eq!(via_route.spec_path, "albums/trip.share.caby");
 
-        let _ = std::fs::remove_dir_all(&space.path);
+        let _ = std::fs::remove_dir_all(space.live.parent().unwrap());
     }
 
     #[tokio::test]
@@ -252,7 +257,7 @@ mod tests {
         let via_route = listed.iter().find(|s| s.id == original.id).unwrap();
         assert_eq!(via_route.spec_path, "albums/trip.share.caby");
 
-        let _ = std::fs::remove_dir_all(&space.path);
+        let _ = std::fs::remove_dir_all(space.live.parent().unwrap());
     }
 
     #[tokio::test]
@@ -283,7 +288,7 @@ mod tests {
 
         assert!(!route_file.exists(), "orphaned route not dropped");
 
-        let _ = std::fs::remove_dir_all(&space.path);
+        let _ = std::fs::remove_dir_all(space.live.parent().unwrap());
     }
 
     #[tokio::test]
@@ -304,6 +309,6 @@ mod tests {
             .join(format!("{}.json", original.id))
             .exists());
 
-        let _ = std::fs::remove_dir_all(&space.path);
+        let _ = std::fs::remove_dir_all(space.live.parent().unwrap());
     }
 }

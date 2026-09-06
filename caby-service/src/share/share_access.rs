@@ -84,7 +84,7 @@ impl Share {
         let scoped = root.join(rel.clean()).clean();
 
         let live = space.join(SpaceDir::LIVE, &scoped)?;
-        let root_live = space.live().join(&root);
+        let root_live = space.live.join(&root);
         if !live.starts_with(&root_live) {
             return Err(anyhow!("path escapes share root"));
         }

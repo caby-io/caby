@@ -6,7 +6,10 @@ use crate::{
     },
     jsend::JSendBuilder,
     space::Space,
-    web::{extractors::RequireAccount, files_api::files_list::FilesPathParams},
+    web::{
+        extractors::{RequireAccount, WritableSpace},
+        files_api::files_list::FilesPathParams,
+    },
 };
 use axum::{
     extract::{Path, State},
@@ -37,7 +40,7 @@ pub enum PutEntryRequest {
 // used to create directories and small, inline, files
 pub async fn handle_put_files(
     State(events_tx): State<Sender>,
-    space: Space,
+    WritableSpace(space): WritableSpace,
     RequireAccount(account): RequireAccount,
     path_params: Path<FilesPathParams>,
     Json(payload): Json<PutEntryRequest>,

@@ -26,7 +26,13 @@ mod validate_config;
 pub struct SpaceConfig {
     pub name: String,
     pub display: String,
-    pub path: PathBuf,
+
+    pub live: PathBuf,
+    pub meta: PathBuf,
+    pub uploads: PathBuf,
+
+    pub managed: bool,
+    pub readonly: bool,
 }
 
 impl From<&SpaceConfig> for Space {
@@ -34,7 +40,11 @@ impl From<&SpaceConfig> for Space {
         Space {
             name: val.name.clone(),
             display: val.display.clone(),
-            path: val.path.clone(),
+            live: val.live.clone(),
+            meta: val.meta.clone(),
+            uploads: val.uploads.clone(),
+            managed: val.managed,
+            readonly: val.readonly,
         }
     }
 }

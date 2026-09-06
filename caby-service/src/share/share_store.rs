@@ -390,19 +390,24 @@ mod tests {
     }
 
     fn temp_space() -> Space {
+        let base = std::env::temp_dir().join(format!("caby-share-{}", xid::new()));
         Space {
             name: "rocinante".to_owned(),
             display: "Rocinante".to_owned(),
-            path: std::env::temp_dir().join(format!("caby-share-{}", xid::new())),
+            live: base.join("live"),
+            meta: base.join("meta"),
+            uploads: base.join("uploads"),
+            managed: true,
+            readonly: false,
         }
     }
 
     fn shares_root(space: &Space) -> PathBuf {
-        space.path.join("shares")
+        space.live.parent().unwrap().join("shares")
     }
 
     fn cleanup(space: &Space) {
-        let _ = std::fs::remove_dir_all(&space.path);
+        let _ = std::fs::remove_dir_all(space.live.parent().unwrap());
     }
 
     #[tokio::test]

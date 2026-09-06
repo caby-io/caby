@@ -5,3 +5,4 @@ mod user;
 
 pub use authorized_user::RequireAccount;
 pub use download_user::DownloadUser;
+pub use space::WritableSpace;

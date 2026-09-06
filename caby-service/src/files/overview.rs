@@ -54,7 +54,7 @@ pub async fn build_overview(
     max_depth: u32,
     dirs_only: bool,
 ) -> Result<Vec<OverviewEntry>> {
-    let live_path = space.live();
+    let live_path = space.live.clone();
     let mut entries = read_dir(live_path.join(path)).await?;
 
     let mut result = vec![];

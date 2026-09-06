@@ -2,8 +2,7 @@ use crate::{
     event::{emit, Event, Sender},
     files,
     jsend::JSendBuilder,
-    space::Space,
-    web::extractors::RequireAccount,
+    web::extractors::{RequireAccount, WritableSpace},
 };
 use axum::{
     extract::{Json, State},
@@ -28,7 +27,7 @@ struct DeleteEntriesResponse {
 // todo: this should be archiving instead of deleting
 pub async fn handle_delete_files(
     State(events_tx): State<Sender>,
-    space: Space,
+    WritableSpace(space): WritableSpace,
     RequireAccount(account): RequireAccount,
     Json(req): Json<DeleteEntriesRequest>,
 ) -> Response {

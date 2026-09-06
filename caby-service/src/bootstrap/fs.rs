@@ -49,25 +49,23 @@ pub async fn init(cfg: &Config) -> Result<()> {
     // Initialize spaces
     let cfg_rtm = cfg.runtime.load();
     for (_, space_config) in cfg_rtm.spaces.iter() {
-        init_dir(
-            &format!("spaces/{}", &space_config.name),
-            &space_config.path,
-        )
-        .await?;
+        if !space_config.managed {
+            continue;
+        }
 
         init_dir(
             &format!("spaces/{}/live", &space_config.name),
-            &space_config.path.join("live"),
+            &space_config.live,
         )
         .await?;
         init_dir(
             &format!("spaces/{}/meta", &space_config.name),
-            &space_config.path.join("meta"),
+            &space_config.meta,
         )
         .await?;
         init_dir(
             &format!("spaces/{}/uploads", &space_config.name),
-            &space_config.path.join("uploads"),
+            &space_config.uploads,
         )
         .await?;
     }

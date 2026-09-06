@@ -300,7 +300,7 @@ async fn build_entry(
 
 pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<Vec<Entry>> {
     // todo: read meta and live in parallel?
-    let live_path = space.live();
+    let live_path = space.live.clone();
     let media_urls = match MediaUrlFactory::new(cfg, &space.name, path) {
         Ok(b) => Some(b),
         Err(err) => {

@@ -2,14 +2,13 @@ use crate::{
     config::Config,
     files::{merge_dir, ops::FileConflictStrategy},
     jsend::JSendBuilder,
-    space::Space,
     upload::{
         decode_upload_token, generate_upload_token, get_file_digest_size,
         manifest::{self, ManifestEntryType, UploadManifest},
         UploadToken, UploadTokenPayload,
     },
     web::{
-        extractors::RequireAccount,
+        extractors::{RequireAccount, WritableSpace},
         headers::{get_required_header, HEADER_CABY_CHUNK_INDEX, HEADER_CABY_UPLOAD_TOKEN},
         upload::*,
     },
@@ -64,7 +63,7 @@ fn is_safe_relative_path(p: &str) -> bool {
 // todo: return error on empty entries
 pub async fn handle_register_upload(
     cfg: State<Config>,
-    space: Space,
+    WritableSpace(space): WritableSpace,
     _: RequireAccount,
     Json(req): Json<RegisterUploadRequest>,
 ) -> Response {
@@ -85,7 +84,7 @@ pub async fn handle_register_upload(
 
     // Generate an ID for this request
     let id = xid::new();
-    let upload_dir = space.uploads().join(id.to_string());
+    let upload_dir = space.uploads.join(id.to_string());
 
     // create the upload dir
     if let Err(err) = fs::create_dir_all(upload_dir.join("files")).await {
@@ -142,7 +141,7 @@ pub struct UploadChunkParams {
 
 pub async fn handle_upload_chunk(
     cfg: State<Config>,
-    space: Space,
+    WritableSpace(space): WritableSpace,
     _: RequireAccount,
     headers: HeaderMap,
     path_params: Path<UploadChunkParams>,
@@ -194,7 +193,7 @@ pub async fn handle_upload_chunk(
     }
 
     let full_path = space
-        .uploads()
+        .uploads
         .join(&path_params.id)
         .join("files")
         .join(&path_params.file_path);
@@ -292,7 +291,7 @@ pub struct UpdateUploadParams {
 // this handler is for updating file metadata such as the hash or whether the file is complete
 pub async fn handle_update_upload(
     cfg: State<Config>,
-    space: Space,
+    WritableSpace(space): WritableSpace,
     _: RequireAccount,
     headers: HeaderMap,
     path_params: Path<UpdateUploadParams>,
@@ -336,7 +335,7 @@ pub async fn handle_update_upload(
             .into_response();
     }
 
-    let upload_dir = space.uploads().join(&path_params.id);
+    let upload_dir = space.uploads.join(&path_params.id);
 
     let manifest = match manifest::read(&upload_dir).await {
         Ok(m) => m,
@@ -405,7 +404,7 @@ pub struct PublishUploadParams {
 
 pub async fn handle_publish_upload(
     cfg: State<Config>,
-    space: Space,
+    WritableSpace(space): WritableSpace,
     _: RequireAccount,
     headers: HeaderMap,
     path_params: Path<PublishUploadParams>,
@@ -443,8 +442,8 @@ pub async fn handle_publish_upload(
     }
 
     // todo: check that all the files are complete
-    let live_base = space.live().join(&upload_token_payload.base_path);
-    let upload_path = space.uploads().join(&path_params.id);
+    let live_base = space.live.join(&upload_token_payload.base_path);
+    let upload_path = space.uploads.join(&path_params.id);
     if let Err(err) = merge_dir(&upload_path.join("files"), &live_base).await {
         error!("could not publish upload: {:#}", err);
         return resp.internal_error().into_response();

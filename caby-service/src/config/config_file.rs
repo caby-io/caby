@@ -68,7 +68,16 @@ pub struct ConfigFile {
             pub struct ConfigFileSpace {
                 pub name: String,
                 pub display: Option<String>,
-                pub path: Option<PathBuf>,
+                pub paths: Option<nest! {
+                    pub struct ConfigFilePaths {
+                        pub base: Option<PathBuf>,
+                        pub live: Option<PathBuf>,
+                        pub meta: Option<PathBuf>,
+                        pub uploads: Option<PathBuf>,
+                    }
+                }>,
+                pub managed: Option<bool>,
+                pub readonly: Option<bool>,
             }
         },
     >,
@@ -86,10 +95,26 @@ pub struct ConfigFile {
 
 impl ConfigFileSpace {
     pub fn into_space_config(self, spaces_path: &Path) -> SpaceConfig {
+        let (base, live, meta, uploads) = match self.paths {
+            Some(p) => (p.base, p.live, p.meta, p.uploads),
+            None => (None, None, None, None),
+        };
+
+        let base = base.unwrap_or_else(|| spaces_path.join(&self.name));
+        let managed = self.managed.unwrap_or(true);
+        let readonly = self.readonly.unwrap_or(false);
+
         SpaceConfig {
-            name: self.name.clone(),
-            display: self.display.unwrap_or(self.name.clone()).clone(),
-            path: self.path.unwrap_or(spaces_path.join(self.name)),
+            display: self.display.unwrap_or_else(|| self.name.clone()),
+
+            live: live.unwrap_or_else(|| base.join("live")),
+            meta: meta.unwrap_or_else(|| base.join("meta")),
+            uploads: uploads.unwrap_or_else(|| base.join("uploads")),
+
+            managed,
+            readonly,
+
+            name: self.name,
         }
     }
 }
@@ -271,6 +296,27 @@ fn parse_img_thumbs_section(config_yaml: &Yaml) -> Result<Option<ConfigFileImgTh
     Ok(Some(ConfigFileImgThumbs { max_edge }))
 }
 
+fn parse_space_paths(space: &Yaml, name: &str) -> Result<Option<ConfigFilePaths>> {
+    let paths_yaml = match &space["paths"] {
+        Yaml::BadValue | Yaml::Null => return Ok(None),
+        Yaml::Hash(_) => &space["paths"],
+        _ => return Err(anyhow!(".spaces.{}.paths must be a map", name)),
+    };
+
+    let parse_path = |key: &str| match &paths_yaml[key] {
+        Yaml::BadValue | Yaml::Null => Ok(None),
+        Yaml::String(s) => Ok(Some(PathBuf::from(s))),
+        _ => Err(anyhow!(".spaces.{}.paths.{} must be a string", name, key)),
+    };
+
+    Ok(Some(ConfigFilePaths {
+        base: parse_path("base")?,
+        live: parse_path("live")?,
+        meta: parse_path("meta")?,
+        uploads: parse_path("uploads")?,
+    }))
+}
+
 fn parse_spaces_section(config_yaml: &Yaml) -> Result<Vec<ConfigFileSpace>> {
     let mut spaces = vec![];
     let mut spacenames: HashSet<String> = HashSet::new();
@@ -298,16 +344,26 @@ fn parse_spaces_section(config_yaml: &Yaml) -> Result<Vec<ConfigFileSpace>> {
             _ => return Err(anyhow!(".spaces.{}.display must be a string", name)),
         };
 
-        let path = match &space["path"] {
+        let paths = parse_space_paths(space, name)?;
+
+        let managed = match &space["managed"] {
             Yaml::BadValue | Yaml::Null => None,
-            Yaml::String(s) => Some(PathBuf::from(s)),
-            _ => return Err(anyhow!(".spaces.{}.path must be a string", name)),
+            Yaml::Boolean(b) => Some(*b),
+            _ => return Err(anyhow!(".spaces.{}.managed must be a bool", name)),
+        };
+
+        let readonly = match &space["readonly"] {
+            Yaml::BadValue | Yaml::Null => None,
+            Yaml::Boolean(b) => Some(*b),
+            _ => return Err(anyhow!(".spaces.{}.readonly must be a bool", name)),
         };
 
         spaces.push(ConfigFileSpace {
             name: name.to_string(),
             display,
-            path,
+            paths,
+            managed,
+            readonly,
         });
     }
 
