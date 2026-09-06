@@ -3,7 +3,7 @@ name: CI
 on:
   pull_request:
   push:
-    branches: [ main ]
+    branches: [main]
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -64,6 +64,9 @@ jobs:
 
       - name: Format check
         run: cargo +nightly fmt --check
+
+      - name: Sync Cargo.lock with workspace versions
+        run: cargo update --workspace
 
       - name: Clippy
         run: cargo clippy --all-targets --locked
