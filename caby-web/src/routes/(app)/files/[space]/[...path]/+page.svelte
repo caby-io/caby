@@ -51,6 +51,7 @@
 
 	let spaces: Space[] = $state([]);
 	let current_space = $derived(spaces.find((s) => s.name === space));
+	let can_write = $derived(!(current_space?.readonly ?? true));
 
 	const fetchSpaces = async () => {
 		const resp = await getSpaces(client);
@@ -239,6 +240,8 @@
 		}
 		e.preventDefault();
 		drag_over_ct = 0;
+
+		if (!can_write) return;
 
 		// todo: webkitGetAsEntry -> getAsEntry in the future, code defensively
 		const entries = [...e.dataTransfer!.items].flatMap((i) => i.webkitGetAsEntry() || []);
@@ -529,6 +532,7 @@
 			{in_selection}
 			{add_content_dialog}
 			{space}
+			{can_write}
 			{handleDeleteSelected}
 			{handleMoveSelected}
 			{handleDownloadSelected}
