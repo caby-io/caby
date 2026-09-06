@@ -5,6 +5,23 @@
 		<link rel="icon" type="image/svg+xml" href="%sveltekit.assets%/favicon.svg" />
 		<link rel="icon" type="image/png" href="%sveltekit.assets%/favicon.png" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+		<style>
+			html {
+				background-color: oklch(0.94 0.01 200.85);
+			}
+			html[data-theme='dark'] {
+				background-color: oklch(12.356% 0.01297 273.358);
+			}
+		</style>
+		<script>
+			(function () {
+				var scheme = localStorage.color_scheme;
+				if (scheme !== 'light' && scheme !== 'dark') {
+					scheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+				}
+				document.documentElement.setAttribute('data-theme', scheme);
+			})();
+		</script>
 		%sveltekit.head%
 	</head>
 
