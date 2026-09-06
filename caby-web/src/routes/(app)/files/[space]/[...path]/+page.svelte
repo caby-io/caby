@@ -51,7 +51,7 @@
 
 	let spaces: Space[] = $state([]);
 	let current_space = $derived(spaces.find((s) => s.name === space));
-	let can_write = $derived(!(current_space?.readonly ?? true));
+	let readonly = $derived(current_space?.readonly ?? true);
 
 	const fetchSpaces = async () => {
 		const resp = await getSpaces(client);
@@ -241,7 +241,7 @@
 		e.preventDefault();
 		drag_over_ct = 0;
 
-		if (!can_write) return;
+		if (readonly) return;
 
 		// todo: webkitGetAsEntry -> getAsEntry in the future, code defensively
 		const entries = [...e.dataTransfer!.items].flatMap((i) => i.webkitGetAsEntry() || []);
@@ -464,12 +464,14 @@
 				if (!e.altKey) {
 					return;
 				}
+				if (readonly) return;
 				handleAddContent();
 				return;
 			case 'r': {
 				if (!e.altKey) {
 					return;
 				}
+				if (readonly) return;
 				if (selected_entries.size !== 1) return;
 				const [entry] = selected_entries;
 				handleRenameEntry(entry);
@@ -483,6 +485,7 @@
 				return;
 			}
 			case 'Delete':
+				if (readonly) return;
 				handleDeleteSelected();
 				return;
 			case 'Escape':
@@ -532,7 +535,7 @@
 			{in_selection}
 			{add_content_dialog}
 			{space}
-			{can_write}
+			{readonly}
 			{handleDeleteSelected}
 			{handleMoveSelected}
 			{handleDownloadSelected}
@@ -582,10 +585,10 @@
 	bind:entry={contextMenuProps.entry}
 	{space}
 	onDownload={(entry) => downloadEntries(client, space, [entry])}
-	{handleMoveEntries}
-	{handleAddContent}
-	{handleDeleteEntries}
-	{handleRenameEntry}
+	handleMoveEntries={readonly ? undefined : handleMoveEntries}
+	handleAddContent={readonly ? undefined : handleAddContent}
+	handleDeleteEntries={readonly ? undefined : handleDeleteEntries}
+	handleRenameEntry={readonly ? undefined : handleRenameEntry}
 />
 <MediaPreviewDialog bind:this={preview} entries={preview_entries} />
 

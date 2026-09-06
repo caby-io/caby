@@ -13,6 +13,7 @@
 		in_selection,
 		add_content_dialog,
 		space,
+		readonly,
 		handleDeleteSelected,
 		handleMoveSelected,
 		handleDownloadSelected,
@@ -22,6 +23,7 @@
 		in_selection: boolean;
 		add_content_dialog: HTMLDialogElement;
 		space: string;
+		readonly: boolean;
 		handleDeleteSelected: () => void;
 		handleMoveSelected: () => void;
 		handleDownloadSelected: () => void;
@@ -41,13 +43,15 @@
 				<IconLucideX />
 			</button>
 			<span>{selected_entries.size} selected</span>
-			<button
-				class="action fx fx--cc border-0 box-shadow-0-card"
-				onclick={handleMoveSelected}
-				title="Move selected"
-			>
-				<IconLucideFolderInput />
-			</button>
+			{#if !readonly}
+				<button
+					class="action fx fx--cc border-0 box-shadow-0-card"
+					onclick={handleMoveSelected}
+					title="Move selected"
+				>
+					<IconLucideFolderInput />
+				</button>
+			{/if}
 			<button
 				class="action fx fx--cc border-0 box-shadow-0-card"
 				onclick={handleDownloadSelected}
@@ -55,24 +59,28 @@
 			>
 				<IconLucideDownload />
 			</button>
-			<button
-				class="action selected fx fx--cc border-0 box-shadow-0-card"
-				onclick={handleDeleteSelected}
-				title="Delete selected"
-			>
-				<IconLucideTrash2 />
-			</button>
+			{#if !readonly}
+				<button
+					class="action selected fx fx--cc border-0 box-shadow-0-card"
+					onclick={handleDeleteSelected}
+					title="Delete selected"
+				>
+					<IconLucideTrash2 />
+				</button>
+			{/if}
 		{:else}
 			<button class="action fx fx--cc border-0 box-shadow-0-card">
 				<IconCiInfo />
 			</button>
-			<button
-				class="action add fx fx--cc border-0 box-shadow-0-card"
-				onclick={() => add_content_dialog.showModal()}
-				title="Add/Upload content"
-			>
-				<IconLetsIconsAddDuotone />
-			</button>
+			{#if !readonly}
+				<button
+					class="action add fx fx--cc border-0 box-shadow-0-card"
+					onclick={() => add_content_dialog.showModal()}
+					title="Add/Upload content"
+				>
+					<IconLetsIconsAddDuotone />
+				</button>
+			{/if}
 		{/if}
 	</div>
 </header>
