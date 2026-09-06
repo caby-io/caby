@@ -585,6 +585,7 @@
 	bind:entry={contextMenuProps.entry}
 	{space}
 	onDownload={(entry) => downloadEntries(client, space, [entry])}
+	// todo: Once RBAC lands, send a control object down instead
 	handleMoveEntries={readonly ? undefined : handleMoveEntries}
 	handleAddContent={readonly ? undefined : handleAddContent}
 	handleDeleteEntries={readonly ? undefined : handleDeleteEntries}
