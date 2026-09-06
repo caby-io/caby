@@ -6,16 +6,4 @@
 	let { children }: { children: Snippet } = $props();
 </script>
 
-<svelte:head>
-	<script>
-		// todo: move this to app.html or into an imported ts file
-		// set color scheme
-		let scheme = localStorage.color_scheme;
-		if (!scheme) {
-			scheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-		}
-		document.documentElement.setAttribute('data-theme', scheme);
-	</script>
-</svelte:head>
-
 {@render children()}
