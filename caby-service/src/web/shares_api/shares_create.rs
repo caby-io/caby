@@ -21,9 +21,9 @@ use crate::{
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     jsend::JSendBuilder,
     share::{hash_format, reconcile_spec, ShareLimits, ShareSpec, SpecAuth, SpecFlow},
-    space::{Space, SpaceDir},
+    space::SpaceDir,
     user::{try_hash_password, Permission},
-    web::extractors::RequireAccount,
+    web::extractors::{RequireAccount, WritableSpace},
     Result,
 };
 
@@ -74,7 +74,7 @@ impl TryFrom<CreateFlow> for SpecFlow {
 }
 
 pub async fn handle_create_share(
-    space: Space,
+    WritableSpace(space): WritableSpace,
     RequireAccount(account): RequireAccount,
     State(cfg): State<Config>,
     State(locks): State<Arc<PathLocks>>,

@@ -43,6 +43,13 @@ pub async fn handle_delete_share(
         }
     };
 
+    if space.readonly {
+        return resp
+            .status_code(StatusCode::FORBIDDEN)
+            .fail("space is read-only")
+            .into_response();
+    }
+
     let guard = locks
         .acquire(&space.name, std::path::Path::new(&share.spec_path))
         .await;

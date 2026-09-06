@@ -129,7 +129,7 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
     let mut uploads_removed: u32 = 0;
 
     for (_, space_config) in cfg_rtm.spaces.iter() {
-        let uploads_dir = space_config.path.join("uploads");
+        let uploads_dir = space_config.uploads.clone();
         let mut dir = match fs::read_dir(&uploads_dir).await {
             Ok(d) => d,
             Err(err) => {

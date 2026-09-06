@@ -10,6 +10,8 @@ use crate::{config::Config, jsend::JSendBuilder, space::Space};
 pub struct SpaceResponse<'a> {
     pub name: &'a str,
     pub display: &'a str,
+    pub managed: bool,
+    pub readonly: bool,
 }
 
 impl<'a> From<&'a Space> for SpaceResponse<'a> {
@@ -17,6 +19,8 @@ impl<'a> From<&'a Space> for SpaceResponse<'a> {
         Self {
             name: &value.name,
             display: &value.display,
+            managed: value.managed,
+            readonly: value.readonly,
         }
     }
 }

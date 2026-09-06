@@ -2,8 +2,7 @@ use crate::{
     event::{emit, Event, Sender},
     files,
     jsend::JSendBuilder,
-    space::Space,
-    web::extractors::RequireAccount,
+    web::extractors::{RequireAccount, WritableSpace},
 };
 use axum::{
     extract::{Json, State},
@@ -44,7 +43,7 @@ impl MoveError {
 
 pub async fn handle_move_files(
     State(events_tx): State<Sender>,
-    space: Space,
+    WritableSpace(space): WritableSpace,
     RequireAccount(account): RequireAccount,
     Json(req): Json<MoveEntriesRequest>,
 ) -> Response {
