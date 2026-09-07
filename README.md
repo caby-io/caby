@@ -1,10 +1,4 @@
 <p align="center">
-  ⚠️ Note: Caby is in active development and in a pre-release state ⚠️
-</p>
-
-<br />
-
-<p align="center">
   <picture>
     <source srcset=".github/assets/logo-white.png" media="(prefers-color-scheme: dark)">
     <img src=".github/assets/logo-black.png" alt="Caby Logo" width="300">
@@ -16,6 +10,7 @@
 </p>
 
 <p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL_v3-blue.svg" alt="License: AGPL v3"></a>
   <a href="https://discord.gg/Z2JkSs2Hzy"><img src="https://img.shields.io/badge/Discord-Join-5865F2?logo=discord&logoColor=white" alt="Discord"></a>
 </p>
 
@@ -53,6 +48,10 @@ What we're working towards in the near future:
 
 Are we missing something? Let us know on [Discord](https://discord.gg/Z2JkSs2Hzy) or
 [open an issue](https://github.com/caby-io/caby/issues).
+
+🚧 Caby is pre-1.0 and under active development. Occasional breaking changes to **config and APIs**
+may require human work. Caby stores your files plainly and they should never be affected by Caby
+version upgrades.
 
 ## 🚀 Quick Start
 
