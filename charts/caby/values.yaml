@@ -25,9 +25,9 @@ config:
         display: "🏠 Home"
 
     users:
-      - name: YOUR_USERNAME
+      - name: caby_user
         # generate with: openssl rand -hex 32
-        activation_token: REPLACE_WITH_A_UNIQUE_64_CHARACTER_TOKEN
+        activation_token: REPLACE_ME
         spaces:
           - name: home
             permissions: "*"

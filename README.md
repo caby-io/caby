@@ -50,8 +50,8 @@ Are we missing something? Let us know on [Discord](https://discord.gg/Z2JkSs2Hzy
 [open an issue](https://github.com/caby-io/caby/issues).
 
 🚧 Caby is pre-1.0 and under active development. Occasional breaking changes to **config and APIs**
-may require human work. Caby stores your files plainly and they should never be affected by Caby
-version upgrades.
+may require human input between versions. Caby stores your files plainly and they should never be
+affected by Caby version upgrades.
 
 ## 🚀 Quick Start
 
@@ -60,41 +60,76 @@ For more complete installation and configuration information please refer to
 
 ### Docker Compose
 
-Grab the starter `compose.yaml` and `config.yaml`:
+1. Grab the starter `compose.yaml` and `config.yaml`:
 
-```bash
-curl -O https://raw.githubusercontent.com/caby-io/caby/main/docker/compose.yaml
-curl -O https://raw.githubusercontent.com/caby-io/caby/main/docker/config.yaml
-```
+   ```bash
+   curl -fO https://raw.githubusercontent.com/caby-io/caby/main/docker/compose.yaml &&
+   curl -fO https://raw.githubusercontent.com/caby-io/caby/main/docker/config.yaml
+   ```
 
-Certain configuration items in Caby are set statically in a file so we'll need to prepare their
-values ahead of deployment:
+2. Generate a 64-character activation token and replace `REPLACE_ME` in `config.yaml`, or, replace
+   the config's token in one shot:
 
-- Your username, and
-- Your activation token
+   ```bash
+   # Unix
+   sed -i "s/REPLACE_ME/$(openssl rand -hex 32)/" config.yaml
+   ```
 
-The activation token must be exactly 64 characters long. We can generate one with:
+   ```bash
+   # macOS
+   sed -i '' "s/REPLACE_ME/$(openssl rand -hex 32)/" config.yaml
+   ```
 
-```bash
-openssl rand -hex 32
-```
+   Make sure you note the activation token for the final step.
 
-Now open up the config file and edit the username and activation token to match:
+3. Deploy:
 
-```yaml
-users:
-  - name: <your cool username>
-    activation_token: <a 64 character token>
-```
+   ```bash
+   docker compose up -d
+   ```
 
-Save the config file and deploy:
+4. Navigate to the activation page (e.g. http://localhost:3000/activate) to activate `caby_user` and
+   set your password.
 
-```bash
-docker compose up -d
-```
-
-Navigate to the activation page to set your password (e.g. http://localhost:3000/activate) and
-login.
-
-For raw `docker run`, reverse-proxy setup, and full configuration options, see the
+For bare `docker run`, reverse-proxy setup, and full configuration options, see the
 [Docker installation guide](https://caby.io/installation/docker/).
+
+### Helm / Kubernetes
+
+Caby ships an official Helm chart.
+
+1. Grab the example `config.yaml`:
+
+   ```bash
+   curl -fO https://raw.githubusercontent.com/caby-io/caby/main/examples/config.yaml
+   ```
+
+2. Generate a 64-character activation token and replace `REPLACE_ME` in `config.yaml`, or, replace
+   the config's token in one shot:
+
+   ```bash
+   # Unix
+   sed -i "s/REPLACE_ME/$(openssl rand -hex 32)/" config.yaml
+   ```
+
+   ```bash
+   # macOS
+   sed -i '' "s/REPLACE_ME/$(openssl rand -hex 32)/" config.yaml
+   ```
+
+   Make sure you note the activation token for the final step.
+
+3. Create a helm release with `--set ingress.web.host=` to your desired domain:
+
+   ```bash
+   helm install caby oci://ghcr.io/caby-io/charts/caby \
+     --namespace caby --create-namespace \
+     --set ingress.web.host=files.example.com \
+     --set-file config.inline=./config.yaml
+   ```
+
+4. Once the pods are up, navigate to the activation page on your ingress host (e.g.
+   https://files.example.com/activate) to activate `caby_user` and set your password.
+
+For the full `config.yaml` format and all chart options, see the
+[Helm installation guide](https://caby.io/installation/helm/).

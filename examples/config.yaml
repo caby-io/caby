@@ -1,9 +1,3 @@
-urls:
-  # Where your backend server is exposed (e.g. https://files-api.caby.net)
-  backend: http://localhost:8080
-  # Where your frontend server is exposed (e.g. https://files.caby.net)
-  frontend: http://localhost:3000
-
 # A list of spaces or compartments
 spaces:
   - name: home
