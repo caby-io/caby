@@ -79,7 +79,7 @@ pub fn min<'a>(value: usize) -> Rule<&'a str> {
 
 pub fn len<'a>(value: usize) -> Rule<&'a str> {
     Box::new(move |s: &str| {
-        if s.len() < value {
+        if s.len() != value {
             return Some(ValidationError(format!(
                 "must be exactly {} characters",
                 value
