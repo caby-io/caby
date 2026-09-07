@@ -2,6 +2,8 @@
     "recommendations": [
         "esbenp.prettier-vscode",
         "svelte.svelte-vscode",
-        "rust-lang.rust-analyzer"
+        "rust-lang.rust-analyzer",
+        "bierner.markdown-preview-github-styles",
+        "bierner.markdown-mermaid"
     ]
 }
