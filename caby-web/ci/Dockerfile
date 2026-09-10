@@ -21,7 +21,6 @@ FROM gcr.io/distroless/nodejs24-debian13
 WORKDIR /app
 
 ENV NODE_ENV=production
-# ENV ORIGIN=http://localhost:8080
 
 COPY --from=build /app/out/ .
 
