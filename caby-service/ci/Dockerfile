@@ -10,11 +10,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY Cargo.toml Cargo.lock ./
 # Stub main.rs to cache deps independently of source code changes
 RUN mkdir src && echo 'fn main() {}' > src/main.rs \
-    && cargo build --release \
+    && cargo build --release --locked \
     && rm -rf src target/release/caby-service target/release/deps/caby_service*
 
 COPY src ./src
-RUN cargo build --release
+RUN cargo build --release --locked
 
 # Release Stage
 FROM debian:13-slim
