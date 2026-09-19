@@ -1,10 +1,7 @@
 use std::path::PathBuf;
 
 use anyhow::anyhow;
-use argon2::{
-    password_hash::{rand_core::OsRng, SaltString},
-    Argon2, PasswordHasher, PasswordVerifier,
-};
+use argon2::{Argon2, PasswordHasher, PasswordVerifier};
 use serde::{Deserialize, Serialize};
 use tokio::fs::{self, try_exists, write};
 
@@ -69,10 +66,9 @@ pub struct Account {
 }
 
 pub fn try_hash_password(password: &str) -> Result<String> {
-    let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
     argon2
-        .hash_password(password.as_bytes(), &salt)
+        .hash_password(password.as_bytes())
         .map_err(|err| anyhow!("could not hash password: {}", err))
         .map(|p| p.to_string())
 }

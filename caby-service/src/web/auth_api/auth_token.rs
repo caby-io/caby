@@ -1,10 +1,6 @@
 use std::io::ErrorKind;
 
 use anyhow::anyhow;
-use argon2::{
-    password_hash::{rand_core::OsRng, SaltString},
-    Argon2, PasswordHasher,
-};
 use axum::{
     extract::{Json, Path, State},
     response::{IntoResponse, Response},
