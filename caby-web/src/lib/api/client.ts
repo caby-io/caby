@@ -179,7 +179,6 @@ export class ApiClient {
 		}
 
 		if (new Date() > this.auth.login_token.expires_at) {
-			console.log('or here');
 			return false;
 		}
 
