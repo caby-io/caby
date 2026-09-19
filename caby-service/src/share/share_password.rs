@@ -1,5 +1,6 @@
 use anyhow::anyhow;
 use argon2::{Argon2, PasswordVerifier};
+use sha_crypt::{PasswordVerifier as _, ShaCrypt};
 
 use crate::{user::try_hash_password, Result};
 
@@ -34,7 +35,9 @@ fn verify_hash(hash: &str, plaintext: &str) -> Result<bool> {
         }
         Some(HashFormat::Bcrypt) => bcrypt::verify(plaintext, hash)
             .map_err(|err| anyhow!("could not verify bcrypt hash: {}", err)),
-        Some(HashFormat::Sha512Crypt) => Ok(sha_crypt::sha512_check(plaintext, hash).is_ok()),
+        Some(HashFormat::Sha512Crypt) => Ok(ShaCrypt::SHA512
+            .verify_password(plaintext.as_bytes(), hash)
+            .is_ok()),
         None => Err(anyhow!("unsupported password hash format")),
     }
 }
