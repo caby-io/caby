@@ -19,7 +19,27 @@ jobs:
           private-key: ${{ secrets.RELEASE_PLEASE_APP_PRIVATE_KEY }}
 
       - uses: googleapis/release-please-action@v5
+        id: release
         with:
           token: ${{ steps.app-token.outputs.token }}
           config-file: release-please-config.json
           manifest-file: .release-please-manifest.json
+
+      - name: Checkout release PR branch
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ fromJSON(steps.release.outputs.pr).headBranchName }}
+          token: ${{ steps.app-token.outputs.token }}
+
+      - name: Sync Cargo.lock to release version
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        working-directory: caby-service
+        run: cargo update --workspace
+
+      - name: Commit synced Cargo.lock
+        if: ${{ steps.release.outputs.prs_created == 'true' }}
+        uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: "chore: sync Cargo.lock to release version"
+          file_pattern: caby-service/Cargo.lock
