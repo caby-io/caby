@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.2.2](https://github.com/caby-io/caby/compare/v0.2.1...v0.2.2) (2026-09-19)
+
+
+### Bug Fixes
+
+* correct auth race on refresh ([#117](https://github.com/caby-io/caby/issues/117)) ([6c26b59](https://github.com/caby-io/caby/commit/6c26b59ba58b93e86215ca94773ccb0aeec6a57a))
+* match cargo lock app version ([#115](https://github.com/caby-io/caby/issues/115)) ([890d5e9](https://github.com/caby-io/caby/commit/890d5e97639c14071487c054698fb88a9da9db7e))
+
 ## [0.2.1](https://github.com/caby-io/caby/compare/v0.2.0...v0.2.1) (2026-09-18)
 
 
