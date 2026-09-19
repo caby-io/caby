@@ -118,7 +118,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
 
       - name: Lint
         run: helm lint charts/caby --set ingress.web.host=caby.example.com
