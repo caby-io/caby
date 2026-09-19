@@ -1,6 +1,7 @@
 use crate::{
     config::Config,
-    files::{merge_dir, ops::FileConflictStrategy},
+    event::{send, Event, Sender},
+    files::{has_ext, merge_dir, ops::FileConflictStrategy, CABY_SHARE_SPEC_EXT},
     jsend::JSendBuilder,
     upload::{
         decode_upload_token, generate_upload_token, get_file_digest_size,
@@ -404,8 +405,9 @@ pub struct PublishUploadParams {
 
 pub async fn handle_publish_upload(
     cfg: State<Config>,
+    State(events_tx): State<Sender>,
     WritableSpace(space): WritableSpace,
-    _: RequireAccount,
+    RequireAccount(account): RequireAccount,
     headers: HeaderMap,
     path_params: Path<PublishUploadParams>,
 ) -> Response {
@@ -444,9 +446,39 @@ pub async fn handle_publish_upload(
     // todo: check that all the files are complete
     let live_base = space.live.join(&upload_token_payload.base_path);
     let upload_path = space.uploads.join(&path_params.id);
+
+    let manifest = match manifest::read(&upload_path).await {
+        Ok(m) => m,
+        Err(err) => {
+            error!("could not read upload manifest: {:#}", err);
+            return resp.internal_error().into_response();
+        }
+    };
+
+    let base = PathBuf::from(&upload_token_payload.base_path);
+    let mut spec_events = vec![];
+    for entry in &manifest.entries {
+        if entry.entry_type != ManifestEntryType::File {
+            continue;
+        }
+        let rel = base.join(&entry.name);
+        if !has_ext(&rel, CABY_SHARE_SPEC_EXT) {
+            continue;
+        }
+        let event = match fs::try_exists(space.live.join(&rel)).await.unwrap_or(false) {
+            true => Event::from_modify(space.name.clone(), rel),
+            false => Event::from_create(space.name.clone(), rel),
+        };
+        spec_events.push(event.by(account.name.as_str()));
+    }
+
     if let Err(err) = merge_dir(&upload_path.join("files"), &live_base).await {
         error!("could not publish upload: {:#}", err);
         return resp.internal_error().into_response();
+    }
+
+    for event in spec_events {
+        send(&events_tx, event).await;
     }
 
     // clean up the manifest and now-empty upload dir
