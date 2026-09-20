@@ -2,7 +2,7 @@ use std::{io::ErrorKind, path::Path};
 
 use anyhow::{anyhow, Context};
 use tokio::fs;
-use tracing::{debug, info};
+use tracing::info;
 
 use crate::{
     config::Config,
@@ -13,10 +13,7 @@ use crate::{
     },
     files::{has_ext, CABY_SHARE_SPEC_EXT},
     job::Input,
-    share::{
-        cleanup_spec, get_shares_in_space, load_state, reconcile_spec, remove_state, Share,
-        ShareSpec,
-    },
+    share::{cleanup_spec, load_state, reconcile_spec, remove_state, Share, ShareSpec},
     space::{Space, SpaceDir},
     Result,
 };
@@ -72,16 +69,6 @@ pub fn handlers() -> Vec<EventHandler> {
     vec![handle_event]
 }
 
-// todo: wire this
-pub async fn try_scan_shares(cfg: &Config, space: &str) -> Result<()> {
-    debug!("controller: ScanShares {} is not wired up yet", space);
-    Ok(())
-}
-
-fn find_space(cfg: &Config, name: &str) -> Option<Space> {
-    cfg.runtime.load().spaces.get(name).map(Space::from)
-}
-
 pub async fn try_reconcile_share(
     cfg: &Config,
     locks: &PathLocks,
@@ -95,7 +82,7 @@ pub async fn try_reconcile_share(
         path.display()
     );
 
-    let Some(space) = find_space(cfg, space_name) else {
+    let Some(space) = cfg.find_space(space_name) else {
         return Err(anyhow!("unknown space {}", space_name));
     };
 
@@ -118,7 +105,7 @@ pub async fn try_move_share(
         to.display()
     );
 
-    let Some(space) = find_space(cfg, space_name) else {
+    let Some(space) = cfg.find_space(space_name) else {
         return Err(anyhow!("unknown space {}", space_name));
     };
 
@@ -161,7 +148,7 @@ async fn move_share(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::controller::PathGuard;
+    use crate::{controller::PathGuard, share::get_shares_in_space};
 
     fn temp_space() -> Space {
         let base = std::env::temp_dir().join(format!("caby-move-{}", xid::new()));

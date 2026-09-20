@@ -117,6 +117,10 @@ impl Config {
         self.runtime.load().users.get(name).cloned()
     }
 
+    pub fn find_space(&self, name: &str) -> Option<Space> {
+        self.runtime.load().spaces.get(name).map(Space::from)
+    }
+
     pub async fn new() -> Result<Self> {
         let mut builder = ConfigBuilder::new();
         let home_path = var("CABY_HOME_PATH").context("missing CABY_HOME_PATH")?;

@@ -82,3 +82,14 @@ pub fn emit(sender: &Sender, event: Event) {
         );
     }
 }
+
+pub async fn send(sender: &Sender, event: Event) {
+    if let Err(err) = sender.send(event).await {
+        let event = err.0;
+        warn!(
+            "dropped file event for {}/{}",
+            event.space,
+            event.path.display()
+        );
+    }
+}

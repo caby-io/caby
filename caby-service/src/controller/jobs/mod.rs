@@ -1,9 +1,6 @@
-use anyhow::anyhow;
-use tokio::time;
-
 use crate::{
     config::Config,
-    controller::PathLocks,
+    controller::{scan, PathLocks},
     job::{Input, Job},
     Result,
 };
@@ -12,7 +9,9 @@ use super::EventHandler;
 
 pub mod shares;
 
-pub use shares::{try_move_share, try_reconcile_share, try_scan_shares};
+use anyhow::anyhow;
+pub use shares::{try_move_share, try_reconcile_share};
+use tokio::time;
 
 pub fn handlers() -> Vec<EventHandler> {
     shares::handlers()
@@ -25,7 +24,7 @@ async fn dispatch(
     actor: Option<&str>,
 ) -> Result<()> {
     match input {
-        Input::ScanShares { space } => try_scan_shares(cfg, space).await,
+        Input::ScanSpace { space } => scan::try_scan_space(cfg, locks, space).await,
         Input::ReconcileShare { space, path } => {
             try_reconcile_share(cfg, locks, space, path, actor).await
         }
