@@ -315,6 +315,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "walkdir",
  "xid",
  "xxhash-rust",
  "yaml-rust2",

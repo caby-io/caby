@@ -2,6 +2,7 @@ use std::{
     any::Any,
     panic::{self, AssertUnwindSafe},
     sync::{Arc, Mutex},
+    time::Duration,
 };
 
 use anyhow::anyhow;
@@ -9,13 +10,14 @@ use futures_util::FutureExt;
 use jiff::SignedDuration;
 use tokio::{
     sync::{Notify, OwnedSemaphorePermit, Semaphore},
-    task, time,
+    time,
 };
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
 use tracing::{debug, warn};
 
 use crate::{
     config::Config,
+    controller::jobs::run,
     event::{self, Event, Receiver, Sender},
     job::{Input, Job},
     Result,
@@ -24,6 +26,7 @@ use crate::{
 pub mod jobs;
 pub mod locks;
 pub mod registry;
+mod scan;
 
 pub use crate::job::Priority;
 pub use locks::{PathGuard, PathLocks};
@@ -38,6 +41,8 @@ const MAX_ATTEMPTS: u32 = 8;
 const RETRY_BASE: SignedDuration = SignedDuration::from_secs(2);
 const RETRY_CEILING: SignedDuration = SignedDuration::from_secs(300);
 const RETRY_MAX_EXPONENT: u32 = 16;
+
+const SCAN_INTERVAL: Duration = Duration::from_secs(60 * 60);
 
 fn retry_backoff(attempts: u32) -> SignedDuration {
     let factor = 1i32 << attempts.saturating_sub(1).min(RETRY_MAX_EXPONENT);
@@ -124,8 +129,9 @@ impl Controller {
     }
 
     fn start(self: &Arc<Self>, events_rx: Receiver) {
-        task::spawn(self.clone().run_jobs());
-        task::spawn(self.clone().run_events(events_rx));
+        self.tasks.spawn(self.clone().run_jobs());
+        self.tasks.spawn(self.clone().run_events(events_rx));
+        self.tasks.spawn(self.clone().run_scanner());
     }
 
     pub fn locks(&self) -> Arc<PathLocks> {
@@ -142,7 +148,7 @@ impl Controller {
     // Jobs
 
     async fn supervise_job(self: Arc<Self>, mut lease: JobLease, _slot: OwnedSemaphorePermit) {
-        let result = AssertUnwindSafe(jobs::run(&self.cfg, &self.locks, lease.job()))
+        let result = AssertUnwindSafe(run(&self.cfg, &self.locks, lease.job()))
             .catch_unwind()
             .await
             .unwrap_or_else(|panic| Err(anyhow!("job panicked: {}", panic_message(&*panic))));
@@ -273,6 +279,32 @@ impl Controller {
                     Some(event) => self.dispatch_event(event),
                     None => break,
                 },
+            }
+        }
+    }
+
+    // Scans
+
+    // todo: look at completed time for next scan
+    // todo: stagger scans to not overwhelm drives
+    async fn run_scanner(self: Arc<Self>) {
+        let mut ticker = time::interval(SCAN_INTERVAL);
+
+        loop {
+            tokio::select! {
+                _ = self.cancel.cancelled() => break,
+                _ = ticker.tick() => {
+                    let runtime = self.cfg.runtime.load();
+                    for space in runtime.spaces.keys() {
+                        self.schedule_job(
+                            Priority::Background,
+                            Input::ScanSpace {
+                                space: space.clone(),
+                            },
+                            None,
+                        );
+                    }
+                }
             }
         }
     }

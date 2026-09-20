@@ -39,6 +39,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"
 url = "2.5"
 libvips = "2.1"
 infer = "0.22"
+walkdir = "2.5.0"
 
 # Enable a small amount of optimization in the dev profile.
 [profile.dev]

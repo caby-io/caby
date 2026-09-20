@@ -5,7 +5,7 @@ use jiff::Timestamp;
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Input {
     // Shares
-    ScanShares {
+    ScanSpace {
         space: String,
     },
     ReconcileShare {
@@ -22,7 +22,7 @@ pub enum Input {
 impl Input {
     pub fn locks(&self) -> Vec<LockKey> {
         match self {
-            Self::ScanShares { space } => vec![LockKey::Space(space.clone())],
+            Self::ScanSpace { space } => vec![LockKey::Space(space.clone())],
             Self::ReconcileShare { space, path } => vec![LockKey::Path {
                 space: space.clone(),
                 path: path.clone(),
@@ -42,7 +42,7 @@ impl Input {
 
     pub fn timeout(&self) -> Duration {
         match self {
-            Self::ScanShares { .. } => Duration::from_secs(600),
+            Self::ScanSpace { .. } => Duration::from_secs(600),
             Self::ReconcileShare { .. } => Duration::from_secs(60),
             Self::MoveShare { .. } => Duration::from_secs(60),
         }
