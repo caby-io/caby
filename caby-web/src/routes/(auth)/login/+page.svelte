@@ -126,11 +126,6 @@
 </div>
 
 <style lang="scss">
-	:global(body) {
-		min-height: 100vh;
-		align-content: center;
-	}
-
 	header.title {
 		background: var(--clr-background-2);
 		padding: 1rem;
