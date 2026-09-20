@@ -108,7 +108,7 @@
 			cursor: pointer;
 			box-sizing: border-box;
 			background: var(--clr-background-2);
-			border-radius: 4px;
+			border-radius: 5px;
 			height: 2rem;
 			width: 2rem;
 			padding: 0.25rem;

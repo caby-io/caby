@@ -31,6 +31,7 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 )
                 .route("/login", post(auth_api::handle_login))
                 .route("/logout", post(auth_api::handle_logout))
+                .route("/me", get(auth_api::handle_me))
                 .route("/guest", post(auth_api::handle_create_guest))
                 .route("/guest/refresh", post(auth_api::handle_refresh_guest))
                 .nest(

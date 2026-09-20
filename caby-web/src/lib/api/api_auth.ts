@@ -91,6 +91,16 @@ export const logout = async (client: ApiClient): Promise<LogoutResponse> => {
 	return resp as LogoutResponse;
 };
 
+export type MeData = {
+	user: string;
+	email: string | null;
+};
+
+export const getMe = async (client: ApiClient): Promise<ApiResponse<MeData>> => {
+	const req = ApiRequestBuilder.get(`auth/me`).intoRequest();
+	return await client.exec<MeData>(req);
+};
+
 export type GuestTokenData = {
 	guest_token: string;
 	expires_at: string;

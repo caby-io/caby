@@ -1,13 +1,19 @@
 <script lang="ts">
-	let { name, size = '2rem' }: { name: string; size?: string } = $props();
+	let { name, size = '2rem' }: { name?: string | null; size?: string } = $props();
 
-	const initial = $derived((name.trim()[0] ?? '?').toUpperCase());
+	const trimmed = $derived((name ?? '').trim());
+	const initial = $derived(trimmed ? trimmed[0].toUpperCase() : '');
 	const hue = $derived(
-		(([...name].reduce((h, c) => (c.charCodeAt(0) + ((h << 5) - h)) | 0, 0) % 360) + 360) % 360
+		(([...trimmed].reduce((h, c) => (c.charCodeAt(0) + ((h << 5) - h)) | 0, 0) % 360) + 360) % 360
 	);
 </script>
 
-<span class="avatar fx fx--cc" style="--avatar-size:{size}; --avatar-hue:{hue}" aria-hidden="true">
+<span
+	class="avatar fx fx--cc"
+	class:placeholder={!trimmed}
+	style="--avatar-size:{size}; --avatar-hue:{hue}"
+	aria-hidden="true"
+>
 	{initial}
 </span>
 
@@ -23,5 +29,13 @@
 		line-height: 1;
 		user-select: none;
 		flex-shrink: 0;
+		transition:
+			background-color 0.2s ease,
+			color 0.2s ease;
+
+		&.placeholder {
+			background: var(--clr-background-2);
+			color: transparent;
+		}
 	}
 </style>

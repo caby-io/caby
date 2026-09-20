@@ -6,8 +6,10 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import ThemeSelect from '$lib/ThemeSelect.svelte';
 	import UserPopover from './UserPopover.svelte';
-	import { setContext } from 'svelte';
+	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/state';
+	import { client } from '$lib/stores/client.svelte';
+	import { user, loadUser } from '$lib/stores/user.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -17,6 +19,10 @@
 	$effect(() => {
 		page.url;
 		menu.open = false;
+	});
+
+	onMount(() => {
+		loadUser(client);
 	});
 </script>
 
@@ -45,7 +51,7 @@
 		</div> -->
 		<ThemeSelect />
 		<button id="nav-user" popovertarget="nav-user-popover" class="user fx fx--cc">
-			<Avatar name="My Account" size="1.9rem" />
+			<Avatar name={user.name} size="1.9rem" />
 		</button>
 	</section>
 </div>

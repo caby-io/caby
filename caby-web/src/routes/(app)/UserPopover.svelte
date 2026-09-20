@@ -3,9 +3,12 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import { logout as apiLogout } from '$lib/api/api_auth';
 	import { client } from '$lib/stores/client.svelte';
+	import { user } from '$lib/stores/user.svelte';
 	import { goto } from '$app/navigation';
 
 	let loading = $state(false);
+
+	const displayName = $derived(user.name ?? 'My Account');
 
 	const logout = async () => {
 		loading = true;
@@ -18,9 +21,11 @@
 
 <div id="nav-user-popover" popover>
 	<div class="card fx fx--col fx--cc">
-		<span class="email ellipsis">My Account</span>
-		<Avatar name="My Account" size="4.5rem" />
-		<h2 class="greeting">Hi, My Account!</h2>
+		{#if user.email}
+			<span class="email ellipsis">{user.email}</span>
+		{/if}
+		<Avatar name={user.name} size="4.5rem" />
+		<h2 class="greeting">Welcome, {displayName}!</h2>
 		<button disabled={loading} class="button signout fx fx--cc" onclick={() => logout()}>
 			<IconLucideLogOut /> Sign out
 		</button>
@@ -38,7 +43,7 @@
 		margin-top: 0.5rem;
 
 		border: 1px solid var(--clr-border);
-		border-radius: 1rem;
+		border-radius: 3px;
 		background: var(--clr-background-1);
 		box-shadow: var(--box-shadow-0);
 

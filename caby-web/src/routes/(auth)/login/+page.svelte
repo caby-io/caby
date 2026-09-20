@@ -146,7 +146,7 @@
 			> button {
 				background: var(--clr-background-1);
 				border: 2px solid transparent;
-				border-radius: 10px;
+				border-radius: 5px;
 				background-image:
 					linear-gradient(var(--clr-background-1), var(--clr-background-1)),
 					linear-gradient(320deg, var(--clr-primary), var(--clr-accent));
