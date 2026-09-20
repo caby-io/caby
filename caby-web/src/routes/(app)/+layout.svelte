@@ -41,10 +41,10 @@
 	>
 		<IconLucideMenu />
 	</button>
-	<div class="logo fx fx--ac" aria-label="Caby">
+	<a href="/" class="logo fx fx--ac" aria-label="Caby">
 		<span class="logo--full">{@html cabyLogo}</span>
 		<span class="logo--icon">{@html cabyIcon}</span>
-	</div>
+	</a>
 	<section class="search fx-grow">
 		<input type="search" placeholder="🔍︎ Search" disabled />
 	</section>
@@ -102,6 +102,7 @@
 		> .logo {
 			width: var(--sidebar-width);
 			color: var(--clr-text-0);
+			text-decoration: none;
 
 			.logo--full {
 				display: contents;
