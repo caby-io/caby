@@ -3,12 +3,10 @@
 	import cabyLogo from '$lib/caby-logo.svg?raw';
 	import cabyIcon from '$lib/caby-icon.svg?raw';
 	import IconLucideMenu from '~icons/lucide/menu';
-	import IconLucideMoon from '~icons/lucide/moon';
-	import IconLucideSunMedium from '~icons/lucide/sun-medium';
 	import IconLucideCircleUserRound from '~icons/lucide/circle-user-round';
-	import { getScheme, toggleScheme, clearStorage } from '$lib/color-scheme';
+	import ThemeSelect from '$lib/ThemeSelect.svelte';
 	import UserPopover from './UserPopover.svelte';
-	import { onMount, setContext } from 'svelte';
+	import { setContext } from 'svelte';
 	import { page } from '$app/state';
 
 	let { children }: { children: Snippet } = $props();
@@ -19,16 +17,6 @@
 	$effect(() => {
 		page.url;
 		menu.open = false;
-	});
-
-	let scheme: string = $state('light');
-	const toggleSchemeLocal = () => {
-		toggleScheme();
-		scheme = getScheme();
-	};
-
-	onMount(() => {
-		scheme = getScheme();
 	});
 </script>
 
@@ -55,16 +43,7 @@
 		<div class="fx fx--cc">
 			<iconify-icon icon="lucide:settings"></iconify-icon>
 		</div> -->
-		<div
-			class="color-scheme fx fx--cc {scheme === 'light' ? 'light' : 'dark'}"
-			onclick={toggleSchemeLocal}
-		>
-			{#if scheme === 'dark'}
-				<IconLucideMoon />
-			{:else}
-				<IconLucideSunMedium />
-			{/if}
-		</div>
+		<ThemeSelect />
 		<button id="nav-user" popovertarget="nav-user-popover" class="user fx fx--cc">
 			<IconLucideCircleUserRound />
 		</button>
@@ -159,28 +138,10 @@
 			gap: 0.5rem;
 			font-size: 1.2rem;
 
-			// todo: remove div?
-			> div,
-			button {
-				// temp?
+			> .user {
 				cursor: pointer;
 				height: 2rem;
 				width: 2rem;
-			}
-
-			> .color-scheme {
-				border-radius: 50%;
-
-				&.light {
-					color: goldenrod;
-				}
-
-				&.dark {
-					color: var(--clr-accent);
-				}
-			}
-
-			> .user {
 				anchor-name: --nav-user;
 			}
 		}
