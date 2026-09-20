@@ -3,7 +3,7 @@
 	import cabyLogo from '$lib/caby-logo.svg?raw';
 	import cabyIcon from '$lib/caby-icon.svg?raw';
 	import IconLucideMenu from '~icons/lucide/menu';
-	import IconLucideCircleUserRound from '~icons/lucide/circle-user-round';
+	import Avatar from '$lib/Avatar.svelte';
 	import ThemeSelect from '$lib/ThemeSelect.svelte';
 	import UserPopover from './UserPopover.svelte';
 	import { setContext } from 'svelte';
@@ -45,7 +45,7 @@
 		</div> -->
 		<ThemeSelect />
 		<button id="nav-user" popovertarget="nav-user-popover" class="user fx fx--cc">
-			<IconLucideCircleUserRound />
+			<Avatar name="My Account" size="1.9rem" />
 		</button>
 	</section>
 </div>
@@ -82,6 +82,12 @@
 			width: var(--sidebar-width);
 			color: var(--clr-text-0);
 			text-decoration: none;
+			opacity: 0.85;
+			transition: opacity 0.2s ease;
+
+			&:hover {
+				opacity: 1;
+			}
 
 			.logo--full {
 				display: contents;
@@ -140,9 +146,14 @@
 
 			> .user {
 				cursor: pointer;
-				height: 2rem;
-				width: 2rem;
+				padding: 0.15rem;
+				border-radius: 50%;
 				anchor-name: --nav-user;
+				transition: box-shadow 0.15s ease;
+
+				&:hover {
+					box-shadow: 0 0 0 2px var(--clr-border);
+				}
 			}
 		}
 	}
