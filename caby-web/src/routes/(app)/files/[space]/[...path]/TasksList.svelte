@@ -54,6 +54,7 @@
 		width: clamp(20rem, 60%, 40rem);
 		margin: 1rem 0;
 		padding: 1rem;
+		pointer-events: auto;
 
 		> header {
 			h1 {

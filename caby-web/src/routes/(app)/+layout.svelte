@@ -3,13 +3,13 @@
 	import cabyLogo from '$lib/caby-logo.svg?raw';
 	import cabyIcon from '$lib/caby-icon.svg?raw';
 	import IconLucideMenu from '~icons/lucide/menu';
-	import IconLucideMoon from '~icons/lucide/moon';
-	import IconLucideSunMedium from '~icons/lucide/sun-medium';
-	import IconLucideCircleUserRound from '~icons/lucide/circle-user-round';
-	import { getScheme, toggleScheme, clearStorage } from '$lib/color-scheme';
+	import Avatar from '$lib/Avatar.svelte';
+	import ThemeSelect from '$lib/ThemeSelect.svelte';
 	import UserPopover from './UserPopover.svelte';
 	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/state';
+	import { client } from '$lib/stores/client.svelte';
+	import { user, loadUser } from '$lib/stores/user.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -21,14 +21,8 @@
 		menu.open = false;
 	});
 
-	let scheme: string = $state('light');
-	const toggleSchemeLocal = () => {
-		toggleScheme();
-		scheme = getScheme();
-	};
-
 	onMount(() => {
-		scheme = getScheme();
+		loadUser(client);
 	});
 </script>
 
@@ -41,10 +35,10 @@
 	>
 		<IconLucideMenu />
 	</button>
-	<div class="logo fx fx--ac" aria-label="Caby">
+	<a href="/" class="logo fx fx--ac" aria-label="Caby">
 		<span class="logo--full">{@html cabyLogo}</span>
 		<span class="logo--icon">{@html cabyIcon}</span>
-	</div>
+	</a>
 	<section class="search fx-grow">
 		<input type="search" placeholder="🔍︎ Search" disabled />
 	</section>
@@ -55,18 +49,9 @@
 		<div class="fx fx--cc">
 			<iconify-icon icon="lucide:settings"></iconify-icon>
 		</div> -->
-		<div
-			class="color-scheme fx fx--cc {scheme === 'light' ? 'light' : 'dark'}"
-			onclick={toggleSchemeLocal}
-		>
-			{#if scheme === 'dark'}
-				<IconLucideMoon />
-			{:else}
-				<IconLucideSunMedium />
-			{/if}
-		</div>
+		<ThemeSelect />
 		<button id="nav-user" popovertarget="nav-user-popover" class="user fx fx--cc">
-			<IconLucideCircleUserRound />
+			<Avatar name={user.name} size="1.9rem" />
 		</button>
 	</section>
 </div>
@@ -102,6 +87,13 @@
 		> .logo {
 			width: var(--sidebar-width);
 			color: var(--clr-text-0);
+			text-decoration: none;
+			opacity: 0.85;
+			transition: opacity 0.2s ease;
+
+			&:hover {
+				opacity: 1;
+			}
 
 			.logo--full {
 				display: contents;
@@ -158,29 +150,16 @@
 			gap: 0.5rem;
 			font-size: 1.2rem;
 
-			// todo: remove div?
-			> div,
-			button {
-				// temp?
-				cursor: pointer;
-				height: 2rem;
-				width: 2rem;
-			}
-
-			> .color-scheme {
-				border-radius: 50%;
-
-				&.light {
-					color: goldenrod;
-				}
-
-				&.dark {
-					color: var(--clr-accent);
-				}
-			}
-
 			> .user {
+				cursor: pointer;
+				padding: 0.15rem;
+				border-radius: 50%;
 				anchor-name: --nav-user;
+				transition: box-shadow 0.15s ease;
+
+				&:hover {
+					box-shadow: 0 0 0 2px var(--clr-border);
+				}
 			}
 		}
 	}

@@ -1,12 +1,14 @@
 <script lang="ts">
 	import IconLucideLogOut from '~icons/lucide/log-out';
+	import Avatar from '$lib/Avatar.svelte';
 	import { logout as apiLogout } from '$lib/api/api_auth';
 	import { client } from '$lib/stores/client.svelte';
+	import { user } from '$lib/stores/user.svelte';
 	import { goto } from '$app/navigation';
 
-	// let popover: HTMLDivElement;
-
 	let loading = $state(false);
+
+	const displayName = $derived(user.name ?? 'My Account');
 
 	const logout = async () => {
 		loading = true;
@@ -18,77 +20,64 @@
 </script>
 
 <div id="nav-user-popover" popover>
-	<button disabled={loading} class="button fx fx--cc" onclick={() => logout()}>
-		<IconLucideLogOut /> Logout
-	</button>
+	<div class="card fx fx--col fx--cc">
+		{#if user.email}
+			<span class="email ellipsis">{user.email}</span>
+		{/if}
+		<Avatar name={user.name} size="4.5rem" />
+		<h2 class="greeting">Welcome, {displayName}!</h2>
+		<button disabled={loading} class="button signout fx fx--cc" onclick={() => logout()}>
+			<IconLucideLogOut /> Sign out
+		</button>
+	</div>
 </div>
 
 <style lang="scss">
 	#nav-user-popover {
 		position-anchor: --nav-user;
-		// width: anchor-size(width);
 		margin: 0;
 		padding: 0;
 		inset: auto;
 		top: anchor(bottom);
 		right: anchor(right);
-		margin-block-start: 0.25rem;
-		font-weight: normal;
-		box-shadow: var(--box-shadow-0);
 		margin-top: 0.5rem;
 
-		border: 0;
-		// border-radius: 5px;
-		background: var(--clr-background-2);
+		border: 1px solid var(--clr-border);
+		border-radius: 3px;
+		background: var(--clr-background-1);
+		box-shadow: var(--box-shadow-0);
 
 		&:popover-open {
-			display: flex;
-			flex-direction: column;
+			display: block;
 		}
 
-		> .button {
-			min-width: 8rem;
+		> .card {
+			width: 20rem;
+			max-width: calc(100vw - 1rem);
+			gap: 0.75rem;
+			padding: 1.5rem;
 			text-align: center;
-			border-radius: 0;
-			text-decoration: none;
-			gap: 1em;
-
-			&:first-of-type {
-				border-radius: 5px 5px 0 0;
-			}
-
-			&:last-of-type {
-				border-radius: 0 0 5px 5px;
-			}
 		}
-	}
 
-	.user-popover {
-		background-color: var(--clr-background-1);
-		border: 1px solid var(--clr-border);
-		border-radius: 0.5rem;
-		padding: 0.25rem 0;
-		min-width: 10rem;
+		.email {
+			max-width: 100%;
+			font-size: 0.85rem;
+			color: var(--clr-text-2);
+		}
 
-		ul {
-			list-style: none;
-			margin: 0;
-			padding: 0;
+		.greeting {
+			font-size: 1.3rem;
+			font-weight: 500;
+			color: var(--clr-text-0);
+		}
 
-			li {
-				display: flex;
-				align-items: center;
-				gap: 0.5rem;
-				padding: 0.5rem 0.75rem;
-				cursor: pointer;
+		.signout {
+			gap: 0.6rem;
+			margin-top: 0.5rem;
 
-				&:hover {
-					background-color: var(--clr-background-2);
-				}
-
-				&.danger {
-					color: var(--clr-error);
-				}
+			&:disabled {
+				opacity: 0.6;
+				cursor: not-allowed;
 			}
 		}
 	}

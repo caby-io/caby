@@ -654,6 +654,7 @@
 		bottom: 0;
 		left: 0;
 		width: 100%;
+		pointer-events: none;
 
 		@media (max-width: bp.$bp-files-sidebar) {
 			padding: 0 1rem;
