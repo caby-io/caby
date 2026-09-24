@@ -97,7 +97,7 @@ export type MeData = {
 };
 
 export const getMe = async (client: ApiClient): Promise<ApiResponse<MeData>> => {
-	const req = ApiRequestBuilder.get(`auth/me`).intoRequest();
+	const req = ApiRequestBuilder.get(`auth/me`).noRedirect().intoRequest();
 	return await client.exec<MeData>(req);
 };
 

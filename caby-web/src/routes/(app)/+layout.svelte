@@ -22,7 +22,7 @@
 	});
 
 	onMount(() => {
-		loadUser(client);
+		if (client.isAuthenticated()) loadUser(client);
 	});
 </script>
 
