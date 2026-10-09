@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::anyhow;
 use futures_util::TryFutureExt;
@@ -6,18 +6,18 @@ use serde::Serialize;
 use tokio::fs::{read_dir, DirEntry};
 use tracing::error;
 
-use crate::{files::EntryType, space::Space, Result};
+use crate::{files::EntryType, Result};
 
 #[derive(Serialize)]
 pub struct OverviewEntry {
     pub entry_type: EntryType,
     pub name: String,
-    pub path: String, // relative path of the file within the space
+    pub path: String, // relative to the overview base
     pub children: Vec<OverviewEntry>,
 }
 
 impl OverviewEntry {
-    async fn try_from(live_path: &Path, value: DirEntry) -> Result<Self> {
+    async fn try_from(base: &Path, value: DirEntry) -> Result<Self> {
         let metadata = value.metadata().await?;
 
         // Fill common fields
@@ -35,7 +35,7 @@ impl OverviewEntry {
             })?,
             path: value
                 .path()
-                .strip_prefix(live_path)
+                .strip_prefix(base)
                 .map_err(|err| anyhow!(err).context("could not strip prefix"))?
                 .to_str()
                 .ok_or(anyhow!("could not convert root path to string"))?
@@ -49,19 +49,18 @@ impl OverviewEntry {
 }
 
 pub async fn build_overview(
-    space: &Space,
+    base: &Path,
     path: &Path,
     max_depth: u32,
     dirs_only: bool,
 ) -> Result<Vec<OverviewEntry>> {
-    let live_path = space.live.clone();
-    let mut entries = read_dir(live_path.join(path)).await?;
+    let mut entries = read_dir(base.join(path)).await?;
 
     let mut result = vec![];
     // todo: filter earlier to save on compute
     while let Some(dir_entry) = entries.next_entry().await? {
         let filename = dir_entry.file_name();
-        let mut entry = match OverviewEntry::try_from(&live_path, dir_entry).await {
+        let mut entry = match OverviewEntry::try_from(base, dir_entry).await {
             Ok(e) => e,
             Err(err) => {
                 error!("couldn't process file: {:?} {:#}", filename, err);
@@ -71,9 +70,9 @@ pub async fn build_overview(
 
         // todo: check that it's a dir
         if matches!(entry.entry_type, EntryType::Directory) && max_depth > 1 {
-            let entry_path = live_path.join(entry.path.clone());
+            let entry_path = PathBuf::from(&entry.path);
             entry.children =
-                Box::pin(build_overview(space, &entry_path, max_depth - 1, dirs_only)).await?;
+                Box::pin(build_overview(base, &entry_path, max_depth - 1, dirs_only)).await?;
         }
 
         if dirs_only && !matches!(entry.entry_type, EntryType::Directory) {

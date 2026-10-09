@@ -18,6 +18,7 @@ use crate::{
 struct ShareSummary {
     id: String,
     owner_id: String,
+    spec_path: String,
     root_entry: String,
     created_at: Timestamp,
     expires_at: Option<Timestamp>,
@@ -29,6 +30,7 @@ impl From<&Share> for ShareSummary {
         ShareSummary {
             id: share.id.clone(),
             owner_id: share.owner_id.clone(),
+            spec_path: share.spec_path.clone(),
             root_entry: share.root_entry.clone(),
             created_at: share.created_at,
             expires_at: share.expires_at,

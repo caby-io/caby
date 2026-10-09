@@ -6,6 +6,9 @@
 	import Avatar from '$lib/Avatar.svelte';
 	import ThemeSelect from '$lib/ThemeSelect.svelte';
 	import UserPopover from './UserPopover.svelte';
+	import Sidebar from '$lib/sidebar/Sidebar.svelte';
+	import LoadingBar from '$lib/LoadingBar.svelte';
+	import { app_loading } from '$lib/stores/loading.svelte';
 	import { onMount, setContext } from 'svelte';
 	import { page } from '$app/state';
 	import { client } from '$lib/stores/client.svelte';
@@ -58,10 +61,20 @@
 
 <UserPopover />
 
-{@render children()}
+<LoadingBar loading={app_loading.active} />
+<div class="app-body fx">
+	<Sidebar />
+	<div class="app-content fx-grow fx fx--col">
+		{@render children()}
+	</div>
+</div>
 
 <style lang="scss">
 	@use '$lib/styles/breakpoints' as bp;
+
+	.app-content {
+		min-width: 0;
+	}
 
 	.top-nav {
 		height: var(--top-nav-height);

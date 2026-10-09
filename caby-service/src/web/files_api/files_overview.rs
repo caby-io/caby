@@ -48,16 +48,22 @@ pub async fn handle_files_overview(
     //     return resp.fail("invalid path").into_response();
     // };
 
-    let entries =
-        match build_overview(&space, &rel_path, 20, params.dirs_only.unwrap_or(false)).await {
-            Ok(r) => r,
-            Err(err) => {
-                return resp
-                    // todo: don't send this down in production, just log the actual error
-                    .error(format!("could not access files: {}", err))
-                    .into_response();
-            }
-        };
+    let entries = match build_overview(
+        &space.live,
+        &rel_path,
+        20,
+        params.dirs_only.unwrap_or(false),
+    )
+    .await
+    {
+        Ok(r) => r,
+        Err(err) => {
+            return resp
+                // todo: don't send this down in production, just log the actual error
+                .error(format!("could not access files: {}", err))
+                .into_response();
+        }
+    };
     // let Ok((dirs, files)) = get_entries(PathBuf::from("/").join(&path).clean().as_path()).await
     // else {
     //     return resp.error("could not access files: {}").into_response();
