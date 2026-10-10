@@ -294,7 +294,12 @@
 	}
 
 	.gate {
-		padding: 2rem;
+		position: fixed;
+		inset: 0;
+		z-index: 3;
+		padding: 1rem;
+		overflow-y: auto;
+		background-color: var(--clr-background);
 	}
 
 	.bar {

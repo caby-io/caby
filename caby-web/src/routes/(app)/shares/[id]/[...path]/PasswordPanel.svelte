@@ -1,4 +1,6 @@
 <script lang="ts">
+	import AuthCard from '$lib/AuthCard.svelte';
+
 	let {
 		onSubmit,
 		error,
@@ -12,58 +14,57 @@
 	let password = $state('');
 </script>
 
-<div class="password-panel fx fx--col box-shadow-0-card border-0">
-	<header class="title fx fx--ac">
-		<h3 class="fx-grow">Password required</h3>
-	</header>
+<AuthCard title="Password required">
 	<form
-		class="fx fx--col"
+		class="password-form fx fx--col"
 		onsubmit={(e) => {
 			e.preventDefault();
 			onSubmit(password);
 		}}
 	>
-		<label for="share-password">This share is protected. Enter its password to continue.</label>
-		<input id="share-password" class:error type="password" bind:value={password} />
+		<p id="share-password-hint" class="hint">
+			This share is protected. Enter its password to continue.
+		</p>
+		<label for="share-password">Password</label>
+		<input
+			id="share-password"
+			class:error
+			type="password"
+			aria-describedby="share-password-hint"
+			bind:value={password}
+		/>
 		<span class="error-message">{error ?? ''}</span>
 		<div class="actions fx">
 			<button class="button primary fx-grow" disabled={loading} type="submit">Unlock</button>
 		</div>
 	</form>
-</div>
+</AuthCard>
 
 <style lang="scss">
-	.password-panel {
-		margin: auto;
-		background-color: var(--clr-background-1);
-		width: fit-content;
-		min-width: 20rem;
+	.password-form {
+		margin: 0.75rem 1rem 1rem;
 
-		header.title {
-			background: var(--clr-background-2);
-			padding: 1rem;
-			border-bottom: 1px solid var(--clr-border);
+		> .hint {
+			margin: 0 0 1rem;
+			font-size: 0.9rem;
+			color: var(--clr-text-2);
 		}
 
-		> form {
-			margin: 0.25rem 1rem 1rem;
+		> label {
+			margin: 0.25em 0;
+		}
 
-			> label {
-				margin: 0.25em 0;
-			}
+		.actions {
+			margin-top: 1.5rem;
+			text-align: center;
+		}
 
-			.actions {
-				margin-top: 1.5rem;
-				text-align: center;
-			}
+		.error-message {
+			font-size: 0.7rem;
+			color: var(--clr-error);
 
-			.error-message {
-				font-size: 0.7rem;
-				color: var(--clr-error);
-
-				&::first-letter {
-					text-transform: uppercase;
-				}
+			&::first-letter {
+				text-transform: uppercase;
 			}
 		}
 	}

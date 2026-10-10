@@ -3,6 +3,7 @@
 	import IconLucideArrowRight from '~icons/lucide/arrow-right';
 	import type { Token } from '$lib/api/client';
 	import { client } from '$lib/stores/client.svelte';
+	import AuthCard from '$lib/AuthCard.svelte';
 
 	let errorMessage: string | undefined = $state(undefined);
 
@@ -49,10 +50,7 @@
 	});
 </script>
 
-<div class="fx fx--col box-shadow-0-card border-0 container">
-	<header class="title fx fx--ac">
-		<h3 class="fx-grow">{errorMessage ? 'Login failed' : 'Signing in…'}</h3>
-	</header>
+<AuthCard title={errorMessage ? 'Login failed' : 'Signing in…'}>
 	<div class="body fx fx--col">
 		{#if errorMessage}
 			<span class="error-message">{errorMessage}</span>
@@ -64,37 +62,24 @@
 			</div>
 		{/if}
 	</div>
-</div>
+</AuthCard>
 
 <style lang="scss">
-	header.title {
-		background: var(--clr-background-2);
-		padding: 1rem;
-		border-bottom: 1px solid var(--clr-border);
-	}
+	.body {
+		margin: 1rem;
+		gap: 1rem;
 
-	.container {
-		margin: auto;
-		background-color: var(--clr-background-1);
-		width: fit-content;
-		min-width: 20rem;
+		.error-message {
+			color: var(--clr-error);
+			text-transform: capitalize;
+		}
 
-		> .body {
-			margin: 1rem;
-			gap: 1rem;
+		.actions {
+			text-align: center;
 
-			.error-message {
-				color: var(--clr-error);
-				text-transform: capitalize;
-			}
-
-			.actions {
-				text-align: center;
-
-				.button {
-					> span {
-						margin-right: 0.25rem;
-					}
+			.button {
+				> span {
+					margin-right: 0.25rem;
 				}
 			}
 		}

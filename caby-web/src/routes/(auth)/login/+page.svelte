@@ -3,6 +3,7 @@
 	import { client } from '$lib/stores/client.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import AuthCard from '$lib/AuthCard.svelte';
 
 	let loading: boolean = $state(false);
 	let login: string = $state('');
@@ -90,10 +91,7 @@
 	});
 </script>
 
-<div class="fx fx--col box-shadow-0-card border-0 container">
-	<header class="title fx fx--ac">
-		<h3 class="fx-grow">Login</h3>
-	</header>
+<AuthCard title="Login">
 	{#if oidcEnabled}
 		<div class="fx fx--col oidc-container fx">
 			<button class="button primary fx-grow" onclick={loginWithOidc}>Login with SSO</button>
@@ -104,7 +102,7 @@
 			<hr class="fx-grow box-shadow-0" />
 		</div>
 	{/if}
-	<form class="fx fx--col">
+	<form class="login-form fx fx--col">
 		<label for="login">Username/Email</label>
 		<input id="login" class="fx-grow" class:error={errors.login} type="text" bind:value={login} />
 		<span class="error-message">{errors.login}</span>
@@ -123,75 +121,62 @@
 			>
 		</div>
 	</form>
-</div>
+</AuthCard>
 
 <style lang="scss">
-	header.title {
-		background: var(--clr-background-2);
-		padding: 1rem;
-		border-bottom: 1px solid var(--clr-border);
+	.oidc-container {
+		margin: 1rem;
+		text-align: center;
+
+		// todo: finalize and add this button to styles.css
+		> button {
+			background: var(--clr-background-1);
+			border: 2px solid transparent;
+			border-radius: 5px;
+			background-image:
+				linear-gradient(var(--clr-background-1), var(--clr-background-1)),
+				linear-gradient(320deg, var(--clr-primary), var(--clr-accent));
+			background-origin: border-box;
+			background-clip: padding-box, border-box;
+			color: var(--clr-primary);
+		}
 	}
 
-	.container {
-		margin: auto;
-		background-color: var(--clr-background-1);
-		width: fit-content;
-		min-width: 20rem;
+	.divider {
+		margin: 0 1rem;
+		color: var(--clr-text-2);
 
-		.oidc-container {
-			margin: 1rem;
+		> span {
+			margin: 0 0.5rem;
+		}
+
+		> hr {
+			border: none;
+			height: 3px;
+			flex-grow: 1;
+			background-color: var(--clr-border);
+			// box-shadow: var(--clr-text-2);
+		}
+	}
+
+	.login-form {
+		margin: 0.25rem 1rem 1rem;
+
+		> label {
+			margin: 0.25em 0;
+		}
+
+		.actions {
+			margin-top: 1.5rem;
 			text-align: center;
-
-			// todo: finalize and add this button to styles.css
-			> button {
-				background: var(--clr-background-1);
-				border: 2px solid transparent;
-				border-radius: 5px;
-				background-image:
-					linear-gradient(var(--clr-background-1), var(--clr-background-1)),
-					linear-gradient(320deg, var(--clr-primary), var(--clr-accent));
-				background-origin: border-box;
-				background-clip: padding-box, border-box;
-				color: var(--clr-primary);
-			}
 		}
 
-		.divider {
-			margin: 0 1rem;
-			color: var(--clr-text-2);
+		.error-message {
+			font-size: 0.7rem;
+			color: var(--clr-error);
 
-			> span {
-				margin: 0 0.5rem;
-			}
-
-			> hr {
-				border: none;
-				height: 3px;
-				flex-grow: 1;
-				background-color: var(--clr-border);
-				// box-shadow: var(--clr-text-2);
-			}
-		}
-
-		> form {
-			margin: 0.25rem 1rem 1rem;
-
-			> label {
-				margin: 0.25em 0;
-			}
-
-			.actions {
-				margin-top: 1.5rem;
-				text-align: center;
-			}
-
-			.error-message {
-				font-size: 0.7rem;
-				color: var(--clr-error);
-
-				&::first-letter {
-					text-transform: uppercase; /* Capitalizes only the first letter */
-				}
+			&::first-letter {
+				text-transform: uppercase; /* Capitalizes only the first letter */
 			}
 		}
 	}

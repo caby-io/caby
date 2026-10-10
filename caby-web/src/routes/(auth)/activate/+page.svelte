@@ -3,6 +3,7 @@
 	import { client } from '$lib/stores/client.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import AuthCard from '$lib/AuthCard.svelte';
 
 	let loading: boolean = $state(false);
 
@@ -95,11 +96,8 @@
 	});
 </script>
 
-<div class="fx fx--col box-shadow-0-card border-0 container">
-	<header class="title fx fx--ac">
-		<h3 class="fx-grow">Activate Account</h3>
-	</header>
-	<form class="fx fx--col">
+<AuthCard title="Activate Account" min_width="25rem">
+	<form class="activate-form fx fx--col">
 		<label for="activation-token">Activation Token</label>
 		<input
 			id="activation-token"
@@ -139,40 +137,27 @@
 			>
 		</div>
 	</form>
-</div>
+</AuthCard>
 
 <style lang="scss">
-	header.title {
-		background: var(--clr-background-2);
-		padding: 1rem;
-		border-bottom: 1px solid var(--clr-border);
-	}
+	.activate-form {
+		margin: 1rem;
 
-	.container {
-		margin: auto;
-		background-color: var(--clr-background-1);
-		width: fit-content;
-		min-width: 25rem;
+		> label {
+			margin: 0.25em 0;
+		}
 
-		> form {
-			margin: 1rem;
+		.actions {
+			margin-top: 1.5rem;
+			text-align: center;
+		}
 
-			> label {
-				margin: 0.25em 0;
-			}
+		.error-message {
+			font-size: 0.7rem;
+			color: var(--clr-error);
 
-			.actions {
-				margin-top: 1.5rem;
-				text-align: center;
-			}
-
-			.error-message {
-				font-size: 0.7rem;
-				color: var(--clr-error);
-
-				&::first-letter {
-					text-transform: uppercase; /* Capitalizes only the first letter */
-				}
+			&::first-letter {
+				text-transform: uppercase; /* Capitalizes only the first letter */
 			}
 		}
 	}
