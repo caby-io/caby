@@ -24,7 +24,7 @@ export const tryRefreshOverview = async (client: ApiClient, space: string) => {
 
 export const expandToPath = (href_base: string, path: string) => {
 	const segments = path.split('/').filter(Boolean);
-	for (let i = 1; i < segments.length; i++) {
+	for (let i = 1; i <= segments.length; i++) {
 		expanded_dirs.add(join(href_base, ...segments.slice(0, i)));
 	}
 };
