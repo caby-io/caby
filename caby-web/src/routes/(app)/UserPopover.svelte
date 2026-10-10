@@ -12,7 +12,6 @@
 
 	const logout = async () => {
 		loading = true;
-		await cookieStore.delete('login_token');
 		await apiLogout(client);
 		await goto('/login');
 		loading = false;
