@@ -20,43 +20,34 @@
 	import * as fs from '$lib/fs';
 
 	import EntriesGrid from '$lib/files/browse/EntriesGrid.svelte';
-	import LoadingBar from '$lib/LoadingBar.svelte';
 	import TasksList from './TasksList.svelte';
 	import { uploadManager } from '$lib/files/upload/upload_manager.svelte';
 	import { EntryType } from '$lib/files/entry';
 	import type { DirFields, DragTarget, Entry, FileFields } from '$lib/files/entry';
 	import { downloadEntries } from '$lib/files/download';
-	import { getFilesOverview, listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
-	import { getSpaces } from '$lib/api/api_spaces';
-	import type { Space } from '$lib/space';
+	import { listFiles, moveFiles, type ListFilesResp } from '$lib/api/api_files';
 	import type { SelectedEntry } from '$lib/files/select';
 	import DeleteDialog from './DeleteDialog.svelte';
 	import EntriesBar from '$lib/files/browse/EntriesBar.svelte';
 	import AddContentDialog from '$lib/files/AddContentDialog.svelte';
 	import ContextMenu, { type ContextMenuProps } from '$lib/files/ContextMenu.svelte';
 	import MediaPreviewDialog from '$lib/files/MediaPreviewDialog.svelte';
-	import SpacesSelector from './SpacesSelector.svelte';
 	import { client } from '$lib/stores/client.svelte';
+	import { useAppLoading } from '$lib/stores/loading.svelte';
+	import { spaces, tryLoadSpaces } from '$lib/stores/spaces.svelte';
+	import { tryRefreshOverview } from '$lib/stores/overview.svelte';
+	import { tryRefreshShares } from '$lib/stores/shares.svelte';
 	import RenameDialog from './RenameDialog.svelte';
 	import MoveDialog from './MoveDialog.svelte';
-	import EntriesOverviewNav from '$lib/files/overview/EntriesOverviewNav.svelte';
 	import { fsEntryIntoFiles } from '$lib/files/upload/drop';
-	import { getContext, onMount } from 'svelte';
-
-	const menu = getContext<{ open: boolean }>('menu');
+	import { onMount } from 'svelte';
 	import { UploadGroup } from '$lib/files/upload/upload_group';
 
 	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
 
-	let spaces: Space[] = $state([]);
-	let current_space = $derived(spaces.find((s) => s.name === space));
+	let current_space = $derived(spaces.list.find((s) => s.name === space));
 	let readonly = $derived(current_space?.readonly ?? true);
-
-	const fetchSpaces = async () => {
-		const resp = await getSpaces(client);
-		if (resp.status === 'success') spaces = resp.data!;
-	};
 
 	let filesResponse: ListFilesResp = $state({
 		path: null,
@@ -65,15 +56,10 @@
 		entries: []
 	});
 
-	// File Overview
-
-	// todo
-	let overview_entries: any = $state();
-
-	// todo: improve
-	const fetchFilesOverview = async () => {
-		const resp = await getFilesOverview(client, space, '', true);
-		overview_entries = resp.data!.entries;
+	// todo: probably will not need to do this anymore once SSE/WSS lands
+	const refreshSidebar = () => {
+		tryRefreshOverview(client, space);
+		tryRefreshShares(client, space);
 	};
 
 	// File List Operations
@@ -84,6 +70,8 @@
 
 	let loading = $state(false);
 	let reloading = $state(false);
+
+	useAppLoading(() => loading);
 
 	const getFilesList = async (path: string) => {
 		const resp = await listFiles(client, space, path);
@@ -119,7 +107,7 @@
 	const onListChange = async () => {
 		// todo: should we clear the delete and selected list?
 		await refreshFiles();
-		await fetchFilesOverview();
+		refreshSidebar();
 	};
 
 	// Select Operations
@@ -495,12 +483,12 @@
 	};
 
 	onMount(() => {
-		fetchSpaces();
+		tryLoadSpaces(client);
 	});
 
 	$effect(() => {
 		reloadFiles();
-		fetchFilesOverview();
+		refreshSidebar();
 	});
 
 	// handle upload refresh
@@ -511,24 +499,13 @@
 		if (completed === last_upload_completed) return;
 		last_upload_completed = completed;
 		refreshFiles();
-		fetchFilesOverview();
+		refreshSidebar();
 	});
 </script>
 
 <svelte:window on:keydown={onKeyDown} />
 
-<LoadingBar {loading} />
 <div class="files-view fx">
-	<section class="left fx fx--col" class:open={menu.open}>
-		<SpacesSelector {current_space} {spaces} />
-		<EntriesOverviewNav {overview_entries} {space} />
-	</section>
-	<div
-		class="menu-backdrop"
-		class:open={menu.open}
-		role="presentation"
-		onclick={() => (menu.open = false)}
-	></div>
 	<section class="right fx-grow fx fx--col">
 		<EntriesBar
 			{selected_entries}
@@ -596,55 +573,7 @@
 <style lang="scss">
 	@use '$lib/styles/breakpoints' as bp;
 
-	.left {
-		background-color: var(--clr-background-1);
-		width: var(--sidebar-width);
-		overflow-x: auto;
-
-		@media (max-width: bp.$bp-files-sidebar) {
-			position: fixed;
-			top: var(--top-nav-height);
-			left: 0;
-			bottom: 0;
-			z-index: 2;
-			transform: translateX(-100%);
-			visibility: hidden;
-			transition:
-				transform 0.25s ease,
-				visibility 0s linear 0.25s;
-
-			&.open {
-				transform: translateX(0);
-				visibility: visible;
-				transition:
-					transform 0.25s ease,
-					visibility 0s linear 0s;
-			}
-		}
-	}
-
-	.menu-backdrop {
-		display: none;
-
-		@media (max-width: bp.$bp-files-sidebar) {
-			display: block;
-			position: fixed;
-			inset: var(--top-nav-height) 0 0 0;
-			background: rgba(0, 0, 0, 0.4);
-			z-index: 1;
-			opacity: 0;
-			pointer-events: none;
-			transition: opacity 0.25s ease;
-
-			&.open {
-				opacity: 1;
-				pointer-events: auto;
-			}
-		}
-	}
-
 	.right {
-		border-left: 1px solid var(--clr-border);
 		min-height: calc(100vh - var(--top-nav-height) - 1px);
 	}
 

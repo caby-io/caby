@@ -8,6 +8,7 @@ pub mod shares_download;
 pub mod shares_get;
 pub mod shares_list;
 pub mod shares_list_files;
+pub mod shares_overview;
 
 #[derive(Deserialize)]
 pub struct ShareIdParam {
@@ -22,3 +23,4 @@ pub use shares_download::handle_download_share;
 pub use shares_get::handle_get_share;
 pub use shares_list::handle_list_shares;
 pub use shares_list_files::handle_list_share_files;
+pub use shares_overview::handle_share_overview;

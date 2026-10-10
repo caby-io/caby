@@ -161,8 +161,9 @@ export class ApiClient {
 		this.auth.login_token = token;
 	};
 
-	public removeLoginToken = () => {
+	public removeLoginToken = async () => {
 		this.auth.login_token = undefined;
+		await cookieStore.delete('login_token');
 	};
 
 	public setGuestToken = (token: string) => {
@@ -204,6 +205,7 @@ export class ApiClient {
 
 			if (resp.status_code === 401 && req.do_redirect) {
 				// todo: send goto via store
+				await this.removeLoginToken();
 				const current = window.location.pathname + window.location.search;
 				window.location.href = `/login?redirect=${encodeURIComponent(current)}`;
 				return resp;

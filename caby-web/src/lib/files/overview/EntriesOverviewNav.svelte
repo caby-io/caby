@@ -1,23 +1,21 @@
 <script lang="ts">
-	import type { Entry } from '../entry';
+	import { EntryType } from '../entry';
+	import type { OverviewEntry } from './overview_entry';
 	import OverviewEntryNav from './OverviewEntryNav.svelte';
 
 	let {
-		selected = $bindable(undefined),
 		overview_entries,
-		space
-	}: { selected?: Entry; overview_entries: any; space: string } = $props();
+		href_base,
+		current_path
+	}: { overview_entries: OverviewEntry[]; href_base: string; current_path: string } = $props();
 
-	let overview_dirs = $derived(overview_entries?.filter((e: any) => e.entry_type === 'directory'));
-
-	let expand = $state(false);
+	let overview_dirs = $derived(
+		overview_entries.filter((e) => e.entry_type === EntryType.DIRECTORY)
+	);
 </script>
 
 <div class="entry-overview">
-	{#each overview_dirs as _, i}
-		<OverviewEntryNav bind:entry={overview_dirs[i]} {space} />
+	{#each overview_dirs as entry (entry.path)}
+		<OverviewEntryNav {entry} {href_base} {current_path} />
 	{/each}
 </div>
-
-<style lang="scss">
-</style>

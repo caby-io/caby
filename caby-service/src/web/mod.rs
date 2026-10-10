@@ -112,6 +112,7 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                     post(shares_api::handle_password_auth_share),
                 )
                 .route("/{id}/list", get(shares_api::handle_list_share_files))
+                .route("/{id}/overview", get(shares_api::handle_share_overview))
                 .route(
                     "/{id}/list/{*path}",
                     get(shares_api::handle_list_share_files),

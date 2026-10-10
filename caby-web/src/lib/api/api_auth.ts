@@ -87,7 +87,7 @@ export type LogoutResponse = LogoutSuccess | LogoutFail | LogoutError;
 export const logout = async (client: ApiClient): Promise<LogoutResponse> => {
 	const req = ApiRequestBuilder.post(`auth/logout`).intoRequest();
 	const resp = await client.exec<LoginData>(req);
-	client.removeLoginToken();
+	await client.removeLoginToken();
 	return resp as LogoutResponse;
 };
 
