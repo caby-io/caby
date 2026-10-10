@@ -60,17 +60,17 @@
 <style lang="scss">
 	.entry {
 		border-radius: 5px;
+		transition: background-color 0.15s ease;
 
 		&:hover {
-			background: var(--clr-background-2);
+			background-color: var(--clr-background-2);
 		}
 
 		&.active {
-			background: var(--clr-background-2);
-			box-shadow: var(--box-shadow-0);
+			background-color: color-mix(in oklab, var(--clr-accent) 25%, transparent);
 
 			.name {
-				color: var(--clr-text-0);
+				color: var(--clr-primary);
 			}
 		}
 
@@ -83,6 +83,7 @@
 
 		.name {
 			margin: 0 0.5rem;
+			transition: color 0.15s ease;
 		}
 
 		.control {

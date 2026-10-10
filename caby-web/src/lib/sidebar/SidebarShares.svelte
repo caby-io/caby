@@ -40,6 +40,7 @@
 		border-radius: 5px;
 		color: var(--clr-text-1);
 		text-decoration: none;
+		transition: background-color 0.15s ease;
 
 		&:hover {
 			background: var(--clr-background-2);
