@@ -112,8 +112,7 @@
 
 	// Select Operations
 
-	let selection_mode = $state<null | 'touch' | 'desktop'>(null);
-	let in_selection = $derived(selection_mode !== null);
+	let in_selection = $state(false);
 
 	let selected_entries: Set<Entry> = $derived(
 		new Set(entries.filter((e) => e.is_selected === true))
@@ -121,11 +120,11 @@
 	let last_selected: SelectedEntry | undefined = $state();
 
 	$effect(() => {
-		if (selection_mode === 'desktop' && selected_entries.size === 0) selection_mode = null;
+		if (in_selection && selected_entries.size === 0) in_selection = false;
 	});
 
 	const handleSelectOp = async (e: MouseEvent, selected: SelectedEntry) => {
-		if (selection_mode === null) selection_mode = 'desktop';
+		in_selection = true;
 
 		// for now we will only allow selection across the same entry type
 		// if shift then try selecting across
@@ -175,7 +174,7 @@
 
 	const exitSelection = () => {
 		handleDeselect();
-		selection_mode = null;
+		in_selection = false;
 	};
 
 	// Self Drag Operations
@@ -336,7 +335,7 @@
 		if (entry && (pointer_type === 'touch' || pointer_type === 'pen')) {
 			e.preventDefault();
 			e.stopPropagation();
-			selection_mode = 'touch';
+			in_selection = true;
 			entry.is_selected = true;
 			const index = entries.findIndex((x) => x === entry);
 			if (index >= 0) last_selected = { index, entry };

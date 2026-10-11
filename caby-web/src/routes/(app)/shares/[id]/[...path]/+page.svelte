@@ -48,17 +48,16 @@
 	let dir_entries = $derived(entries.filter((e) => e.entry_type === EntryType.DIRECTORY));
 	let file_entries = $derived(entries.filter((e) => e.entry_type === EntryType.FILE));
 
-	let selection_mode = $state<null | 'touch' | 'desktop'>(null);
-	let in_selection = $derived(selection_mode !== null);
+	let in_selection = $state(false);
 	let selected_entries = $derived(new Set(entries.filter((e) => e.is_selected === true)));
 	let last_selected: SelectedEntry | undefined = $state();
 
 	$effect(() => {
-		if (selection_mode === 'desktop' && selected_entries.size === 0) selection_mode = null;
+		if (in_selection && selected_entries.size === 0) in_selection = false;
 	});
 
 	const handleSelectOp = (e: MouseEvent, selected: SelectedEntry) => {
-		if (selection_mode === null) selection_mode = 'desktop';
+		in_selection = true;
 
 		if (
 			e.shiftKey &&
