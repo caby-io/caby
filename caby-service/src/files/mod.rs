@@ -12,6 +12,7 @@ pub mod media_type;
 pub mod ops;
 pub mod overview;
 pub mod pretty;
+pub mod thumbnail;
 
 pub use entry::{
     build_entries, try_build_entry, Entry, EntryFields, EntryType, SpecialFields, SpecialType,

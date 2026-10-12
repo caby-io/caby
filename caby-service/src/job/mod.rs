@@ -1,6 +1,9 @@
-use std::{path::PathBuf, time::Duration};
+use std::{ffi::OsString, path::PathBuf, time::Duration};
 
 use jiff::Timestamp;
+
+pub const THUMB_TIMEOUT: Duration = Duration::from_secs(60);
+pub const THUMBS_BATCH_SIZE: u32 = 200;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub enum Input {
@@ -16,6 +19,18 @@ pub enum Input {
         space: String,
         from: PathBuf,
         to: PathBuf,
+    },
+
+    // Thumbnails
+    GenerateFileThumb {
+        space: String,
+        path: PathBuf,
+    },
+    GenerateDirThumbs {
+        space: String,
+        dir: PathBuf,
+        recursive: bool,
+        after: Option<OsString>,
     },
 }
 
@@ -37,6 +52,9 @@ impl Input {
                     path: to.clone(),
                 },
             ],
+            Self::GenerateFileThumb { .. } | Self::GenerateDirThumbs { .. } => {
+                vec![LockKey::Thumbnails]
+            }
         }
     }
 
@@ -45,6 +63,8 @@ impl Input {
             Self::ScanSpace { .. } => Duration::from_secs(600),
             Self::ReconcileShare { .. } => Duration::from_secs(60),
             Self::MoveShare { .. } => Duration::from_secs(60),
+            Self::GenerateFileThumb { .. } => THUMB_TIMEOUT,
+            Self::GenerateDirThumbs { .. } => THUMB_TIMEOUT * THUMBS_BATCH_SIZE,
         }
     }
 }
@@ -54,6 +74,7 @@ pub enum LockKey {
     Instance,
     Space(String),
     Path { space: String, path: PathBuf },
+    Thumbnails,
 }
 
 impl LockKey {
@@ -61,6 +82,8 @@ impl LockKey {
         use LockKey::*;
         match (self, other) {
             (Instance, _) | (_, Instance) => true,
+            (Thumbnails, Thumbnails) => true,
+            (Thumbnails, _) | (_, Thumbnails) => false,
             (Space(a), Space(b)) => a == b,
             (Space(s), Path { space, .. }) | (Path { space, .. }, Space(s)) => s == space,
             (Path { space: a, path: p }, Path { space: b, path: q }) => {
@@ -76,7 +99,7 @@ pub enum Status {
     Running,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Priority {
     Interactive,
     Background,
@@ -110,5 +133,38 @@ impl Job {
 
     pub fn is_ready(&self, now: Timestamp) -> bool {
         self.not_before.is_none_or(|at| at <= now)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn path(space: &str, path: &str) -> LockKey {
+        LockKey::Path {
+            space: space.to_owned(),
+            path: PathBuf::from(path),
+        }
+    }
+
+    #[test]
+    fn thumbnail_locks_serialize_each_other() {
+        assert!(LockKey::Thumbnails.conflicts(&LockKey::Thumbnails));
+    }
+
+    #[test]
+    fn thumbnail_locks_ignore_space_and_path_locks() {
+        let space = LockKey::Space("rocinante".to_owned());
+        let path = path("rocinante", "holiday");
+        assert!(!LockKey::Thumbnails.conflicts(&space));
+        assert!(!LockKey::Thumbnails.conflicts(&path));
+        assert!(!space.conflicts(&LockKey::Thumbnails));
+        assert!(!path.conflicts(&LockKey::Thumbnails));
+    }
+
+    #[test]
+    fn thumbnail_locks_yield_to_instance() {
+        assert!(LockKey::Thumbnails.conflicts(&LockKey::Instance));
+        assert!(LockKey::Instance.conflicts(&LockKey::Thumbnails));
     }
 }

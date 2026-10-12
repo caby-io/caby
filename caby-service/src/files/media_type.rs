@@ -25,7 +25,7 @@ const PREVIEWABLE_MIMES: &[&str] = &[
     "image/webp",
     "image/gif",
     "image/avif",
-    // video — browser-renderable codecs only
+    // video, browser-renderable codecs
     "video/mp4",
     "video/webm",
     // audio
@@ -50,6 +50,10 @@ pub enum FileKind {
 }
 
 impl FileKind {
+    pub fn from_path(path: &Path) -> Option<Self> {
+        MediaType::from_path(path).map(|media_type| Self::from(&media_type))
+    }
+
     pub fn can_preview(&self, mime: Option<&MediaType>) -> bool {
         if !matches!(self, Self::Image | Self::Video | Self::Audio) {
             return false;
