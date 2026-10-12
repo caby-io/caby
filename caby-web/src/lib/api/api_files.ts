@@ -13,6 +13,7 @@ export type ListFilesResp = {
 	parent_dir: string | null;
 	current_dir: string;
 	entries: Array<Entry>;
+	revision: number;
 };
 
 export const listFiles = async (

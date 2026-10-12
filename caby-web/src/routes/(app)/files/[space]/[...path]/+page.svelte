@@ -53,7 +53,8 @@
 		path: null,
 		parent_dir: null,
 		current_dir: '',
-		entries: []
+		entries: [],
+		revision: 0
 	});
 
 	// todo: probably will not need to do this anymore once SSE/WSS lands
@@ -80,7 +81,8 @@
 				path: null,
 				parent_dir: null,
 				current_dir: '',
-				entries: []
+				entries: [],
+				revision: 0
 			};
 			return;
 		}
