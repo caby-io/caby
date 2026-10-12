@@ -1,12 +1,12 @@
 use std::path::{Path, PathBuf};
 
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::files::{has_ext, CABY_SHARE_SPEC_EXT};
 
 use super::sse_event::{EntryChange, SseEvent};
 
-#[derive(Serialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
 #[serde(rename_all = "lowercase")]
 pub enum SubscriptionKind {
     Dir,

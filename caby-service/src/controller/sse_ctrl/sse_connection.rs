@@ -6,10 +6,7 @@ use std::{
 use tokio::sync::broadcast::{self, error::RecvError};
 use tokio_util::sync::CancellationToken;
 
-use super::{
-    sse_event::SseEvent,
-    sse_subscription::{Subscription, SubscriptionKind},
-};
+use crate::sse::{SseEvent, Subscription, SubscriptionKind};
 
 pub type ConnectionId = String;
 pub type SubscriptionMap = HashMap<SubscriptionKind, Subscription>;
@@ -59,7 +56,7 @@ impl SseConnection {
         tokio::select! {
             _ = self.cancel.cancelled() => Received::Closed,
             received = self.rx.recv() => match received {
-                Ok((seq, event)) => Received::Event(seq, event),
+                Ok((revision, event)) => Received::Event(revision, event),
                 Err(RecvError::Lagged(_)) => Received::Lagged,
                 Err(RecvError::Closed) => Received::Closed,
             },

@@ -19,6 +19,18 @@ pub struct SseToken {
 }
 
 impl SseToken {
+    pub fn expires_at(&self) -> Result<Timestamp> {
+        self.issued_at_unix
+            .checked_add(TOKEN_LIFETIME_SECS)
+            .and_then(|secs| Timestamp::from_second(secs).ok())
+            .ok_or_else(|| {
+                anyhow!(
+                    "sse token issued_at_unix out of valid range: {}",
+                    self.issued_at_unix
+                )
+            })
+    }
+
     pub fn is_expired(&self) -> bool {
         let Some(expires_at_unix) = self.issued_at_unix.checked_add(TOKEN_LIFETIME_SECS) else {
             error!(

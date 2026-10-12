@@ -1,5 +1,6 @@
 use crate::{
     config::Config,
+    controller::SseController,
     files::{build_entries, Entry},
     jsend::JSendBuilder,
     space::Space,
@@ -10,7 +11,7 @@ use axum::{
     response::{IntoResponse, Response},
 };
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{path::PathBuf, sync::Arc};
 
 pub const FILE_NOT_FOUND: &str = "file not found";
 
@@ -25,10 +26,12 @@ struct ListFilesResponse {
     pub path: String,
     pub parent_dir: Option<String>,
     pub entries: Vec<Entry>,
+    pub revision: u64,
 }
 
 pub async fn handle_list_files(
     State(cfg): State<Config>,
+    State(sse): State<Arc<SseController>>,
     space: Space,
     _: RequireAccount,
     path_params: Path<FilesPathParams>,
@@ -45,6 +48,8 @@ pub async fn handle_list_files(
     // let Ok(path) = space.join(&rel_path) else {
     //     return resp.fail("invalid path").into_response();
     // };
+
+    let revision = sse.revision();
 
     // todo: consider santizing after join
     // todo: check that it is a dir? OR return something else for files
@@ -65,6 +70,7 @@ pub async fn handle_list_files(
         path: rel_path.to_str().unwrap().to_owned(), // todo: make safe
         parent_dir,
         entries,
+        revision,
     })
     .into_response()
 }

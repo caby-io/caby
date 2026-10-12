@@ -54,7 +54,17 @@ pub async fn handle_put_files(
         PutEntryRequest::Directory {
             name,
             conflict_strategy,
-        } => put_directory(&space, &rel_path, &name, conflict_strategy).await,
+        } => {
+            put_directory(
+                &space,
+                &events_tx,
+                &account.name,
+                &rel_path,
+                &name,
+                conflict_strategy,
+            )
+            .await
+        }
         PutEntryRequest::File {
             name,
             content,
@@ -76,6 +86,8 @@ pub async fn handle_put_files(
 
 async fn put_directory(
     space: &Space,
+    events_tx: &Sender,
+    author: &str,
     rel_path: &std::path::Path,
     name: &str,
     conflict_strategy: DirConflictStrategy,
@@ -84,10 +96,15 @@ async fn put_directory(
     let rel = rel_path.join(name);
 
     match create_dir(space, &rel, conflict_strategy).await {
-        Ok(path) => resp
-            .status_code(StatusCode::CREATED)
-            .success(path.to_string_lossy().into_owned())
-            .into_response(),
+        Ok(path) => {
+            emit(
+                events_tx,
+                Event::from_create(space.name.clone(), path.clone()).by(author),
+            );
+            resp.status_code(StatusCode::CREATED)
+                .success(path.to_string_lossy().into_owned())
+                .into_response()
+        }
         Err(err) if is_name_too_long(&err) => resp
             .status_code(StatusCode::BAD_REQUEST)
             .fail("name exceeds the maximum length")
