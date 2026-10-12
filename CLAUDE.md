@@ -54,10 +54,14 @@ Uses `pnpm` (enforced via preinstall hook — do not use npm or yarn).
 - `web/` — HTTP handlers organized by resource:
   - `files_api/` — CRUD file operations (list, upload, download, delete, move, rename)
   - `spaces_api/` — Space management
+  - `sse_api/` — Live updates: token, stream, subscriptions
+- `controller/` — Runtime orchestration ("internal" layer): job queue, `PathLocks`, and runtime sub-features in `<feature>_ctrl/` (e.g. `sse_ctrl/`)
 - `files/` — Core file system logic (entry structs, directory overview, pretty printing)
+- `sse/` — SSE wire types, subscriptions/matching, event projection, token (no runtime state)
+- `helpers/` — Domain-free shared helpers (e.g. `random_token()` for unguessable ids)
 - `space/` — Space resolution from config
 - `config/` — YAML-based config loading and validation
-- `auth/auth_middleware.rs` — Bearer token authentication middleware
+- `web/extractors/` — Per-handler auth (`RequireAccount`, `AuthUser`) and space extractors; there is no global auth middleware
 - `jsend.rs` — JSend response format (`{ status, data|message }`)
 - `error.rs` — Unified error type that maps to HTTP responses
 
@@ -65,7 +69,8 @@ Uses `pnpm` (enforced via preinstall hook — do not use npm or yarn).
 - `routes/(app)/files/[space]/[...path]/` — Main file browser page and its dialogs (Delete, Rename, Move, NewFolder)
 - `lib/api/` — API client abstractions:
   - `client.ts` — Core `ApiClient` and `ApiRequestBuilder` pattern
-  - `api_files.ts`, `api_spaces.ts` — Typed wrappers per resource
+  - `api_files.ts`, `api_spaces.ts`, `api_sse.ts` — Typed wrappers per resource
+- `lib/sse/` — Live updates: `sse.svelte.ts` (connection + `onSubscription`), `sse_event.ts` (wire types)
 - `lib/files/` — File management state and components:
   - `upload/` — Chunked upload system with web workers and progress tracking
   - `overview/` — Directory listing components (Nav and Select variants)
@@ -78,6 +83,27 @@ Uses `pnpm` (enforced via preinstall hook — do not use npm or yarn).
 - Responses use JSend format: `{ "status": "success|fail|error", "data": {...} | "message": "..." }`
 - File paths: `/v0/files/{space}/{...path}`
 - Space list: `GET /v0/spaces`
+
+### Live Updates (SSE)
+Browser push uses Server-Sent Events (chosen over WebSockets so it works behind any reverse proxy).
+- **Endpoints:** `POST /v0/sse/token` mints a short-lived token (account-bound, ~10 min).
+  `GET /v0/sse?token=` opens the stream. `PUT|DELETE /v0/sse/{connection_id}/subscriptions/{kind}`
+  (body `{ space, path? }`) manages what the stream delivers. One subscription per kind; a PUT replaces it.
+- **Envelope:** `{ kind, data, actor?, subscriptions? }` with SSE `id:` = `revision`. Kinds are
+  `domain.verb`: `entry.created|modified|removed|moved` (carry the full `Entry`), `stream.connected`
+  (`{ connection_id }`), `stream.reset` (state may be stale: refetch).
+- **List-watch:** `files/list` returns `revision`. The client buffers `dir` events while a list fetch
+  is in flight, then ignores events with `id <= revision` and patches the rest (`patchEntries`).
+  `tree` and `shares` refetch (debounced) instead of patching.
+- **Backend flow:** domain `event::Event` → `Controller::run_events` → `SseController` (ordered
+  projection in `sse::project`, revision stamp, broadcast) → per-connection subscription filter.
+  Wire shapes live in `sse/` and belong to the frontend; the domain `Event` stays serde-free.
+- **New live view recipe:** add a `Subscription` variant + `SubscriptionKind` (backend and
+  `sse_event.ts`), then call `onSubscription(client, { kind, space, path }, handler)` inside a
+  `$effect` and return its cleanup. The handler gets `null` on reset (refetch) or an event.
+- **One stream per tab.** Never open more: plain-HTTP (HTTP/1.1) deployments allow ~6 connections
+  per origin across all tabs. Proxies must not buffer the stream (`X-Accel-Buffering: no` is set;
+  custom nginx configs must not ignore it or use short `proxy_read_timeout`s).
 
 ### File System Layout
 The backend stores data at `CABY_HOME_PATH` (default: `~/cabynet`):
