@@ -223,7 +223,7 @@ async fn build_entry(
     metadata: Metadata,
     space: &Space,
     live_path: &Path,
-    media_urls: Option<&MediaUrlFactory<'_>>,
+    media_urls: &MediaUrlFactory<'_>,
 ) -> Result<Entry> {
     let name = abs_path
         .file_name()
@@ -246,13 +246,13 @@ async fn build_entry(
         let media_type = MediaType::from_path(abs_path);
         let kind = media_type.as_ref().map(FileKind::from).unwrap_or_default();
         let preview_url = if kind == FileKind::Image {
-            media_urls.map(|b| b.thumbnail_url_for(Path::new(&path)))
+            Some(media_urls.thumbnail_url_for(Path::new(&path), metadata.mtime()))
         } else {
             None
         };
         let can_preview = kind.can_preview(media_type.as_ref());
         let media_url = if can_preview {
-            media_urls.map(|b| b.preview_url_for(Path::new(&path)))
+            Some(media_urls.preview_url_for(Path::new(&path), metadata.mtime()))
         } else {
             None
         };
@@ -304,13 +304,7 @@ async fn build_entry(
 pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<Vec<Entry>> {
     // todo: read meta and live in parallel?
     let live_path = space.live.clone();
-    let media_urls = match MediaUrlFactory::new(cfg, &space.name, path) {
-        Ok(b) => Some(b),
-        Err(err) => {
-            warn!("could not generate media token for {:?}: {:#}", path, err);
-            None
-        }
-    };
+    let media_urls = MediaUrlFactory::new(cfg, &space.name, path);
 
     let mut entries = read_dir(live_path.join(path)).await?;
     let mut result = vec![];
@@ -318,14 +312,7 @@ pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<V
         let filename = dir_entry.file_name();
         let built = match dir_entry.metadata().await {
             Ok(metadata) => {
-                build_entry(
-                    &dir_entry.path(),
-                    metadata,
-                    space,
-                    &live_path,
-                    media_urls.as_ref(),
-                )
-                .await
+                build_entry(&dir_entry.path(), metadata, space, &live_path, &media_urls).await
             }
             Err(err) => Err(err.into()),
         };
@@ -362,14 +349,8 @@ pub async fn try_build_entry(cfg: &Config, space: &Space, rel: &Path) -> Result<
     };
 
     let dir = rel.parent().unwrap_or(Path::new(""));
-    let media_urls = match MediaUrlFactory::new(cfg, &space.name, dir) {
-        Ok(b) => Some(b),
-        Err(err) => {
-            warn!("could not generate media token for {:?}: {:#}", dir, err);
-            None
-        }
-    };
+    let media_urls = MediaUrlFactory::new(cfg, &space.name, dir);
 
-    let entry = build_entry(&abs_path, metadata, space, &space.live, media_urls.as_ref()).await?;
+    let entry = build_entry(&abs_path, metadata, space, &space.live, &media_urls).await?;
     Ok(Some(entry))
 }

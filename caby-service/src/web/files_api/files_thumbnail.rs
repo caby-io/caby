@@ -6,9 +6,10 @@ use axum::{
     http::{header, StatusCode},
     response::{IntoResponse, Response},
 };
+use jiff::Timestamp;
 use serde::Deserialize;
 use tokio_util::io::ReaderStream;
-use tracing::warn;
+use tracing::{debug, warn};
 
 use crate::{
     config::Config,
@@ -46,23 +47,13 @@ pub async fn handle_get_thumbnail(
     let Some(token) = query.token else {
         return unauthorized_resp();
     };
-    let payload = match media::decode_token(&cfg, &token) {
-        Ok(p) => p,
+    let expires_at = match media::try_verify_file(&cfg, &space.name, &rel_path, &token) {
+        Ok(expires_at) => expires_at,
         Err(err) => {
-            warn!("could not decode media token: {:#}", err);
+            debug!("could not verify media token: {:#}", err);
             return unauthorized_resp();
         }
     };
-    if payload.is_expired() || payload.space != space.name {
-        return unauthorized_resp();
-    }
-    let req_dir = rel_path
-        .parent()
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    if req_dir != payload.dir {
-        return unauthorized_resp();
-    }
 
     let Ok(live_path) = space.join(SpaceDir::LIVE, &rel_path) else {
         return JSendBuilder::new().fail("invalid path").into_response();
@@ -107,9 +98,11 @@ pub async fn handle_get_thumbnail(
     let stream = ReaderStream::new(file);
     let body = Body::from_stream(stream);
 
+    let max_age = (expires_at - Timestamp::now().as_second()).max(0);
+    let cache_control = format!("private, max-age={max_age}, immutable");
     let headers = [
         (header::CONTENT_TYPE, "image/webp"),
-        (header::CACHE_CONTROL, "private, max-age=3600"),
+        (header::CACHE_CONTROL, cache_control.as_str()),
     ];
 
     (headers, body).into_response()
