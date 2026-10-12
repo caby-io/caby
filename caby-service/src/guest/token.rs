@@ -11,9 +11,7 @@ use jiff::Timestamp;
 
 use crate::{guest::Guest, Result};
 
-const DEFAULT_GUEST_TOKEN_LIFETIME_DAYS: u64 = 7;
-pub const DEFAULT_GUEST_TOKEN_LIFETIME: Duration =
-    Duration::from_mins(DEFAULT_GUEST_TOKEN_LIFETIME_DAYS * 24 * 60);
+pub const DEFAULT_GUEST_TOKEN_LIFETIME: Duration = Duration::from_secs(7 * 24 * 60 * 60);
 
 #[derive(Encode, Decode, PartialEq, Debug)]
 pub struct GuestToken {

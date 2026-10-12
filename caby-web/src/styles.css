@@ -130,11 +130,16 @@
 
 html {
 	color-scheme: light dark;
+	scrollbar-gutter: stable;
 }
 
 html:has(dialog[open]) {
 	overflow: hidden;
 	overscroll-behavior: none;
+}
+
+html:has(dialog.preview-dialog[open]) {
+	scrollbar-gutter: auto;
 }
 
 img {

@@ -10,11 +10,7 @@
 	import IconPhUploadFill from '~icons/ph/upload-fill';
 	import IconLogosYoutubeIcon from '~icons/logos/youtube-icon';
 
-	let {
-		dialog = $bindable(),
-		space,
-		onListChange
-	}: { dialog: HTMLDialogElement; space: string; onListChange: any } = $props();
+	let { dialog = $bindable(), space }: { dialog: HTMLDialogElement; space: string } = $props();
 	const path = $derived(page.params.path!);
 
 	// const openAddDialog = () => {
@@ -104,7 +100,7 @@
 	{/snippet}
 </Dialog>
 
-<NewFolderDialog {space} bind:dialog={newFolderDialog} {onListChange} />
+<NewFolderDialog {space} bind:dialog={newFolderDialog} />
 
 <style lang="scss">
 	.add-button {

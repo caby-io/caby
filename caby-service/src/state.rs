@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::{
     auth::oidc::OidcClient,
     config::Config,
-    controller::{Controller, PathLocks},
+    controller::{Controller, PathLocks, SseController},
     event::Sender,
     Result,
 };
@@ -55,6 +55,12 @@ impl FromRef<AppState> for Arc<Controller> {
 impl FromRef<AppState> for Arc<PathLocks> {
     fn from_ref(state: &AppState) -> Self {
         state.controller.locks()
+    }
+}
+
+impl FromRef<AppState> for Arc<SseController> {
+    fn from_ref(state: &AppState) -> Self {
+        state.controller.sse()
     }
 }
 

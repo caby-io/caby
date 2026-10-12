@@ -9,7 +9,7 @@ use anyhow::anyhow;
 use futures_util::FutureExt;
 use jiff::SignedDuration;
 use tokio::{
-    sync::{Notify, OwnedSemaphorePermit, Semaphore},
+    sync::{mpsc, Notify, OwnedSemaphorePermit, Semaphore},
     time,
 };
 use tokio_util::{sync::CancellationToken, task::TaskTracker};
@@ -27,9 +27,11 @@ pub mod jobs;
 pub mod locks;
 pub mod registry;
 mod scan;
+pub mod sse_ctrl;
 
 pub use crate::job::Priority;
 pub use locks::{PathGuard, PathLocks};
+pub use sse_ctrl::{Received, SseConnection, SseController};
 
 pub type EventHandler = fn(&Event) -> Vec<(Priority, Input)>;
 
@@ -60,7 +62,7 @@ pub struct Controller {
     locks: Arc<PathLocks>,
     handlers: Vec<EventHandler>,
     registry: Mutex<Registry>,
-    // todo: duplicate to notification system that we can wire to websockets
+    sse: Arc<SseController>,
     notify: Notify,
     slots: Arc<Semaphore>,
     tasks: TaskTracker,
@@ -112,30 +114,39 @@ impl Drop for JobLease {
 impl Controller {
     pub fn new(cfg: Config) -> (Arc<Self>, Sender) {
         let (events_tx, events_rx) = event::channel();
+        let cancel = CancellationToken::new();
+        let (sse, sse_rx) = SseController::new(cancel.child_token());
 
         let controller = Arc::new(Self {
             cfg,
             locks: Arc::new(PathLocks::default()),
             handlers: jobs::handlers(),
             registry: Mutex::new(Registry::default()),
+            sse,
             notify: Notify::new(),
             slots: Arc::new(Semaphore::new(MAX_CONCURRENT_JOBS)),
             tasks: TaskTracker::new(),
-            cancel: CancellationToken::new(),
+            cancel,
         });
 
-        controller.start(events_rx);
+        controller.start(events_rx, sse_rx);
         (controller, events_tx)
     }
 
-    fn start(self: &Arc<Self>, events_rx: Receiver) {
+    fn start(self: &Arc<Self>, events_rx: Receiver, sse_rx: mpsc::Receiver<Event>) {
         self.tasks.spawn(self.clone().run_jobs());
         self.tasks.spawn(self.clone().run_events(events_rx));
         self.tasks.spawn(self.clone().run_scanner());
+        self.tasks
+            .spawn(self.sse.clone().run(self.cfg.clone(), sse_rx));
     }
 
     pub fn locks(&self) -> Arc<PathLocks> {
         self.locks.clone()
+    }
+
+    pub fn sse(&self) -> Arc<SseController> {
+        self.sse.clone()
     }
 
     pub async fn shutdown(&self) {
@@ -276,7 +287,10 @@ impl Controller {
             tokio::select! {
                 _ = self.cancel.cancelled() => break,
                 event = events_rx.recv() => match event {
-                    Some(event) => self.dispatch_event(event),
+                    Some(event) => {
+                        self.sse.forward(&event);
+                        self.dispatch_event(event);
+                    }
                     None => break,
                 },
             }

@@ -10,7 +10,7 @@ use crate::{
     auth::{oidc::oidc_auth_code_flow::AuthCodeFlow, Token as SessionToken},
     config::Config,
     download::Token as DownloadToken,
-    upload::{decode_upload_token, manifest, UPLOAD_TOKEN_LIFETIME_HOURS},
+    upload::{decode_upload_token, manifest, UPLOAD_TOKEN_LIFETIME_SECS},
     Result,
 };
 
@@ -176,7 +176,7 @@ pub async fn housekeeping(cfg: &Config) -> Result<()> {
                             let age = SystemTime::now()
                                 .duration_since(created)
                                 .unwrap_or(Duration::ZERO);
-                            age > Duration::from_secs(UPLOAD_TOKEN_LIFETIME_HOURS as u64 * 3600)
+                            age > Duration::from_secs(UPLOAD_TOKEN_LIFETIME_SECS as u64)
                         }
                         Err(err) => {
                             errors.push(format!(

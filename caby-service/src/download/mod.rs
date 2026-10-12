@@ -1,10 +1,8 @@
 use std::{str::FromStr, time::Duration};
 
-use crate::Result;
+use crate::{helpers::random_token, Result};
 use anyhow::{anyhow, Context};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use jiff::Timestamp;
-use rand::RngExt;
 use serde::Serialize;
 
 const DOWNLOAD_LIFETIME: Duration = Duration::from_mins(5);
@@ -35,16 +33,13 @@ impl Token {
     }
 
     pub fn new(space: &str, file_paths: Vec<String>) -> Result<Self> {
-        let mut bytes = [0u8; 32];
-        rand::rng().fill(&mut bytes);
-
         let now = Timestamp::now();
         let expires_at = now
             .checked_add(DOWNLOAD_LIFETIME)
             .context("download token expiry is out of valid range")?;
 
         Ok(Self {
-            value: URL_SAFE_NO_PAD.encode(bytes),
+            value: random_token(),
             space: space.to_string(),
             file_paths,
             issued_at: now,

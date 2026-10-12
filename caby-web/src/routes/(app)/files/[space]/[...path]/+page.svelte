@@ -42,6 +42,9 @@
 	import { fsEntryIntoFiles } from '$lib/files/upload/drop';
 	import { onMount } from 'svelte';
 	import { UploadGroup } from '$lib/files/upload/upload_group';
+	import { patchEntries } from '$lib/files/entries_patch';
+	import { debounce, onSubscription } from '$lib/sse/sse.svelte';
+	import { SubscriptionKind, type SseEntryEvent } from '$lib/sse/sse_event';
 
 	const space = $derived(page.params.space!);
 	const path = $derived(page.params.path!);
@@ -49,18 +52,18 @@
 	let current_space = $derived(spaces.list.find((s) => s.name === space));
 	let readonly = $derived(current_space?.readonly ?? true);
 
-	let filesResponse: ListFilesResp = $state({
+	const emptyListing = (): ListFilesResp => ({
 		path: null,
 		parent_dir: null,
 		current_dir: '',
-		entries: []
+		entries: [],
+		revision: 0
 	});
 
-	// todo: probably will not need to do this anymore once SSE/WSS lands
-	const refreshSidebar = () => {
-		tryRefreshOverview(client, space);
-		tryRefreshShares(client, space);
-	};
+	let filesResponse: ListFilesResp = $state(emptyListing());
+	let revision: number | null = null;
+	let pending_events: SseEntryEvent[] | null = null;
+	let latest_fetch = 0;
 
 	// File List Operations
 
@@ -73,18 +76,33 @@
 
 	useAppLoading(() => loading);
 
-	const getFilesList = async (path: string) => {
-		const resp = await listFiles(client, space, path);
-		if (resp.status != 'success') {
-			filesResponse = {
-				path: null,
-				parent_dir: null,
-				current_dir: '',
-				entries: []
-			};
+	const applyDirEvent = (ev: SseEntryEvent) => {
+		if (pending_events) {
+			pending_events.push(ev);
 			return;
 		}
-		filesResponse = resp.data!;
+		if (revision === null || ev.id <= revision) return;
+		filesResponse.entries = patchEntries(filesResponse.entries, ev, path);
+	};
+
+	const getFilesList = async (path: string) => {
+		const fetch_id = ++latest_fetch;
+		revision = null;
+		pending_events = [];
+
+		const resp = await listFiles(client, space, path);
+		if (fetch_id !== latest_fetch) return;
+
+		const buffered = pending_events ?? [];
+		pending_events = null;
+		if (resp.status != 'success' || !resp.data) {
+			filesResponse = emptyListing();
+			return;
+		}
+
+		filesResponse = resp.data;
+		revision = resp.data.revision;
+		for (const ev of buffered) applyDirEvent(ev);
 	};
 
 	// for first time loads and hard reloads of entire list
@@ -97,18 +115,20 @@
 	};
 
 	// for atomic loads
-	// note: this should be totally replaced by websockets eventually
 	const refreshFiles = async () => {
 		loading = true;
 		await getFilesList(path);
 		loading = false;
 	};
 
-	const onListChange = async () => {
-		// todo: should we clear the delete and selected list?
-		await refreshFiles();
-		refreshSidebar();
-	};
+	const MEDIA_REFRESH_COOLDOWN_MS = 60_000;
+	let last_media_refresh = 0;
+
+	const onMediaError = debounce(() => {
+		if (Date.now() - last_media_refresh < MEDIA_REFRESH_COOLDOWN_MS) return;
+		last_media_refresh = Date.now();
+		refreshFiles();
+	});
 
 	// Select Operations
 
@@ -382,9 +402,6 @@
 			return;
 		}
 		// todo: handle errors
-		// const payload = await response.json();
-		// todo: move this to onDrop?
-		await onListChange();
 	};
 
 	// svelte-ignore non_reactive_update
@@ -485,20 +502,28 @@
 		tryLoadSpaces(client);
 	});
 
+	$effect(() =>
+		onSubscription(client, { kind: SubscriptionKind.DIR, space, path }, (ev) => {
+			if (ev) return applyDirEvent(ev);
+			if (filesResponse.path === path) return refreshFiles();
+			reloadFiles();
+		})
+	);
+
 	$effect(() => {
-		reloadFiles();
-		refreshSidebar();
+		const refresh = () => tryRefreshOverview(client, space);
+		const debounced = debounce(refresh);
+		return onSubscription(client, { kind: SubscriptionKind.TREE, space }, (ev) =>
+			ev ? debounced() : refresh()
+		);
 	});
 
-	// handle upload refresh
-	// todo: we should make a more efficient version of this after refactoring uploadManager -> task manager
-	let last_upload_completed = uploadManager.upload_groups_completed;
 	$effect(() => {
-		const completed = uploadManager.upload_groups_completed;
-		if (completed === last_upload_completed) return;
-		last_upload_completed = completed;
-		refreshFiles();
-		refreshSidebar();
+		const refresh = () => tryRefreshShares(client, space);
+		const debounced = debounce(refresh);
+		return onSubscription(client, { kind: SubscriptionKind.SHARES, space }, (ev) =>
+			ev ? debounced() : refresh()
+		);
 	});
 </script>
 
@@ -532,6 +557,7 @@
 			{handleContextMenu}
 			{handleSelectOp}
 			{handlePreview}
+			{onMediaError}
 			{onEntryDragStart}
 			{onEntryDragEnd}
 			{onEntryDragEnter}
@@ -545,16 +571,10 @@
 	</section>
 </div>
 
-<AddContentDialog bind:dialog={add_content_dialog} {space} {onListChange} />
-<MoveDialog
-	bind:dialog={move_entries_dialog}
-	{space}
-	{path}
-	{onListChange}
-	entries={target_move_entries}
-/>
-<DeleteDialog bind:dialog={delete_entries_dialog} {space} {onListChange} entries={delete_entries} />
-<RenameDialog bind:dialog={rename_entry_dialog} {space} {target_rename_entry} {onListChange} />
+<AddContentDialog bind:dialog={add_content_dialog} {space} />
+<MoveDialog bind:dialog={move_entries_dialog} {space} {path} entries={target_move_entries} />
+<DeleteDialog bind:dialog={delete_entries_dialog} {space} entries={delete_entries} />
+<RenameDialog bind:dialog={rename_entry_dialog} {space} {target_rename_entry} />
 <ContextMenu
 	bind:dialog={contextMenuDialog}
 	position={contextMenuProps.position}
@@ -567,7 +587,7 @@
 	handleDeleteEntries={readonly ? undefined : handleDeleteEntries}
 	handleRenameEntry={readonly ? undefined : handleRenameEntry}
 />
-<MediaPreviewDialog bind:this={preview} entries={preview_entries} />
+<MediaPreviewDialog bind:this={preview} entries={preview_entries} {onMediaError} />
 
 <style lang="scss">
 	@use '$lib/styles/breakpoints' as bp;

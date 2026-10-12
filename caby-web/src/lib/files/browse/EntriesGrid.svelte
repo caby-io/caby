@@ -20,6 +20,7 @@
 		handleContextMenu,
 		handleSelectOp,
 		handlePreview,
+		onMediaError,
 		onEntryDragStart,
 		onEntryDragEnd,
 		onEntryDragEnter,
@@ -42,6 +43,7 @@
 		handleContextMenu?: (e: MouseEvent, entry?: Entry) => void;
 		handleSelectOp?: (e: MouseEvent, selected: SelectedEntry) => void;
 		handlePreview?: (entry: Entry) => void;
+		onMediaError?: () => void;
 		onEntryDragStart?: (e: DragEvent, entry: Entry) => void;
 		onEntryDragEnd?: (e: DragEvent, entry: Entry) => void;
 		onEntryDragEnter?: (e: DragEvent, entry: Entry) => void;
@@ -94,6 +96,7 @@
 					onSelect={(e: MouseEvent) =>
 						handleSelectOp?.(e, { index: index + dir_entries.length, entry })}
 					onPreview={handlePreview}
+					{onMediaError}
 					onDragStart={onEntryDragStart}
 					onDragEnd={onEntryDragEnd}
 					onDragOver={onEntryDragOver}

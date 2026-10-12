@@ -13,6 +13,7 @@
 	import { page } from '$app/state';
 	import { client } from '$lib/stores/client.svelte';
 	import { user, loadUser } from '$lib/stores/user.svelte';
+	import { tryConnectSse } from '$lib/sse/sse.svelte';
 
 	let { children }: { children: Snippet } = $props();
 
@@ -26,6 +27,11 @@
 
 	onMount(() => {
 		if (client.isAuthenticated()) loadUser(client);
+	});
+
+	$effect(() => {
+		if (!client.isAuthenticated()) return;
+		return tryConnectSse(client);
 	});
 </script>
 
@@ -154,8 +160,11 @@
 		}
 
 		.search {
+			min-width: 0;
+
 			> input {
 				width: clamp(5rem, 30vw, 30rem);
+				max-width: 100%;
 			}
 		}
 

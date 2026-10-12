@@ -11,13 +11,11 @@
 		dialog = $bindable(),
 		space,
 		path,
-		onListChange,
 		entries
 	}: {
 		dialog: HTMLDialogElement;
 		space: string;
 		path: string;
-		onListChange: any;
 		entries: Set<Entry>;
 	} = $props();
 
@@ -56,7 +54,6 @@
 			console.error(`could not move files: ${resp.message}`);
 			return;
 		}
-		await onListChange();
 		dialog.close();
 	};
 

@@ -4,18 +4,12 @@
 	import { putDirectory } from '$lib/api/api_files';
 	import { client } from '$lib/stores/client.svelte';
 
-	let {
-		space,
-		dialog = $bindable(),
-		onListChange
-	}: { space: string; dialog: HTMLDialogElement; onListChange: any } = $props();
+	let { space, dialog = $bindable() }: { space: string; dialog: HTMLDialogElement } = $props();
 	let value: string = $state('');
 	const path = $derived(page.params.path!);
 
 	const tryCreateDir = async () => {
-		const resp = await putDirectory(client, space, path, value);
-
-		onListChange();
+		await putDirectory(client, space, path, value);
 		dialog.close();
 		value = '';
 	};

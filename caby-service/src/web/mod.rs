@@ -11,6 +11,7 @@ mod files_api;
 pub mod headers;
 mod shares_api;
 mod spaces_api;
+mod sse_api;
 mod upload;
 mod users_api;
 
@@ -98,6 +99,17 @@ pub fn api_router(state: &AppState) -> Router<AppState> {
                 // .route("/upload/complete", post(files_api::handle_complete_upload))
                 .route("/delete/{space}", post(files_api::handle_delete_files))
                 .route("/move/{space}", post(files_api::handle_move_files)),
+        )
+        .nest(
+            "/sse",
+            Router::new()
+                .route("/", get(sse_api::handle_connect_sse))
+                .route("/token", post(sse_api::handle_register_sse))
+                .route(
+                    "/{connection_id}/subscriptions/{kind}",
+                    put(sse_api::handle_put_sse_subscription)
+                        .delete(sse_api::handle_delete_sse_subscription),
+                ),
         )
         .nest(
             "/shares",

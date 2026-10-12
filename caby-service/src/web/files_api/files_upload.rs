@@ -29,7 +29,7 @@ use std::{
     hash::Hasher,
     io::{self},
     os::unix::fs::MetadataExt,
-    path::{Component, PathBuf},
+    path::{Component, Path as FsPath, PathBuf},
 };
 use tokio::{
     fs::{self, remove_file, OpenOptions},
@@ -472,12 +472,36 @@ pub async fn handle_publish_upload(
         spec_events.push(event.by(account.name.as_str()));
     }
 
+    let mut top_level: Vec<&str> = manifest
+        .entries
+        .iter()
+        .filter_map(|entry| match FsPath::new(&entry.name).components().next() {
+            Some(Component::Normal(name)) => name.to_str(),
+            _ => None,
+        })
+        .collect();
+    top_level.sort_unstable();
+    top_level.dedup();
+
+    let mut entry_events = vec![];
+    for name in top_level {
+        let rel = base.join(name);
+        if has_ext(&rel, CABY_SHARE_SPEC_EXT) {
+            continue;
+        }
+        let event = match fs::try_exists(space.live.join(&rel)).await.unwrap_or(false) {
+            true => Event::from_modify(space.name.clone(), rel),
+            false => Event::from_create(space.name.clone(), rel),
+        };
+        entry_events.push(event.by(account.name.as_str()));
+    }
+
     if let Err(err) = merge_dir(&upload_path.join("files"), &live_base).await {
         error!("could not publish upload: {:#}", err);
         return resp.internal_error().into_response();
     }
 
-    for event in spec_events {
+    for event in spec_events.into_iter().chain(entry_events) {
         send(&events_tx, event).await;
     }
 

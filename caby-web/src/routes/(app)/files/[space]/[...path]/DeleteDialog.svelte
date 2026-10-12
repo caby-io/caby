@@ -7,12 +7,10 @@
 	let {
 		dialog = $bindable(),
 		space,
-		onListChange,
 		entries
 	}: {
 		dialog: HTMLDialogElement;
 		space: string;
-		onListChange: any;
 		entries: Array<Entry>;
 	} = $props();
 
@@ -23,7 +21,6 @@
 			console.error(`could not delete files: ${resp.message}`);
 			return;
 		}
-		await onListChange();
 		dialog.close();
 	};
 </script>

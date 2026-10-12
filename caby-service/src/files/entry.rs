@@ -4,14 +4,17 @@ use anyhow::anyhow;
 use jiff::Timestamp;
 use nest_struct::nest_struct;
 use serde::{Deserialize, Serialize};
-use tokio::fs::{self, read_dir, read_link, DirEntry};
+use tokio::{
+    fs::{self, read_dir, read_link},
+    io,
+};
 use tracing::{error, warn};
 
 use crate::{
     config::Config,
     error::Result,
     share::{load_state, Share},
-    space::Space,
+    space::{Space, SpaceDir},
 };
 
 use super::{
@@ -216,18 +219,18 @@ impl EntryFactory {
 }
 
 async fn build_entry(
-    dir_entry: DirEntry,
+    abs_path: &Path,
+    metadata: Metadata,
     space: &Space,
     live_path: &Path,
     media_urls: Option<&MediaUrlFactory<'_>>,
 ) -> Result<Entry> {
-    let metadata = dir_entry.metadata().await?;
-
-    let name = dir_entry.file_name().into_string().map_err(|err| {
-        anyhow!("could not convert entry name to string").context(format!("{:?}", err))
-    })?;
-    let path = dir_entry
-        .path()
+    let name = abs_path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .ok_or(anyhow!("could not convert entry name to string"))?
+        .to_owned();
+    let path = abs_path
         .strip_prefix(live_path)
         .map_err(|err| anyhow!(err).context("could not strip prefix"))?
         .to_str()
@@ -240,7 +243,7 @@ async fn build_entry(
     if metadata.is_dir() {
         factory.set_directory();
     } else if metadata.is_file() {
-        let media_type = MediaType::from_path(&dir_entry.path());
+        let media_type = MediaType::from_path(abs_path);
         let kind = media_type.as_ref().map(FileKind::from).unwrap_or_default();
         let preview_url = if kind == FileKind::Image {
             media_urls.map(|b| b.thumbnail_url_for(Path::new(&path)))
@@ -275,7 +278,7 @@ async fn build_entry(
     } else if metadata.is_symlink() {
         // todo: validate that the symlink doesn't go outside where we are allowed to go
         // todo: this probably goes to the wrong place
-        let target = read_link(dir_entry.path()).await?;
+        let target = read_link(abs_path).await?;
         let target_path = target.as_os_str().to_str().unwrap().to_owned();
 
         if !target.exists() {
@@ -313,7 +316,20 @@ pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<V
     let mut result = vec![];
     while let Some(dir_entry) = entries.next_entry().await? {
         let filename = dir_entry.file_name();
-        match build_entry(dir_entry, space, &live_path, media_urls.as_ref()).await {
+        let built = match dir_entry.metadata().await {
+            Ok(metadata) => {
+                build_entry(
+                    &dir_entry.path(),
+                    metadata,
+                    space,
+                    &live_path,
+                    media_urls.as_ref(),
+                )
+                .await
+            }
+            Err(err) => Err(err.into()),
+        };
+        match built {
             Ok(e) => result.push(e),
             Err(err) => {
                 // todo: send errored entries with the list
@@ -335,4 +351,25 @@ pub async fn build_entries(cfg: &Config, space: &Space, path: &Path) -> Result<V
     });
 
     Ok(result)
+}
+
+pub async fn try_build_entry(cfg: &Config, space: &Space, rel: &Path) -> Result<Option<Entry>> {
+    let abs_path = space.join(SpaceDir::LIVE, rel)?;
+    let metadata = match fs::symlink_metadata(&abs_path).await {
+        Ok(metadata) => metadata,
+        Err(err) if err.kind() == io::ErrorKind::NotFound => return Ok(None),
+        Err(err) => return Err(err.into()),
+    };
+
+    let dir = rel.parent().unwrap_or(Path::new(""));
+    let media_urls = match MediaUrlFactory::new(cfg, &space.name, dir) {
+        Ok(b) => Some(b),
+        Err(err) => {
+            warn!("could not generate media token for {:?}: {:#}", dir, err);
+            None
+        }
+    };
+
+    let entry = build_entry(&abs_path, metadata, space, &space.live, media_urls.as_ref()).await?;
+    Ok(Some(entry))
 }

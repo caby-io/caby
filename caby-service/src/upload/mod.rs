@@ -19,8 +19,7 @@ use crate::{config::Config, Result};
 
 pub mod manifest;
 
-pub const UPLOAD_TOKEN_LIFETIME_HOURS: i64 = 24;
-const UPLOAD_TOKEN_LIFETIME_SECS: i64 = UPLOAD_TOKEN_LIFETIME_HOURS * 3600;
+pub const UPLOAD_TOKEN_LIFETIME_SECS: i64 = 24 * 60 * 60;
 
 #[derive(Encode, Decode)]
 pub struct UploadTokenPayload {

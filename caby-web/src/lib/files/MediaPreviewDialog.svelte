@@ -5,7 +5,7 @@
 	import { swipe } from '$lib/actions/swipe';
 	import type { Entry } from './entry';
 
-	let { entries }: { entries: Entry[] } = $props();
+	let { entries, onMediaError }: { entries: Entry[]; onMediaError?: () => void } = $props();
 
 	let dialog: HTMLDialogElement;
 	let dialog_open = $state(false);
@@ -108,13 +108,27 @@
 				{#if media_url}
 					{#key media_url}
 						{#if kind === 'image'}
-							<img src={media_url} alt={current_entry.name} />
+							<img src={media_url} alt={current_entry.name} onerror={onMediaError} />
 						{:else if kind === 'video'}
 							<!-- svelte-ignore a11y_media_has_caption -->
-							<video src={media_url} controls playsinline {autoplay} bind:muted onplay={onMediaPlay}
+							<video
+								src={media_url}
+								controls
+								playsinline
+								{autoplay}
+								bind:muted
+								onplay={onMediaPlay}
+								onerror={onMediaError}
 							></video>
 						{:else if kind === 'audio'}
-							<audio src={media_url} controls {autoplay} bind:muted onplay={onMediaPlay}></audio>
+							<audio
+								src={media_url}
+								controls
+								{autoplay}
+								bind:muted
+								onplay={onMediaPlay}
+								onerror={onMediaError}
+							></audio>
 						{/if}
 					{/key}
 				{/if}

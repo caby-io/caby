@@ -68,6 +68,7 @@ export type EntryProps<T> = {
 	onSelect?: (e: MouseEvent) => void;
 	// fired when the user taps a previewable file's thumbnail
 	onPreview?: (entry: Entry) => void;
+	onMediaError?: () => void;
 
 	// drag events
 	onDragStart?: (e: DragEvent, entry: Entry) => void;
