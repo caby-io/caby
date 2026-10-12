@@ -10,8 +10,7 @@ use tracing::error;
 
 use crate::{config::Config, Result};
 
-const TOKEN_LIFETIME_MINS: i64 = 60;
-const TOKEN_LIFETIME_SECS: i64 = TOKEN_LIFETIME_MINS * 60;
+const TOKEN_LIFETIME_SECS: i64 = 60 * 60;
 
 #[derive(Encode, Decode)]
 pub struct DownloadToken {

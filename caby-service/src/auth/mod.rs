@@ -1,13 +1,12 @@
 use std::{str::FromStr, time::Duration};
 
 use anyhow::{anyhow, Context};
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use jiff::Timestamp;
-use rand::RngExt;
 use serde::Serialize;
 
 use crate::{
     guest::Guest,
+    helpers::random_token,
     share::Share,
     user::{Account, Permission},
     Result,
@@ -63,16 +62,13 @@ impl Token {
     }
 
     pub fn new() -> Result<Self> {
-        let mut bytes = [0u8; 32];
-        rand::rng().fill(&mut bytes);
-
         let now = Timestamp::now();
         let expires_at = now
             .checked_add(SESSION_LIFETIME)
             .context("session token expiry is out of valid range")?;
 
         Ok(Self {
-            value: URL_SAFE_NO_PAD.encode(bytes),
+            value: random_token(),
             issued_at: now,
             expires_at,
         })

@@ -4,13 +4,12 @@ use std::{
 };
 
 use anyhow::anyhow;
-use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
 use jiff::Timestamp;
-use rand::RngExt;
 use serde::{Deserialize, Serialize};
 
 use crate::{
     files::{has_ext, CABY_SHARE_SPEC_EXT},
+    helpers::random_token,
     user::Permission,
     Result,
 };
@@ -121,11 +120,8 @@ impl Share {
         guest_flows: Vec<ShareAccessFlow>,
         expires_at: Option<Timestamp>,
     ) -> Self {
-        let mut id_bytes = [0u8; 32];
-        rand::rng().fill(&mut id_bytes);
-
         Self {
-            id: URL_SAFE_NO_PAD.encode(id_bytes),
+            id: random_token(),
             owner_id: owner_id.to_owned(),
             space: space.to_owned(),
             spec_path: spec_path.to_owned(),

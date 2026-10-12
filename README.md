@@ -40,7 +40,7 @@ What we're working towards in the near future:
   - [ ] Guest uploads, writes, and deletes
 - [ ] Background tasks (download files, convert videos, and more) _(in progress)_
   - [x] Background jobs system
-  - [ ] Websocket events
+  - [x] Server-sent events
   - [ ] Background downloads
 - [ ] Web file editor
 - [ ] File versioning
