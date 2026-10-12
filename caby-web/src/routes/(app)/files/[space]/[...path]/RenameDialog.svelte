@@ -9,13 +9,11 @@
 	let {
 		space,
 		target_rename_entry,
-		dialog = $bindable(),
-		onListChange
+		dialog = $bindable()
 	}: {
 		space: string;
 		target_rename_entry?: Entry;
 		dialog: HTMLDialogElement;
-		onListChange: any;
 	} = $props();
 
 	let previous_name = $derived.by(() => {
@@ -46,7 +44,6 @@
 			return;
 		}
 
-		await onListChange();
 		dialog.close();
 		name = '';
 	};

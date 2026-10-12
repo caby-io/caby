@@ -13,6 +13,7 @@
 		selection_mode = false,
 		onSelect,
 		onPreview,
+		onMediaError,
 		onDragStart,
 		onDragEnd,
 		onDragOver,
@@ -90,7 +91,10 @@
 				decoding="async"
 				loading="lazy"
 				draggable="false"
-				onerror={() => (failed_url = preview_url)}
+				onerror={() => {
+					failed_url = preview_url;
+					onMediaError?.();
+				}}
 			/>
 		</section>
 	{:else}

@@ -30,8 +30,15 @@ export const patchEntries = (entries: Entry[], ev: SseEntryEvent, dir: string): 
 	if (!in_dir(ev.data.path)) return next;
 
 	const name = basename(ev.data.path);
-	const without = next.filter((e) => e.name !== name);
+	const existing = next.find((e) => e.name === name);
+	const without = next.filter((e) => e !== existing);
 	if (ev.kind === SseKind.ENTRY_REMOVED || !ev.data.entry) return without;
 
-	return [...without, ev.data.entry].sort(compareEntries);
+	const entry: Entry = {
+		...ev.data.entry,
+		is_selected: existing?.is_selected,
+		is_targetted: existing?.is_targetted,
+		is_processing: existing?.is_processing
+	};
+	return [...without, entry].sort(compareEntries);
 };

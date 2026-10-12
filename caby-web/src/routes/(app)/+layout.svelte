@@ -160,8 +160,11 @@
 		}
 
 		.search {
+			min-width: 0;
+
 			> input {
 				width: clamp(5rem, 30vw, 30rem);
+				max-width: 100%;
 			}
 		}
 

@@ -206,9 +206,6 @@ export class UploadManager {
 	hash_worker_count: number = 0;
 	upload_worker_count: number = 0;
 
-	// TEMP
-	upload_groups_completed: number = $state(0);
-
 	public addUploads = (...upload_groups: UploadGroup[]) => {
 		this.upload_groups.push(...upload_groups);
 
@@ -328,9 +325,6 @@ export class UploadManager {
 		const resp = await publishUpload(client, upload_group!);
 
 		console.debug(`[caby/upload-manager] completed ${upload_group.registration.id}`);
-
-		// TEMP
-		this.upload_groups_completed = Date.now();
 	};
 }
 
