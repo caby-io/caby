@@ -8,7 +8,7 @@ use axum::{
 use serde::Deserialize;
 use tower::ServiceExt;
 use tower_http::services::ServeFile;
-use tracing::warn;
+use tracing::debug;
 
 use crate::{
     config::Config,
@@ -46,21 +46,8 @@ pub async fn handle_get_preview(
     let Some(token) = query.token else {
         return unauthorized_resp();
     };
-    let payload = match media::decode_token(&cfg, &token) {
-        Ok(p) => p,
-        Err(err) => {
-            warn!("could not decode media token: {:#}", err);
-            return unauthorized_resp();
-        }
-    };
-    if payload.is_expired() || payload.space != space.name {
-        return unauthorized_resp();
-    }
-    let req_dir = rel_path
-        .parent()
-        .map(|p| p.to_string_lossy().into_owned())
-        .unwrap_or_default();
-    if req_dir != payload.dir {
+    if let Err(err) = media::try_verify_file(&cfg, &space.name, &rel_path, &token) {
+        debug!("could not verify media token: {:#}", err);
         return unauthorized_resp();
     }
 
