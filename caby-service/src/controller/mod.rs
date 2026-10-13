@@ -100,7 +100,7 @@ impl JobLease {
         &self.job
     }
 
-    fn settle(&mut self, result: &Result<()>) {
+    fn settle<T>(&mut self, result: &Result<T>) {
         self.requeue = result.is_err();
     }
 }
@@ -164,11 +164,16 @@ impl Controller {
             .await
             .unwrap_or_else(|panic| Err(anyhow!("job panicked: {}", panic_message(&*panic))));
 
-        if let Err(err) = &result {
-            warn!("controller: job {:?} failed: {:#}", lease.job().input, err);
-        }
-
         lease.settle(&result);
+
+        match result {
+            Ok(next_jobs) => {
+                for (priority, input) in next_jobs {
+                    self.schedule_job(priority, input, lease.job().actor.clone());
+                }
+            }
+            Err(err) => warn!("controller: job {:?} failed: {:#}", lease.job().input, err),
+        }
     }
 
     async fn next_job(self: &Arc<Self>) -> Option<JobLease> {

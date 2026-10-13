@@ -1,6 +1,8 @@
 $td-main-width: 40rem;
 
 .entry {
+	position: relative;
+	overflow: hidden;
 	display: flex;
 	flex-direction: column;
 	background: var(--clr-background-1);

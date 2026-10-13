@@ -13,8 +13,10 @@ use tracing::{debug, warn};
 
 use crate::{
     config::Config,
-    files::media,
-    img_thumbs::{self, ThumbError},
+    files::{
+        media,
+        thumbnail::{self, ThumbError},
+    },
     jsend::JSendBuilder,
     space::{Space, SpaceDir},
     web::files_api::files_list::FilesPathParams,
@@ -59,7 +61,7 @@ pub async fn handle_get_thumbnail(
         return JSendBuilder::new().fail("invalid path").into_response();
     };
 
-    let Ok(thumb_path) = img_thumbs::thumb_path(&space, &rel_path) else {
+    let Ok(thumb_path) = thumbnail::thumb_path(&space, &rel_path) else {
         return JSendBuilder::new().fail("invalid path").into_response();
     };
 
@@ -71,7 +73,7 @@ pub async fn handle_get_thumbnail(
                 .into_response();
         }
 
-        match img_thumbs::try_generate_thumb(&live_path, &thumb_path, cfg.img_thumbs.max_edge).await
+        match thumbnail::try_generate_thumb(&live_path, &thumb_path, cfg.img_thumbs.max_edge).await
         {
             Ok(()) => {}
             Err(ThumbError::UnsupportedFormat) => {

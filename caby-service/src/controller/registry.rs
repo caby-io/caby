@@ -86,12 +86,9 @@ impl Registry {
                 continue;
             }
 
-            if job.priority == Priority::Interactive {
-                next = Some(job);
-                break;
-            }
-
-            if next.is_none() {
+            if next.is_none_or(|best| {
+                (job.priority, job.created_at) < (best.priority, best.created_at)
+            }) {
                 next = Some(job);
             }
         }
@@ -138,6 +135,8 @@ impl Registry {
 
 #[cfg(test)]
 mod tests {
+    use jiff::SignedDuration;
+
     use super::*;
 
     fn reconcile(path: &str) -> Input {
@@ -246,6 +245,39 @@ mod tests {
         assert!(!registry.insert(reconcile("a.caby.yaml"), Priority::Interactive, None));
         let ready = take(&mut registry);
         assert_eq!(ready.priority, Priority::Interactive);
+    }
+
+    #[test]
+    fn oldest_background_job_runs_first() {
+        let mut registry = Registry::default();
+
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
+        registry.insert(reconcile("b.caby.yaml"), Priority::Background, None);
+        let older = registry
+            .jobs
+            .values_mut()
+            .find(|job| job.input == reconcile("b.caby.yaml"))
+            .unwrap();
+        older.created_at -= SignedDuration::from_secs(60);
+
+        assert_eq!(take(&mut registry).input, reconcile("b.caby.yaml"));
+        assert_eq!(take(&mut registry).input, reconcile("a.caby.yaml"));
+    }
+
+    #[test]
+    fn interactive_job_runs_before_older_background_job() {
+        let mut registry = Registry::default();
+
+        registry.insert(reconcile("a.caby.yaml"), Priority::Background, None);
+        registry.insert(reconcile("b.caby.yaml"), Priority::Interactive, None);
+        let older = registry
+            .jobs
+            .values_mut()
+            .find(|job| job.input == reconcile("a.caby.yaml"))
+            .unwrap();
+        older.created_at -= SignedDuration::from_secs(60);
+
+        assert_eq!(take(&mut registry).input, reconcile("b.caby.yaml"));
     }
 
     #[test]

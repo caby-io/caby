@@ -30,7 +30,6 @@ mod files;
 mod guest;
 mod helpers;
 mod housekeeping;
-mod img_thumbs;
 mod job;
 mod jsend;
 mod share;

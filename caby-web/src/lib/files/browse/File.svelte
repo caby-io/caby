@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { SpecialType, type EntryProps, type FileFields } from '$lib/files/entry';
+	import LoadingSurface from '$lib/LoadingSurface.svelte';
 	import IconFlatColorIconsFile from '~icons/flat-color-icons/file';
 	import IconFlatColorIconsImageFile from '~icons/flat-color-icons/image-file';
 	import IconFlatColorIconsVideoFile from '~icons/flat-color-icons/video-file';
@@ -44,12 +45,14 @@
 	let is_targetted = $derived(entry.is_targetted);
 
 	let failed_url = $state<string | undefined>();
+	let loaded_url = $state<string | undefined>();
 	let kind = $derived(entry.entry_fields.kind);
 	let preview_url = $derived(entry.entry_fields.preview_url);
 	let is_share = $derived(entry.special_type === SpecialType.SHARE);
 	let show_preview = $derived(
 		!is_share && kind === 'image' && !!preview_url && failed_url !== preview_url
 	);
+	let is_loaded = $derived(!!preview_url && loaded_url === preview_url);
 	let KindIcon = $derived(pickKindIcon(kind));
 	let can_preview = $derived(entry.entry_fields.can_preview);
 
@@ -88,14 +91,17 @@
 			<img
 				src={preview_url}
 				alt={entry.name}
+				class:loaded={is_loaded}
 				decoding="async"
 				loading="lazy"
 				draggable="false"
+				onload={() => (loaded_url = preview_url)}
 				onerror={() => {
 					failed_url = preview_url;
 					onMediaError?.();
 				}}
 			/>
+			<LoadingSurface loading={!is_loaded} />
 		</section>
 	{:else}
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -120,4 +126,13 @@
 
 <style lang="scss">
 	@use 'entry';
+
+	.display img {
+		opacity: 0;
+		transition: opacity 0.15s ease;
+
+		&.loaded {
+			opacity: 1;
+		}
+	}
 </style>
