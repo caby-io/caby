@@ -258,7 +258,7 @@ mod tests {
             .values_mut()
             .find(|job| job.input == reconcile("b.caby.yaml"))
             .unwrap();
-        older.created_at = older.created_at - SignedDuration::from_secs(60);
+        older.created_at -= SignedDuration::from_secs(60);
 
         assert_eq!(take(&mut registry).input, reconcile("b.caby.yaml"));
         assert_eq!(take(&mut registry).input, reconcile("a.caby.yaml"));
@@ -275,7 +275,7 @@ mod tests {
             .values_mut()
             .find(|job| job.input == reconcile("a.caby.yaml"))
             .unwrap();
-        older.created_at = older.created_at - SignedDuration::from_secs(60);
+        older.created_at -= SignedDuration::from_secs(60);
 
         assert_eq!(take(&mut registry).input, reconcile("b.caby.yaml"));
     }

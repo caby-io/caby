@@ -165,9 +165,28 @@ pub async fn try_generate_thumb(
 
 #[cfg(test)]
 mod tests {
-    use std::time::{Duration, SystemTime};
+    use std::{
+        ops::Deref,
+        time::{Duration, SystemTime},
+    };
 
     use super::*;
+
+    struct ScratchDir(PathBuf);
+
+    impl Deref for ScratchDir {
+        type Target = Path;
+
+        fn deref(&self) -> &Path {
+            &self.0
+        }
+    }
+
+    impl Drop for ScratchDir {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
 
     fn metadata_at(dir: &Path, name: &str, modified: SystemTime) -> Metadata {
         let path = dir.join(name);
@@ -176,10 +195,10 @@ mod tests {
         std::fs::metadata(&path).unwrap()
     }
 
-    fn scratch_dir(name: &str) -> PathBuf {
+    fn scratch_dir(name: &str) -> ScratchDir {
         let dir = std::env::temp_dir().join(format!("caby-thumbs-{}-{}", name, xid::new()));
         std::fs::create_dir_all(&dir).unwrap();
-        dir
+        ScratchDir(dir)
     }
 
     #[test]
