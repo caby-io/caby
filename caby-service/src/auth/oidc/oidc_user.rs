@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path, sync::Arc};
+use std::{collections::HashMap, path::Path};
 
 use anyhow::{anyhow, Context};
 use jiff::Timestamp;
@@ -8,7 +8,7 @@ use tokio::fs;
 
 use crate::{
     auth::oidc::oidc_user_names::{calculate_name, ADJECTIVES, ANIMALS},
-    config::{Config, Runtime, UserConfig},
+    config::{Config, ManagedBy, UserConfig},
     user::Account,
     Result,
 };
@@ -30,14 +30,6 @@ pub fn resolve_display_name(claims: &CoreIdTokenClaims) -> String {
         .map(|n| n.as_str().trim().to_string())
         .filter(|n| !n.is_empty())
         .unwrap_or_else(|| calculate_name(claims.subject().as_str()))
-}
-
-fn write_to_config(cfg: &Config, key: String, user_config: UserConfig) {
-    cfg.runtime.rcu(|r| {
-        let mut next = (**r).clone();
-        next.users.insert(key.clone(), user_config.clone());
-        Arc::new(next)
-    });
 }
 
 // this will load users based on the filesystem
@@ -84,6 +76,7 @@ pub async fn load_provisioned_users(users_path: &Path) -> Result<HashMap<String,
             email: parsed.email,
             activation_token: None,
             spaces: vec![],
+            managed_by: ManagedBy::App,
         };
 
         out.insert(parsed.subject, user_config);
@@ -116,8 +109,9 @@ pub async fn provision_user(cfg: &Config, claims: &CoreIdTokenClaims) -> Result<
             email: existing.email,
             activation_token: None,
             spaces: vec![],
+            managed_by: ManagedBy::App,
         };
-        write_to_config(cfg, subject, user_config.clone());
+        cfg.try_upsert_app_user(subject, user_config.clone())?;
         return Ok((&user_config).into());
     }
 
@@ -161,8 +155,9 @@ pub async fn provision_user(cfg: &Config, claims: &CoreIdTokenClaims) -> Result<
         email,
         activation_token: None,
         spaces: vec![],
+        managed_by: ManagedBy::App,
     };
-    write_to_config(cfg, subject, user_config.clone());
+    cfg.try_upsert_app_user(subject, user_config.clone())?;
 
     Ok((&user_config).into())
 }
