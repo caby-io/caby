@@ -1,8 +1,8 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use anyhow::{anyhow, Ok};
 use tokio::fs::{create_dir_all, try_exists};
-use tracing::info;
+use tracing::{info, warn};
 
 use crate::{
     auth::oidc::{oidc_user::load_provisioned_users, OIDC_DIR},
@@ -37,13 +37,11 @@ pub async fn init(cfg: &Config) -> Result<()> {
     let users = load_provisioned_users(&cfg.users_path).await?;
     if !users.is_empty() {
         info!("found {} provisioned OIDC users", users.len());
-        cfg.runtime.rcu(|r| {
-            let mut next = (**r).clone();
-            for (k, v) in &users {
-                next.users.entry(k.clone()).or_insert_with(|| v.clone());
+        for (key, user) in users {
+            if let Err(err) = cfg.try_upsert_app_user(key, user) {
+                warn!("skipping provisioned OIDC user: {}", err);
             }
-            Arc::new(next)
-        });
+        }
     }
 
     // Initialize spaces

@@ -22,6 +22,12 @@ pub mod img_thumbs;
 pub mod urls;
 mod validate_config;
 
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ManagedBy {
+    Config,
+    App,
+}
+
 #[derive(Clone, Deserialize)]
 pub struct SpaceConfig {
     pub name: String,
@@ -64,13 +70,14 @@ impl From<&UserSpaceConfig> for SpaceAccess {
     }
 }
 
-#[derive(Clone, Deserialize)]
+#[derive(Clone)]
 pub struct UserConfig {
     pub name: String,
     pub path: PathBuf,
     pub email: Option<String>,
     pub activation_token: Option<String>,
     pub spaces: Vec<UserSpaceConfig>,
+    pub managed_by: ManagedBy,
 }
 
 impl From<&UserConfig> for Account {
@@ -91,6 +98,14 @@ pub struct Runtime {
     pub spaces: HashMap<String, SpaceConfig>,
     pub users: HashMap<String, UserConfig>,
     // todo: roles
+}
+
+impl Runtime {
+    fn is_config_managed_user(&self, key: &str) -> bool {
+        self.users
+            .get(key)
+            .is_some_and(|u| u.managed_by == ManagedBy::Config)
+    }
 }
 
 #[derive(Clone)]
@@ -119,6 +134,22 @@ impl Config {
 
     pub fn find_space(&self, name: &str) -> Option<Space> {
         self.runtime.load().spaces.get(name).map(Space::from)
+    }
+
+    pub fn try_upsert_app_user(&self, key: String, mut user: UserConfig) -> Result<()> {
+        user.managed_by = ManagedBy::App;
+        let prev = self.runtime.rcu(|r| {
+            if r.is_config_managed_user(&key) {
+                return Arc::clone(r);
+            }
+            let mut next = (**r).clone();
+            next.users.insert(key.clone(), user.clone());
+            Arc::new(next)
+        });
+        if prev.is_config_managed_user(&key) {
+            return Err(anyhow!("user {} is managed by config", key));
+        }
+        Ok(())
     }
 
     pub async fn new() -> Result<Self> {
@@ -310,5 +341,81 @@ impl ConfigBuilder {
             img_thumbs: self.img_thumbs.unwrap_or_default(),
             runtime: Arc::new(ArcSwap::from_pointee(runtime)),
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::config_file::ConfigFileUrls;
+
+    fn user(name: &str, managed_by: ManagedBy) -> UserConfig {
+        UserConfig {
+            name: name.to_owned(),
+            path: PathBuf::from("/caby/users").join(name),
+            email: None,
+            activation_token: None,
+            spaces: vec![],
+            managed_by,
+        }
+    }
+
+    fn test_config(users: Vec<UserConfig>) -> Config {
+        let urls = UrlsConfig::try_new(Some(ConfigFileUrls {
+            backend: Some("http://localhost:8080".to_owned()),
+            frontend: Some("http://localhost:5173".to_owned()),
+        }))
+        .unwrap();
+        let auth = AuthConfig::try_new(None, &urls).unwrap();
+        let mut builder = ConfigBuilder::new();
+        builder
+            .try_set_dir_meta_filename(Some(".cabydir".to_owned()))
+            .unwrap()
+            .try_set_home_path(Some("/caby"))
+            .unwrap()
+            .try_set_urls(Some(urls))
+            .unwrap()
+            .try_set_auth(Some(auth))
+            .unwrap()
+            .try_set_users(Some(users))
+            .unwrap();
+        builder.build().unwrap()
+    }
+
+    #[test]
+    fn app_write_rejects_config_managed_user() {
+        let cfg = test_config(vec![user("holden", ManagedBy::Config)]);
+        let mut holden = user("holden", ManagedBy::App);
+        holden.email = Some("holden@rocinante.test".to_owned());
+
+        assert!(cfg.try_upsert_app_user("holden".to_owned(), holden).is_err());
+
+        let stored = cfg.find_user("holden").unwrap();
+        assert_eq!(stored.managed_by, ManagedBy::Config);
+        assert_eq!(stored.email, None);
+    }
+
+    #[test]
+    fn app_write_replaces_app_managed_user() {
+        let cfg = test_config(vec![]);
+        cfg.try_upsert_app_user("naomi".to_owned(), user("naomi", ManagedBy::App))
+            .unwrap();
+        let mut naomi = user("naomi", ManagedBy::App);
+        naomi.email = Some("naomi@rocinante.test".to_owned());
+
+        cfg.try_upsert_app_user("naomi".to_owned(), naomi).unwrap();
+
+        let stored = cfg.find_user("naomi").unwrap();
+        assert_eq!(stored.email.as_deref(), Some("naomi@rocinante.test"));
+    }
+
+    #[test]
+    fn app_write_inserts_new_user_as_app_managed() {
+        let cfg = test_config(vec![]);
+
+        cfg.try_upsert_app_user("amos".to_owned(), user("amos", ManagedBy::Config))
+            .unwrap();
+
+        assert_eq!(cfg.find_user("amos").unwrap().managed_by, ManagedBy::App);
     }
 }

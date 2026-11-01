@@ -1,5 +1,5 @@
 use crate::{
-    config::{SpaceConfig, UserConfig, UserSpaceConfig},
+    config::{ManagedBy, SpaceConfig, UserConfig, UserSpaceConfig},
     validation::{
         self,
         prefabs::{activation_token_validation, email_validation, username_validation},
@@ -127,6 +127,7 @@ impl ConfigFileUser {
             email: self.email,
             activation_token: self.activation_token,
             spaces: self.spaces,
+            managed_by: ManagedBy::Config,
         }
     }
 }
