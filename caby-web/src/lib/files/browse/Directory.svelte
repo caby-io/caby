@@ -51,8 +51,10 @@
 					if (selection_mode) e.preventDefault();
 					else onSelect = undefined;
 				}}
-				{href}>{entry.name}</a
+				{href}
 			>
+				{entry.name}
+			</a>
 		</h1>
 		{entry.pretty_modified_at}
 	</section>

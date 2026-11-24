@@ -116,9 +116,9 @@
 		/>
 		<span class="error-message">{errors.password}</span>
 		<div class="actions fx">
-			<button class="button primary fx-grow" disabled={loading} onclick={() => tryLogin()}
-				>Login</button
-			>
+			<button class="button primary fx-grow" disabled={loading} onclick={() => tryLogin()}>
+				Login
+			</button>
 		</div>
 	</form>
 </AuthCard>
