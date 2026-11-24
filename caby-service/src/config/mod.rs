@@ -388,7 +388,9 @@ mod tests {
         let mut holden = user("holden", ManagedBy::App);
         holden.email = Some("holden@rocinante.test".to_owned());
 
-        assert!(cfg.try_upsert_app_user("holden".to_owned(), holden).is_err());
+        assert!(cfg
+            .try_upsert_app_user("holden".to_owned(), holden)
+            .is_err());
 
         let stored = cfg.find_user("holden").unwrap();
         assert_eq!(stored.managed_by, ManagedBy::Config);
