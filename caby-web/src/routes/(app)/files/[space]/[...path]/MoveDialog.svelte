@@ -68,9 +68,9 @@
 			<EntriesOverviewSelect {space} {overview_entries} onSelect={handleSelect} />
 			<div class="actions fx">
 				<button class="button" onclick={() => dialog.close()}>Cancel</button>
-				<button class="button primary" onclick={() => tryMove()} disabled={!selected_dir}
-					>Move</button
-				>
+				<button class="button primary" onclick={() => tryMove()} disabled={!selected_dir}>
+					Move
+				</button>
 			</div>
 		</section>
 	{/snippet}

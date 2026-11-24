@@ -19,8 +19,10 @@
 			class:current={space.name === current_space?.name}
 			aria-current={space.name === current_space?.name ? 'page' : undefined}
 			href="/files/{space.name}"
-			onclick={() => popover.hidePopover()}>{space.display}</a
+			onclick={() => popover.hidePopover()}
 		>
+			{space.display}
+		</a>
 	{/each}
 </div>
 

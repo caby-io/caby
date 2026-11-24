@@ -132,9 +132,9 @@
 		<span class="error-message">{errors.confirm_password}</span>
 
 		<div class="actions fx">
-			<button class="button primary fx-grow" disabled={loading} onclick={() => tryActivate()}
-				>Activate</button
-			>
+			<button class="button primary fx-grow" disabled={loading} onclick={() => tryActivate()}>
+				Activate
+			</button>
 		</div>
 	</form>
 </AuthCard>
